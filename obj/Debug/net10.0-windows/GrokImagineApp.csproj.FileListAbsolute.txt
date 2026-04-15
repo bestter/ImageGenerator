@@ -1,0 +1,16 @@
+D:\projects\Repos\GrokImagineApp\bin\Debug\net10.0-windows\GrokImagineApp.exe
+D:\projects\Repos\GrokImagineApp\bin\Debug\net10.0-windows\GrokImagineApp.deps.json
+D:\projects\Repos\GrokImagineApp\bin\Debug\net10.0-windows\GrokImagineApp.runtimeconfig.json
+D:\projects\Repos\GrokImagineApp\bin\Debug\net10.0-windows\GrokImagineApp.dll
+D:\projects\Repos\GrokImagineApp\bin\Debug\net10.0-windows\GrokImagineApp.pdb
+D:\projects\Repos\GrokImagineApp\obj\Debug\net10.0-windows\GrokImagineApp.GeneratedMSBuildEditorConfig.editorconfig
+D:\projects\Repos\GrokImagineApp\obj\Debug\net10.0-windows\GrokImagineApp.AssemblyInfoInputs.cache
+D:\projects\Repos\GrokImagineApp\obj\Debug\net10.0-windows\GrokImagineApp.AssemblyInfo.cs
+D:\projects\Repos\GrokImagineApp\obj\Debug\net10.0-windows\GrokImagineApp.csproj.CoreCompileInputs.cache
+D:\projects\Repos\GrokImagineApp\obj\Debug\net10.0-windows\GrokImagineApp.dll
+D:\projects\Repos\GrokImagineApp\obj\Debug\net10.0-windows\refint\GrokImagineApp.dll
+D:\projects\Repos\GrokImagineApp\obj\Debug\net10.0-windows\GrokImagineApp.pdb
+D:\projects\Repos\GrokImagineApp\obj\Debug\net10.0-windows\GrokImagineApp.genruntimeconfig.cache
+D:\projects\Repos\GrokImagineApp\obj\Debug\net10.0-windows\ref\GrokImagineApp.dll
+D:\projects\Repos\GrokImagineApp\obj\Debug\net10.0-windows\GrokImagineApp.Form1.resources
+D:\projects\Repos\GrokImagineApp\obj\Debug\net10.0-windows\GrokImagineApp.csproj.GenerateResource.cache

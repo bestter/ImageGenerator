@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "dgSpecHash": "0FxaqnpLTVg=",
+  "success": true,
+  "projectFilePath": "D:\\projects\\Repos\\GrokImagineApp\\GrokImagineApp.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\marti\\.nuget\\packages\\system.text.json\\10.0.6\\system.text.json.10.0.6.nupkg.sha512"
+  ],
+  "logs": [
+    {
+      "code": "NU1510",
+      "level": "Warning",
+      "message": "Le PackageReference System.Text.Json ne sera pas supprimé. Envisagez de retirer ce package de vos dépendances, car il est probablement inutile.",
+      "projectPath": "D:\\projects\\Repos\\GrokImagineApp\\GrokImagineApp.csproj",
+      "warningLevel": 1,
+      "filePath": "D:\\projects\\Repos\\GrokImagineApp\\GrokImagineApp.csproj",
+      "libraryId": "System.Text.Json",
+      "targetGraphs": [
+        "net10.0-windows7.0"
+      ]
+    }
+  ]
+}

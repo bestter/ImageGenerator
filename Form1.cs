@@ -1,0 +1,271 @@
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
+using System.Net.Http;
+using System.Security.Principal;
+using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace GrokImagineApp
+{
+    public partial class Form1 : Form
+    {
+        private PictureBox pictureBox;
+        private TextBox txtApiKey;
+        private TextBox txtPrompt;
+        private ComboBox cmbModel;
+        private ComboBox cmbResolution;
+        private Button btnGenerate;
+        private Button btnSave;
+        private Button btnClear;
+        private Label lblStatus;
+        private string currentBase64Image = null;
+        private List<string> selectedImages = new List<string>();
+        private Button btnAddImages;
+
+        public Form1()
+        {
+            InitializeControls();
+        }
+
+        private void InitializeControls()
+        {
+            this.Text = "Grok Imagine - Générateur d'images xAI";
+            this.ClientSize = new Size(900, 700);
+            this.StartPosition = FormStartPosition.CenterScreen;
+            this.WindowState = FormWindowState.Maximized;
+
+            // API Key
+            var lblKey = new Label { Text = "Clé API xAI :", Location = new Point(20, 20), AutoSize = true };
+            txtApiKey = new TextBox { Location = new Point(120, 17), Width = 650, PasswordChar = '•', Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
+
+            // Prompt
+            var lblPrompt = new Label { Text = "Prompt :", Location = new Point(20, 60), AutoSize = true };
+            txtPrompt = new TextBox { Location = new Point(120, 57), Width = 650, Height = 100, Multiline = true, ScrollBars = ScrollBars.Vertical, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
+
+            // Modèle
+            var lblModel = new Label { Text = "Modèle :", Location = new Point(20, 175), AutoSize = true };
+            cmbModel = new ComboBox { Location = new Point(120, 172), Width = 300, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            cmbModel.Items.AddRange(new[] { "grok-imagine-image", "grok-imagine-image-pro" });
+            cmbModel.SelectedIndex = 0;
+
+            // Résolution (haute dispo)
+            var lblRes = new Label { Text = "Résolution :", Location = new Point(440, 175), AutoSize = true };
+            cmbResolution = new ComboBox { Location = new Point(520, 172), Width = 150, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            cmbResolution.Items.AddRange(new[] { "1k", "2k" });
+            cmbResolution.SelectedIndex = 1; // 2k par défaut (haute résolution)
+
+            // Images
+            btnAddImages = new Button { Text = "Ajouter images (0/5)", Location = new Point(690, 171), Width = 150, Height = 25, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnAddImages.Click += BtnAddImages_Click;
+
+            // Boutons
+            btnGenerate = new Button { Text = "Générer l'image", Location = new Point(120, 220), Width = 200, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnGenerate.Click += BtnGenerate_Click;
+
+            btnSave = new Button { Text = "📥 Enregistrer l'image (haute rés.)", Location = new Point(340, 220), Width = 250, Height = 40, Enabled = false, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnSave.Click += BtnSave_Click;
+
+            btnClear = new Button { Text = "Effacer", Location = new Point(610, 220), Width = 100, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnClear.Click += (s, e) => ClearForm();
+
+            // Status
+            lblStatus = new Label { Location = new Point(20, 280), Width = 750, Height = 30, ForeColor = Color.DarkBlue, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
+
+            // PictureBox
+            pictureBox = new PictureBox
+            {
+                Location = new Point(20, 320),
+                Size = new Size(840, 340),
+                SizeMode = PictureBoxSizeMode.Zoom,
+                BorderStyle = BorderStyle.FixedSingle,
+                BackColor = Color.Black,
+                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
+            };
+
+            this.Controls.AddRange(new Control[] { lblKey, txtApiKey, lblPrompt, txtPrompt, lblModel, cmbModel, lblRes, cmbResolution, btnAddImages,
+                btnGenerate, btnSave, btnClear, lblStatus, pictureBox });
+
+            this.Resize += Form1_Resize;
+        }
+
+        private async void BtnGenerate_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(txtApiKey.Text))
+            {
+                MessageBox.Show("Entre ta clé API xAI d'abord !", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(txtPrompt.Text))
+            {
+                MessageBox.Show("Écris un prompt !", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            btnGenerate.Enabled = false;
+            btnSave.Enabled = false;
+            lblStatus.Text = "⏳ Génération en cours...";
+            pictureBox.Image = null;
+            currentBase64Image = null;
+
+            try
+            {
+                using var client = new HttpClient();
+                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {txtApiKey.Text}");
+
+                object requestBody;
+                string apiUrl;
+
+                if (selectedImages.Count > 0)
+                {
+                    apiUrl = "https://api.x.ai/v1/images/edits";
+                    var imagesList = new List<object>();
+                    foreach (var imgPath in selectedImages)
+                    {
+                        var ext = Path.GetExtension(imgPath).ToLower().TrimStart('.');
+                        if (ext == "jpg") ext = "jpeg";
+                        var b64Bytes = File.ReadAllBytes(imgPath);
+                        var b64Data = Convert.ToBase64String(b64Bytes);
+                        imagesList.Add(new { type = "image_url", url = $"data:image/{ext};base64,{b64Data}" });
+                    }
+                    requestBody = new
+                    {
+                        model = cmbModel.Text,
+                        prompt = txtPrompt.Text.Trim(),
+                        images = imagesList,
+                        n = 1,
+                        resolution = cmbResolution.Text,
+                        aspect_ratio = "20:9",
+                        user = WindowsIdentity.GetCurrent().Name,
+                        response_format = "b64_json"
+                    };
+                }
+                else
+                {
+                    apiUrl = "https://api.x.ai/v1/images/generations";
+                    requestBody = new
+                    {
+                        model = cmbModel.Text,
+                        prompt = txtPrompt.Text.Trim(),
+                        n = 1,
+                        resolution = cmbResolution.Text,
+                        aspect_ratio = "20:9",
+                        user = WindowsIdentity.GetCurrent().Name,
+                        response_format = "b64_json"
+                    };
+                }
+
+                var json = JsonSerializer.Serialize(requestBody);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync(apiUrl, content);
+                var responseString = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    lblStatus.Text = $"❌ Erreur {response.StatusCode}";
+                    MessageBox.Show($"Erreur API :\n{responseString}", "Erreur API", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                var result = JsonSerializer.Deserialize<JsonElement>(responseString);
+                var b64 = result.GetProperty("data")[0].GetProperty("b64_json").GetString();
+
+                currentBase64Image = b64;
+
+                // Affichage de l'image
+                var imageBytes = Convert.FromBase64String(b64);
+                using var ms = new MemoryStream(imageBytes);
+                pictureBox.Image = Image.FromStream(ms);
+
+                lblStatus.Text = $"✅ Image générée avec {cmbModel.Text} ({cmbResolution.Text})";
+                btnSave.Enabled = true;
+            }
+            catch (Exception ex)
+            {
+                lblStatus.Text = "❌ Erreur inattendue";
+                MessageBox.Show($"Erreur :\n{ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                btnGenerate.Enabled = true;
+            }
+        }
+
+        private void BtnSave_Click(object sender, EventArgs e)
+        {
+            if (currentBase64Image == null) return;
+
+            using var sfd = new SaveFileDialog
+            {
+                Filter = "PNG Image|*.png",
+                Title = "Enregistrer l'image Grok Imagine",
+                FileName = $"grok-imagine-{DateTime.Now:yyyyMMdd-HHmmss}.png"
+            };
+
+            if (sfd.ShowDialog() == DialogResult.OK)
+            {
+                var imageBytes = Convert.FromBase64String(currentBase64Image);
+                File.WriteAllBytes(sfd.FileName, imageBytes);
+                lblStatus.Text = $"💾 Image sauvegardée : {Path.GetFileName(sfd.FileName)}";
+                MessageBox.Show("Image enregistrée avec succès !", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        private void ClearForm()
+        {
+            txtPrompt.Clear();
+            pictureBox.Image = null;
+            currentBase64Image = null;
+            btnSave.Enabled = false;
+            lblStatus.Text = "";
+            selectedImages.Clear();
+            UpdateImageButtonText();
+        }
+
+        private void BtnAddImages_Click(object sender, EventArgs e)
+        {
+            using var ofd = new OpenFileDialog
+            {
+                Filter = "Images|*.jpg;*.jpeg;*.png;*.webp",
+                Multiselect = true,
+                Title = "Sélectionner des images (max 5)"
+            };
+
+            if (ofd.ShowDialog() == DialogResult.OK)
+            {
+                foreach (var file in ofd.FileNames)
+                {
+                    if (!selectedImages.Contains(file) && selectedImages.Count < 5)
+                    {
+                        selectedImages.Add(file);
+                    }
+                }
+                UpdateImageButtonText();
+            }
+        }
+
+        private void UpdateImageButtonText()
+        {
+            if (btnAddImages != null)
+                btnAddImages.Text = $"Ajouter images ({selectedImages.Count}/5)";
+        }
+
+        private void Form1_Resize(object sender, EventArgs e)
+        {
+            // PictureBox size is automatically adjusted via Anchor
+            // If additional custom adjustments are needed, add here
+        }
+
+        //[STAThread]
+        //static void Main()
+        //{
+        //    Application.EnableVisualStyles();
+        //    Application.SetCompatibleTextRenderingDefault(false);
+        //    Application.Run(new Form1());
+        //}
+    }
+}
