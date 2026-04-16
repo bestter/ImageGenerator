@@ -18,6 +18,7 @@ namespace GrokImagineApp
         private TextBox txtPrompt;
         private ComboBox cmbModel;
         private ComboBox cmbResolution;
+        private ComboBox cmbAspectRatio;
         private Button btnGenerate;
         private Button btnSave;
         private Button btnClear;
@@ -62,31 +63,37 @@ namespace GrokImagineApp
             btnAddImages = new Button { Text = "Ajouter images (0/5)", Location = new Point(690, 171), Width = 150, Height = 25, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnAddImages.Click += BtnAddImages_Click;
 
+            // Aspect Ratio
+            var lblRatio = new Label { Text = "Aspect Ratio :", Location = new Point(20, 220), AutoSize = true };
+            cmbAspectRatio = new ComboBox { Location = new Point(120, 217), Width = 250, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            cmbAspectRatio.Items.AddRange(new[] { "1:1 (Médias sociaux)", "16:9 (Widescreen)", "9:16 (Stories/Reels)", "4:3 (Standard)", "3:2 (Photographie)", "20:9 (Panoramique cellulaire)" });
+            cmbAspectRatio.SelectedIndex = 1; // 16:9 par défaut
+
             // Boutons
-            btnGenerate = new Button { Text = "Générer l'image", Location = new Point(120, 220), Width = 200, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnGenerate = new Button { Text = "Générer l'image", Location = new Point(120, 260), Width = 200, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnGenerate.Click += BtnGenerate_Click;
 
-            btnSave = new Button { Text = "📥 Enregistrer l'image (haute rés.)", Location = new Point(340, 220), Width = 250, Height = 40, Enabled = false, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnSave = new Button { Text = "📥 Enregistrer l'image (haute rés.)", Location = new Point(340, 260), Width = 250, Height = 40, Enabled = false, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnSave.Click += BtnSave_Click;
 
-            btnClear = new Button { Text = "Effacer", Location = new Point(610, 220), Width = 100, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnClear = new Button { Text = "Effacer", Location = new Point(610, 260), Width = 100, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnClear.Click += (s, e) => ClearForm();
 
             // Status
-            lblStatus = new Label { Location = new Point(20, 280), Width = 750, Height = 30, ForeColor = Color.DarkBlue, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
+            lblStatus = new Label { Location = new Point(20, 310), Width = 750, Height = 30, ForeColor = Color.DarkBlue, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
 
             // PictureBox
             pictureBox = new PictureBox
             {
-                Location = new Point(20, 320),
-                Size = new Size(840, 340),
+                Location = new Point(20, 340),
+                Size = new Size(840, 320),
                 SizeMode = PictureBoxSizeMode.Zoom,
                 BorderStyle = BorderStyle.FixedSingle,
                 BackColor = Color.Black,
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
             };
 
-            this.Controls.AddRange(new Control[] { lblKey, txtApiKey, lblPrompt, txtPrompt, lblModel, cmbModel, lblRes, cmbResolution, btnAddImages,
+            this.Controls.AddRange(new Control[] { lblKey, txtApiKey, lblPrompt, txtPrompt, lblModel, cmbModel, lblRes, cmbResolution, btnAddImages, lblRatio, cmbAspectRatio,
                 btnGenerate, btnSave, btnClear, lblStatus, pictureBox });
 
             this.Resize += Form1_Resize;
@@ -119,6 +126,9 @@ namespace GrokImagineApp
                 object requestBody;
                 string apiUrl;
 
+                string selectedRatioText = cmbAspectRatio.SelectedItem?.ToString() ?? "16:9";
+                string aspectRatioValue = selectedRatioText.Split(' ')[0];
+
                 if (selectedImages.Count > 0)
                 {
                     apiUrl = "https://api.x.ai/v1/images/edits";
@@ -138,7 +148,7 @@ namespace GrokImagineApp
                         images = imagesList,
                         n = 1,
                         resolution = cmbResolution.Text,
-                        aspect_ratio = "20:9",
+                        aspect_ratio = aspectRatioValue,
                         user = WindowsIdentity.GetCurrent().Name,
                         response_format = "b64_json"
                     };
@@ -152,7 +162,7 @@ namespace GrokImagineApp
                         prompt = txtPrompt.Text.Trim(),
                         n = 1,
                         resolution = cmbResolution.Text,
-                        aspect_ratio = "20:9",
+                        aspect_ratio = aspectRatioValue,
                         user = WindowsIdentity.GetCurrent().Name,
                         response_format = "b64_json"
                     };
