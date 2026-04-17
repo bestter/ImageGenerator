@@ -23,6 +23,7 @@ namespace GrokImagineApp
         private Button btnSave;
         private Button btnClear;
         private Label lblStatus;
+        private CheckBox chkMultiTurnEditing;
         private string currentBase64Image = null;
         private List<string> selectedImages = new List<string>();
         private Button btnAddImages;
@@ -69,6 +70,15 @@ namespace GrokImagineApp
             cmbAspectRatio.Items.AddRange(new[] { "1:1 (Médias sociaux)", "16:9 (Widescreen)", "9:16 (Stories/Reels)", "4:3 (Standard)", "3:2 (Photographie)", "20:9 (Panoramique cellulaire)" });
             cmbAspectRatio.SelectedIndex = 1; // 16:9 par défaut
 
+            // Multi-turn editing
+            chkMultiTurnEditing = new CheckBox 
+            { 
+                Text = "Éditer l'image actuelle (Multi-turn)", 
+                Location = new Point(440, 220), 
+                AutoSize = true, 
+                Anchor = AnchorStyles.Top | AnchorStyles.Left 
+            };
+
             // Boutons
             btnGenerate = new Button { Text = "Générer l'image", Location = new Point(120, 260), Width = 200, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnGenerate.Click += BtnGenerate_Click;
@@ -93,7 +103,7 @@ namespace GrokImagineApp
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
             };
 
-            this.Controls.AddRange(new Control[] { lblKey, txtApiKey, lblPrompt, txtPrompt, lblModel, cmbModel, lblRes, cmbResolution, btnAddImages, lblRatio, cmbAspectRatio,
+            this.Controls.AddRange(new Control[] { lblKey, txtApiKey, lblPrompt, txtPrompt, lblModel, cmbModel, lblRes, cmbResolution, btnAddImages, lblRatio, cmbAspectRatio, chkMultiTurnEditing,
                 btnGenerate, btnSave, btnClear, lblStatus, pictureBox });
 
             this.Resize += Form1_Resize;
@@ -112,6 +122,15 @@ namespace GrokImagineApp
                 return;
             }
 
+            string imageToEditBase64 = null;
+            if (chkMultiTurnEditing.Checked && !string.IsNullOrEmpty(currentBase64Image))
+            {
+                imageToEditBase64 = currentBase64Image;
+            }
+
+            Image previousImage = pictureBox.Image;
+            string previousBase64Image = currentBase64Image;
+
             btnGenerate.Enabled = false;
             btnSave.Enabled = false;
             lblStatus.Text = "⏳ Génération en cours...";
@@ -129,10 +148,16 @@ namespace GrokImagineApp
                 string selectedRatioText = cmbAspectRatio.SelectedItem?.ToString() ?? "16:9";
                 string aspectRatioValue = selectedRatioText.Split(' ')[0];
 
-                if (selectedImages.Count > 0)
+                if (selectedImages.Count > 0 || !string.IsNullOrEmpty(imageToEditBase64))
                 {
                     apiUrl = "https://api.x.ai/v1/images/edits";
                     var imagesList = new List<object>();
+
+                    if (!string.IsNullOrEmpty(imageToEditBase64))
+                    {
+                        imagesList.Add(new { type = "image_url", url = $"data:image/png;base64,{imageToEditBase64}" });
+                    }
+
                     foreach (var imgPath in selectedImages)
                     {
                         var ext = Path.GetExtension(imgPath).ToLower().TrimStart('.');
@@ -141,17 +166,34 @@ namespace GrokImagineApp
                         var b64Data = Convert.ToBase64String(b64Bytes);
                         imagesList.Add(new { type = "image_url", url = $"data:image/{ext};base64,{b64Data}" });
                     }
-                    requestBody = new
+
+                    if (imagesList.Count == 1)
                     {
-                        model = cmbModel.Text,
-                        prompt = txtPrompt.Text.Trim(),
-                        images = imagesList,
-                        n = 1,
-                        resolution = cmbResolution.Text,
-                        aspect_ratio = aspectRatioValue,
-                        user = WindowsIdentity.GetCurrent().Name,
-                        response_format = "b64_json"
-                    };
+                        requestBody = new
+                        {
+                            model = cmbModel.Text,
+                            prompt = txtPrompt.Text.Trim(),
+                            image = imagesList[0],
+                            n = 1,
+                            resolution = cmbResolution.Text,
+                            user = WindowsIdentity.GetCurrent().Name,
+                            response_format = "b64_json"
+                        };
+                    }
+                    else
+                    {
+                        requestBody = new
+                        {
+                            model = cmbModel.Text,
+                            prompt = txtPrompt.Text.Trim(),
+                            images = imagesList,
+                            n = 1,
+                            resolution = cmbResolution.Text,
+                            aspect_ratio = aspectRatioValue,
+                            user = WindowsIdentity.GetCurrent().Name,
+                            response_format = "b64_json"
+                        };
+                    }
                 }
                 else
                 {
@@ -202,6 +244,12 @@ namespace GrokImagineApp
             finally
             {
                 btnGenerate.Enabled = true;
+                if (currentBase64Image == null && previousBase64Image != null)
+                {
+                    currentBase64Image = previousBase64Image;
+                    pictureBox.Image = previousImage;
+                    btnSave.Enabled = true;
+                }
             }
         }
 
