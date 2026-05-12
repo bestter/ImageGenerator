@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Security.Principal;
 using System.Text;
@@ -158,14 +159,15 @@ namespace GrokImagineApp
                         imagesList.Add(new { type = "image_url", url = $"data:image/png;base64,{imageToEditBase64}" });
                     }
 
-                    foreach (var imgPath in selectedImages)
+                    var tasks = selectedImages.Select(async imgPath =>
                     {
                         var ext = Path.GetExtension(imgPath).ToLower().TrimStart('.');
                         if (ext == "jpg") ext = "jpeg";
-                        var b64Bytes = File.ReadAllBytes(imgPath);
+                        var b64Bytes = await File.ReadAllBytesAsync(imgPath);
                         var b64Data = Convert.ToBase64String(b64Bytes);
-                        imagesList.Add(new { type = "image_url", url = $"data:image/{ext};base64,{b64Data}" });
-                    }
+                        return new { type = "image_url", url = $"data:image/{ext};base64,{b64Data}" };
+                    });
+                    imagesList.AddRange(await Task.WhenAll(tasks));
 
                     if (imagesList.Count == 1)
                     {
