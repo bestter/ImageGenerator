@@ -28,6 +28,7 @@ namespace GrokImagineApp
         private string currentBase64Image = null;
         private List<string> selectedImages = new List<string>();
         private Button btnAddImages;
+        private const long MaxFileSizeBytes = 20 * 1024 * 1024; // 20 MB
 
         public Form1()
         {
@@ -161,6 +162,14 @@ namespace GrokImagineApp
 
                     var tasks = selectedImages.Select(async imgPath =>
                     {
+                        var fileInfo = new FileInfo(imgPath);
+                        if (fileInfo.Length > MaxFileSizeBytes)
+                        {
+                            lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(imgPath)}";
+                            MessageBox.Show($"L'image '{Path.GetFileName(imgPath)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+
                         var ext = Path.GetExtension(imgPath).ToLower().TrimStart('.');
                         if (ext == "jpg") ext = "jpeg";
                         var b64Bytes = await File.ReadAllBytesAsync(imgPath);
@@ -299,6 +308,12 @@ namespace GrokImagineApp
             {
                 foreach (var file in ofd.FileNames)
                 {
+                    if (new FileInfo(file).Length > MaxFileSizeBytes)
+                    {
+                        MessageBox.Show($"L'image '{Path.GetFileName(file)}' dépasse la limite de 20 Mo et ne sera pas ajoutée.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        continue;
+                    }
+
                     if (!selectedImages.Contains(file) && selectedImages.Count < 5)
                     {
                         selectedImages.Add(file);
