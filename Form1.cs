@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
@@ -167,7 +168,7 @@ namespace GrokImagineApp
                         {
                             lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(imgPath)}";
                             MessageBox.Show($"L'image '{Path.GetFileName(imgPath)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            return;
+                            return null;
                         }
 
                         var ext = Path.GetExtension(imgPath).ToLower().TrimStart('.');
@@ -176,7 +177,8 @@ namespace GrokImagineApp
                         var b64Data = Convert.ToBase64String(b64Bytes);
                         return new { type = "image_url", url = $"data:image/{ext};base64,{b64Data}" };
                     });
-                    imagesList.AddRange(await Task.WhenAll(tasks));
+                    var completedTasks = await Task.WhenAll(tasks);
+                    imagesList.AddRange(completedTasks.Where(t => t != null));
 
                     if (imagesList.Count == 1)
                     {
@@ -187,7 +189,7 @@ namespace GrokImagineApp
                             image = imagesList[0],
                             n = 1,
                             resolution = cmbResolution.Text,
-                            user = WindowsIdentity.GetCurrent().Name,
+                            user = GetOpaqueUserId(),
                             response_format = "b64_json"
                         };
                     }
@@ -201,7 +203,7 @@ namespace GrokImagineApp
                             n = 1,
                             resolution = cmbResolution.Text,
                             aspect_ratio = aspectRatioValue,
-                            user = WindowsIdentity.GetCurrent().Name,
+                            user = GetOpaqueUserId(),
                             response_format = "b64_json"
                         };
                     }
@@ -216,7 +218,7 @@ namespace GrokImagineApp
                         n = 1,
                         resolution = cmbResolution.Text,
                         aspect_ratio = aspectRatioValue,
-                        user = WindowsIdentity.GetCurrent().Name,
+                        user = GetOpaqueUserId(),
                         response_format = "b64_json"
                     };
                 }
@@ -327,6 +329,21 @@ namespace GrokImagineApp
         {
             if (btnAddImages != null)
                 btnAddImages.Text = $"Ajouter images ({selectedImages.Count}/5)";
+        }
+
+        private string GetOpaqueUserId()
+        {
+            // Compute a SHA-256 hash of the local username to prevent leaking PII
+            using (SHA256 sha256Hash = SHA256.Create())
+            {
+                byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(WindowsIdentity.GetCurrent().Name));
+                StringBuilder builder = new StringBuilder();
+                for (int i = 0; i < bytes.Length; i++)
+                {
+                    builder.Append(bytes[i].ToString("x2"));
+                }
+                return builder.ToString();
+            }
         }
 
         private void Form1_Resize(object sender, EventArgs e)
