@@ -31,6 +31,10 @@ namespace GrokImagineApp
         private Button btnAddImages;
         private const long MaxFileSizeBytes = 20 * 1024 * 1024; // 20 MB
 
+        // ⚡ Bolt Optimization: Use a shared HttpClient instance for the lifetime of the application
+        // This avoids socket exhaustion (TIME_WAIT state) and eliminates TCP/TLS handshake latency on subsequent requests
+        private static readonly HttpClient _httpClient = new HttpClient();
+
         public Form1()
         {
             InitializeControls();
@@ -142,9 +146,6 @@ namespace GrokImagineApp
 
             try
             {
-                using var client = new HttpClient();
-                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {txtApiKey.Text}");
-
                 object requestBody;
                 string apiUrl;
 
@@ -226,7 +227,12 @@ namespace GrokImagineApp
                 var json = JsonSerializer.Serialize(requestBody);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response = await client.PostAsync(apiUrl, content);
+                // ⚡ Bolt Optimization: Create a per-request message to set headers safely with the shared client
+                using var requestMessage = new HttpRequestMessage(HttpMethod.Post, apiUrl);
+                requestMessage.Headers.Add("Authorization", $"Bearer {txtApiKey.Text}");
+                requestMessage.Content = content;
+
+                var response = await _httpClient.SendAsync(requestMessage);
                 var responseString = await response.Content.ReadAsStringAsync();
 
                 if (!response.IsSuccessStatusCode)
