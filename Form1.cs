@@ -4,8 +4,6 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Security.Cryptography;
-using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -190,7 +188,6 @@ namespace GrokImagineApp
                             image = imagesList[0],
                             n = 1,
                             resolution = cmbResolution.Text,
-                            user = GetOpaqueUserId(),
                             response_format = "b64_json"
                         };
                     }
@@ -204,7 +201,6 @@ namespace GrokImagineApp
                             n = 1,
                             resolution = cmbResolution.Text,
                             aspect_ratio = aspectRatioValue,
-                            user = GetOpaqueUserId(),
                             response_format = "b64_json"
                         };
                     }
@@ -219,7 +215,6 @@ namespace GrokImagineApp
                         n = 1,
                         resolution = cmbResolution.Text,
                         aspect_ratio = aspectRatioValue,
-                        user = GetOpaqueUserId(),
                         response_format = "b64_json"
                     };
                 }
@@ -358,25 +353,6 @@ namespace GrokImagineApp
         {
             if (btnAddImages != null)
                 btnAddImages.Text = $"Ajouter images ({selectedImages.Count}/5)";
-        }
-
-        private string GetOpaqueUserId()
-        {
-            // Compute a SHA-256 hash of the local username to prevent leaking PII
-            // Adding a static salt to prevent rainbow table attacks
-            string salt = "GrokImagineApp_Salt_2023";
-            string rawData = WindowsIdentity.GetCurrent().Name + salt;
-
-            using (SHA256 sha256Hash = SHA256.Create())
-            {
-                byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(rawData));
-                StringBuilder builder = new StringBuilder();
-                for (int i = 0; i < bytes.Length; i++)
-                {
-                    builder.Append(bytes[i].ToString("x2"));
-                }
-                return builder.ToString();
-            }
         }
 
         private void Form1_Resize(object sender, EventArgs e)
