@@ -60,3 +60,6 @@ nunit-*.xml
 *.suo
 *.userosscache
 *.sln.docstates
+
+# Agent temporary files
+.jules/

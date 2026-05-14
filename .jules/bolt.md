@@ -1,6 +1,0 @@
-## 2024-05-20 - [Avoid HttpClient Instantiation and Large String Allocations]
-**Learning:** Instantiating `HttpClient` per request causes socket exhaustion and adds TCP/TLS handshake latency to every call. Additionally, reading large JSON responses (like base64 images) into strings with `ReadAsStringAsync` creates significant memory pressure.
-**Action:** Always use a shared `HttpClient` instance for the lifetime of the application. Stream large responses directly using `ReadAsStreamAsync` and `JsonDocument.ParseAsync` to avoid large string allocations.
-## 2024-05-14 - [Avoid Large String Allocations with System.Text.Json]
-**Learning:** Using `response.Content.ReadAsStringAsync()` and then passing the string to `JsonSerializer.Deserialize` causes massive memory spikes, particularly when the response payload contains a large base64 image string. This puts immense pressure on the Large Object Heap (LOH).
-**Action:** Use `HttpCompletionOption.ResponseHeadersRead` combined with `response.Content.ReadAsStreamAsync()` and `JsonDocument.ParseAsync(stream)`. This streams the JSON parsing directly, bypassing the intermediate string allocation and dramatically improving memory efficiency and speed.
