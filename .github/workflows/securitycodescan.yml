@@ -40,6 +40,11 @@ jobs:
       - name: Build
         run: dotnet build --no-restore
 
+      - name: Add .NET tools to PATH
+        run: |
+          echo "C:\Users\runneradmin\.dotnet\tools" >> $env:GITHUB_PATH
+        shell: bash
+
       - name: Convert sarif for uploading to GitHub
         uses: security-code-scan/security-code-scan-results-action@cdb3d5e639054395e45bf401cba8688fcaf7a687
 
