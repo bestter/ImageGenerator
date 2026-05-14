@@ -53,7 +53,7 @@ namespace GrokImagineApp
 
             // Prompt
             var lblPrompt = new Label { Text = "Prompt :", Location = new Point(20, 60), AutoSize = true };
-            txtPrompt = new TextBox { Location = new Point(120, 57), Width = 650, Height = 100, Multiline = true, ScrollBars = ScrollBars.Vertical, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
+            txtPrompt = new TextBox { Location = new Point(120, 57), Width = 650, Height = 100, Multiline = true, ScrollBars = ScrollBars.Vertical, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, MaxLength = 4000 };
 
             // Modèle
             var lblModel = new Label { Text = "Modèle :", Location = new Point(20, 175), AutoSize = true };
@@ -229,7 +229,7 @@ namespace GrokImagineApp
 
                 // ⚡ Bolt Optimization: Create a per-request message to set headers safely with the shared client
                 using var requestMessage = new HttpRequestMessage(HttpMethod.Post, apiUrl);
-                requestMessage.Headers.Add("Authorization", $"Bearer {txtApiKey.Text}");
+                requestMessage.Headers.Add("Authorization", $"Bearer {txtApiKey.Text.Trim()}");
                 requestMessage.Content = content;
 
                 // ⚡ Bolt Optimization: Use HttpCompletionOption.ResponseHeadersRead to stream the response
@@ -243,7 +243,24 @@ namespace GrokImagineApp
                     using var reader = new StreamReader(responseStream);
                     var errorString = await reader.ReadToEndAsync();
                     lblStatus.Text = $"❌ Erreur {response.StatusCode}";
-                    MessageBox.Show($"Erreur API :\n{errorString}", "Erreur API", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    // Parse the JSON error message to prevent leaking raw HTML or echoing sensitive input/API internals
+                    string safeErrorMessage = "Une erreur est survenue lors de la communication avec l'API.";
+                    try
+                    {
+                        using (JsonDocument doc = JsonDocument.Parse(responseString))
+                        {
+                            if (doc.RootElement.TryGetProperty("error", out JsonElement errorElement) && errorElement.TryGetProperty("message", out JsonElement messageElement))
+                            {
+                                safeErrorMessage = messageElement.GetString() ?? safeErrorMessage;
+                            }
+                        }
+                    }
+                    catch (JsonException)
+                    {
+                        // Fallback to generic message if parsing fails
+                    }
+
+                    MessageBox.Show($"Erreur API :\n{safeErrorMessage}", "Erreur API", MessageBoxButtons.OK, MessageBoxIcon.Error);                    
                     return;
                 }
 
@@ -261,10 +278,10 @@ namespace GrokImagineApp
                 lblStatus.Text = $"✅ Image générée avec {cmbModel.Text} ({cmbResolution.Text})";
                 btnSave.Enabled = true;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 lblStatus.Text = "❌ Erreur inattendue";
-                MessageBox.Show($"Erreur :\n{ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Une erreur de communication est survenue. Veuillez vérifier votre connexion ou réessayer plus tard.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
@@ -346,9 +363,13 @@ namespace GrokImagineApp
         private string GetOpaqueUserId()
         {
             // Compute a SHA-256 hash of the local username to prevent leaking PII
+            // Adding a static salt to prevent rainbow table attacks
+            string salt = "GrokImagineApp_Salt_2023";
+            string rawData = WindowsIdentity.GetCurrent().Name + salt;
+
             using (SHA256 sha256Hash = SHA256.Create())
             {
-                byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(WindowsIdentity.GetCurrent().Name));
+                byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(rawData));
                 StringBuilder builder = new StringBuilder();
                 for (int i = 0; i < bytes.Length; i++)
                 {
