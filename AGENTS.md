@@ -31,4 +31,4 @@ L'application suit une structure standard de projet Windows Forms :
 ## 🛠️ Directives de développement (Pour les agents)
 - **Architecture** : L'interface graphique est codée manuellement dans `InitializeControls()` (dans `Form1.cs`) plutôt que de s'appuyer exclusivement sur le Designer. Toute modification de l'UI doit idéalement se faire dans cette méthode.
 - **Sécurité** : Les clés API sont stockées temporairement dans le champ de texte `txtApiKey` et passées en `Bearer token` dans l'en-tête HTTP. Il n'y a pas de sauvegarde persistante implémentée pour l'instant.
-- **Dépendances** : Le projet utilise les bibliothèques standards `System.Net.Http` et `System.Text.Json` pour les appels d'API. Pas de dépendances externes complexes (comme RestSharp ou Newtonsoft.Json) repérées.
+- **Dépendances** : Le projet utilise les bibliothèques standards `System.Net.Http` pour les appels d'API. Pas de dépendances externes complexes (comme RestSharp ou Newtonsoft.Json) repérées.
