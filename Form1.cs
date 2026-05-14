@@ -232,11 +232,16 @@ namespace GrokImagineApp
                 requestMessage.Headers.Add("Authorization", $"Bearer {txtApiKey.Text.Trim()}");
                 requestMessage.Content = content;
 
-                var response = await _httpClient.SendAsync(requestMessage);
-                var responseString = await response.Content.ReadAsStringAsync();
+                // ⚡ Bolt Optimization: Use HttpCompletionOption.ResponseHeadersRead to stream the response
+                var response = await _httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead);
+
+                // ⚡ Bolt Optimization: Read directly from stream to avoid large string allocation
+                using var responseStream = await response.Content.ReadAsStreamAsync();
 
                 if (!response.IsSuccessStatusCode)
                 {
+                    using var reader = new StreamReader(responseStream);
+                    var errorString = await reader.ReadToEndAsync();
                     lblStatus.Text = $"❌ Erreur {response.StatusCode}";
                     // Parse the JSON error message to prevent leaking raw HTML or echoing sensitive input/API internals
                     string safeErrorMessage = "Une erreur est survenue lors de la communication avec l'API.";
@@ -255,12 +260,13 @@ namespace GrokImagineApp
                         // Fallback to generic message if parsing fails
                     }
 
-                    MessageBox.Show($"Erreur API :\n{safeErrorMessage}", "Erreur API", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"Erreur API :\n{safeErrorMessage}", "Erreur API", MessageBoxButtons.OK, MessageBoxIcon.Error);                    
                     return;
                 }
 
-                var result = JsonSerializer.Deserialize<JsonElement>(responseString);
-                var b64 = result.GetProperty("data")[0].GetProperty("b64_json").GetString();
+                // ⚡ Bolt Optimization: Parse JSON directly from stream
+                using var result = await JsonDocument.ParseAsync(responseStream);
+                var b64 = result.RootElement.GetProperty("data")[0].GetProperty("b64_json").GetString();
 
                 currentBase64Image = b64;
 
