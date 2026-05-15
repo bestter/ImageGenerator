@@ -24,14 +24,8 @@ jobs:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
-      - uses: nuget/setup-nuget@v2.0.0
+      - uses: nuget/setup-nuget@04b0c2b8d1b97922f67eca497d7cf0bf17b8ffe1
       - uses: microsoft/setup-msbuild@v1.0.2
-
-      - name: Setup .NET Core 3.1 for Sarif Multitool
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 3.1.x
-
 
       - name: Set up projects for analysis
         uses: security-code-scan/security-code-scan-add-action@f8ff4f2763ed6f229eded80b1f9af82ae7f32a0d
@@ -41,20 +35,6 @@ jobs:
 
       - name: Build
         run: dotnet build --no-restore -p:EnableWindowsTargeting=true
-
-      - name: Setup .NET Core 3.1 for Sarif.Multitool
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 3.1.x
-
-      - name: Add .NET tools to PATH
-        run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
-        shell: bash
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
 
       - name: Convert sarif for uploading to GitHub
         uses: security-code-scan/security-code-scan-results-action@cdb3d5e639054395e45bf401cba8688fcaf7a687
