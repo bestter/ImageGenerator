@@ -15,20 +15,20 @@ namespace GrokImagineApp
 {
     public partial class Form1 : Form
     {
-        private PictureBox pictureBox;
-        private TextBox txtApiKey;
-        private TextBox txtPrompt;
-        private ComboBox cmbModel;
-        private ComboBox cmbResolution;
-        private ComboBox cmbAspectRatio;
-        private Button btnGenerate;
-        private Button btnSave;
-        private Button btnClear;
-        private Label lblStatus;
-        private CheckBox chkMultiTurnEditing;
-        private string currentBase64Image = null;
+        private PictureBox pictureBox = null!;
+        private TextBox txtApiKey = null!;
+        private TextBox txtPrompt = null!;
+        private ComboBox cmbModel = null!;
+        private ComboBox cmbResolution = null!;
+        private ComboBox cmbAspectRatio = null!;
+        private Button btnGenerate = null!;
+        private Button btnSave = null!;
+        private Button btnClear = null!;
+        private Label lblStatus = null!;
+        private CheckBox chkMultiTurnEditing = null!;
+        private string? currentBase64Image = null;
         private List<string> selectedImages = new List<string>();
-        private Button btnAddImages;
+        private Button btnAddImages = null!;
         private const long MaxFileSizeBytes = 20 * 1024 * 1024; // 20 MB
 
         // ⚡ Bolt Optimization: Use a shared HttpClient instance for the lifetime of the application
@@ -116,7 +116,7 @@ namespace GrokImagineApp
             this.Resize += Form1_Resize;
         }
 
-        private async void BtnGenerate_Click(object sender, EventArgs e)
+        private async void BtnGenerate_Click(object? sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtApiKey.Text))
             {
@@ -129,14 +129,14 @@ namespace GrokImagineApp
                 return;
             }
 
-            string imageToEditBase64 = null;
+            string? imageToEditBase64 = null;
             if (chkMultiTurnEditing.Checked && !string.IsNullOrEmpty(currentBase64Image))
             {
                 imageToEditBase64 = currentBase64Image;
             }
 
-            Image previousImage = pictureBox.Image;
-            string previousBase64Image = currentBase64Image;
+            Image? previousImage = pictureBox.Image;
+            string? previousBase64Image = currentBase64Image;
 
             btnGenerate.Enabled = false;
             btnSave.Enabled = false;
@@ -179,7 +179,7 @@ namespace GrokImagineApp
                         return new { type = "image_url", url = $"data:image/{ext};base64,{b64Data}" };
                     });
                     var completedTasks = await Task.WhenAll(tasks);
-                    imagesList.AddRange(completedTasks.Where(t => t != null));
+                    imagesList.AddRange(completedTasks.Where(t => t != null)!);
 
                     if (imagesList.Count == 1)
                     {
@@ -232,17 +232,22 @@ namespace GrokImagineApp
                 requestMessage.Headers.Add("Authorization", $"Bearer {txtApiKey.Text.Trim()}");
                 requestMessage.Content = content;
 
-                var response = await _httpClient.SendAsync(requestMessage);
-                var responseString = await response.Content.ReadAsStringAsync();
+                // ⚡ Bolt Optimization: Use HttpCompletionOption.ResponseHeadersRead to stream the response
+                var response = await _httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead);
+
+                // ⚡ Bolt Optimization: Read directly from stream to avoid large string allocation
+                using var responseStream = await response.Content.ReadAsStreamAsync();
 
                 if (!response.IsSuccessStatusCode)
                 {
+                    using var reader = new StreamReader(responseStream);
+                    var errorString = await reader.ReadToEndAsync();
                     lblStatus.Text = $"❌ Erreur {response.StatusCode}";
                     // Parse the JSON error message to prevent leaking raw HTML or echoing sensitive input/API internals
                     string safeErrorMessage = "Une erreur est survenue lors de la communication avec l'API.";
                     try
                     {
-                        using (JsonDocument doc = JsonDocument.Parse(responseString))
+                        using (JsonDocument doc = JsonDocument.Parse(errorString))
                         {
                             if (doc.RootElement.TryGetProperty("error", out JsonElement errorElement) && errorElement.TryGetProperty("message", out JsonElement messageElement))
                             {
@@ -260,8 +265,8 @@ namespace GrokImagineApp
                 }
 
                 // ⚡ Bolt Optimization: Parse JSON directly from stream
-                var result = JsonSerializer.Deserialize<JsonElement>(responseString);
-                var b64 = result.GetProperty("data")[0].GetProperty("b64_json").GetString();
+                using var result = await JsonDocument.ParseAsync(responseStream);
+                var b64 = result.RootElement.GetProperty("data")[0].GetProperty("b64_json").GetString();
                 if (b64 == null)
                 {
                     lblStatus.Text = "❌ Réponse API invalide";
@@ -295,7 +300,7 @@ namespace GrokImagineApp
             }
         }
 
-        private void BtnSave_Click(object sender, EventArgs e)
+        private void BtnSave_Click(object? sender, EventArgs e)
         {
             if (currentBase64Image == null) return;
 
@@ -326,7 +331,7 @@ namespace GrokImagineApp
             UpdateImageButtonText();
         }
 
-        private void BtnAddImages_Click(object sender, EventArgs e)
+        private void BtnAddImages_Click(object? sender, EventArgs e)
         {
             using var ofd = new OpenFileDialog
             {
@@ -379,7 +384,7 @@ namespace GrokImagineApp
             }
         }
 
-        private void Form1_Resize(object sender, EventArgs e)
+        private void Form1_Resize(object? sender, EventArgs e)
         {
             // PictureBox size is automatically adjusted via Anchor
             // If additional custom adjustments are needed, add here
