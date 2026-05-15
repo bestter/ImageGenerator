@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -251,19 +252,20 @@ namespace GrokImagineApp
                     };
                 }
 
-                var json = JsonSerializer.Serialize(requestBody);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                // ⚡ Bolt Optimization: Stream JSON serialization to avoid large string allocations for base64 images
+                using var content = JsonContent.Create(requestBody);
 
                 // ⚡ Bolt Optimization: Create a per-request message to set headers safely with the shared client
                 using var requestMessage = new HttpRequestMessage(HttpMethod.Post, apiUrl);
                 requestMessage.Headers.Add("Authorization", $"Bearer {apiKey}");
                 requestMessage.Content = content;
 
-                var response = await _httpClient.SendAsync(requestMessage);
-                var responseString = await response.Content.ReadAsStringAsync();
+                // ⚡ Bolt Optimization: Use ResponseHeadersRead to prevent buffering the potentially large JSON response in memory
+                using var response = await _httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead);
 
                 if (!response.IsSuccessStatusCode)
                 {
+                    var responseString = await response.Content.ReadAsStringAsync();
                     lblStatus.Text = $"❌ Erreur {response.StatusCode}";
                     // Parse the JSON error message to prevent leaking raw HTML or echoing sensitive input/API internals
                     string safeErrorMessage = "Une erreur est survenue lors de la communication avec l'API.";
@@ -286,8 +288,9 @@ namespace GrokImagineApp
                     return;
                 }
 
-                // ⚡ Bolt Optimization: Parse JSON directly from stream
-                var result = JsonSerializer.Deserialize<JsonElement>(responseString);
+                // ⚡ Bolt Optimization: Parse JSON directly from stream without reading it as a string first
+                using var responseStream = await response.Content.ReadAsStreamAsync();
+                var result = await JsonSerializer.DeserializeAsync<JsonElement>(responseStream);
                 var b64 = result.GetProperty("data")[0].GetProperty("b64_json").GetString();
                 if (b64 == null)
                 {
