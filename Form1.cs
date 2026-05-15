@@ -266,14 +266,14 @@ namespace GrokImagineApp
                     var errorString = await reader.ReadToEndAsync();
                     lblStatus.Text = $"❌ Erreur {response.StatusCode}";
                     // Parse the JSON error message to prevent leaking raw HTML or echoing sensitive input/API internals
-                    string safeErrorMessage = "Une erreur est survenue lors de la communication avec l'API.";
+                    string safeErrorMessage = string.Empty;
                     try
                     {
                         using (JsonDocument doc = JsonDocument.Parse(errorString))
                         {
                             if (doc.RootElement.TryGetProperty("error", out JsonElement errorElement) && errorElement.TryGetProperty("message", out JsonElement messageElement))
                             {
-                                safeErrorMessage = messageElement.GetString() ?? safeErrorMessage;
+                                safeErrorMessage = messageElement.GetString() ?? string.Empty;
                             }
                         }
                     }
@@ -282,7 +282,14 @@ namespace GrokImagineApp
                         // Fallback to generic message if parsing fails
                     }
 
-                    MessageBox.Show($"Erreur API :\n{safeErrorMessage}", "Erreur API", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    if (string.IsNullOrWhiteSpace(safeErrorMessage))
+                    {
+                        safeErrorMessage = string.IsNullOrWhiteSpace(errorString) 
+                            ? "Une erreur est survenue lors de la communication avec l'API." 
+                            : errorString;
+                    }
+
+                    MessageBox.Show($"Erreur API ({(int)response.StatusCode} {response.StatusCode}) :\n{safeErrorMessage}", "Erreur API", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
@@ -305,10 +312,10 @@ namespace GrokImagineApp
                 lblStatus.Text = $"✅ Image générée avec {cmbModel.Text} ({cmbResolution.Text})";
                 btnSave.Enabled = true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 lblStatus.Text = "❌ Erreur inattendue";
-                MessageBox.Show("Une erreur de communication est survenue. Veuillez vérifier votre connexion ou réessayer plus tard.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Une erreur est survenue :\n{ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
@@ -335,10 +342,18 @@ namespace GrokImagineApp
 
             if (sfd.ShowDialog() == DialogResult.OK)
             {
-                var imageBytes = Convert.FromBase64String(currentBase64Image);
-                File.WriteAllBytes(sfd.FileName, imageBytes);
-                lblStatus.Text = $"💾 Image sauvegardée : {Path.GetFileName(sfd.FileName)}";
-                MessageBox.Show("Image enregistrée avec succès !", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                try
+                {
+                    var imageBytes = Convert.FromBase64String(currentBase64Image);
+                    File.WriteAllBytes(sfd.FileName, imageBytes);
+                    lblStatus.Text = $"💾 Image sauvegardée : {Path.GetFileName(sfd.FileName)}";
+                    MessageBox.Show("Image enregistrée avec succès !", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    lblStatus.Text = "❌ Erreur de sauvegarde";
+                    MessageBox.Show($"Erreur lors de la sauvegarde de l'image :\n{ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 
