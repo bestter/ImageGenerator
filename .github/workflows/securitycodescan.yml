@@ -48,8 +48,8 @@ jobs:
       - name: Build
         run: dotnet build --no-restore -p:EnableWindowsTargeting=true --configuration Release
 
-      - name: Convert sarif for uploading to GitHub
-        uses: security-code-scan/security-code-scan-results-action@cdb3d5e639054395e45bf401cba8688fcaf7a687
+      - name: Run SecurityCodeScan analysis
+        run: dotnet build --no-restore -p:EnableWindowsTargeting=true --configuration Release /p:TreatWarningsAsErrors=false /p:SecurityCodeScanGenerateSarif=true /p:SecurityCodeScanSarifOutputPath=../results
 
       - name: Upload SARIF results
         uses: github/codeql-action/upload-sarif@v3
