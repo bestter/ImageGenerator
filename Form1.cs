@@ -335,10 +335,19 @@ namespace GrokImagineApp
 
             if (sfd.ShowDialog() == DialogResult.OK)
             {
-                var imageBytes = Convert.FromBase64String(currentBase64Image);
-                File.WriteAllBytes(sfd.FileName, imageBytes);
-                lblStatus.Text = $"💾 Image sauvegardée : {Path.GetFileName(sfd.FileName)}";
-                MessageBox.Show("Image enregistrée avec succès !", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                try
+                {
+                    var imageBytes = Convert.FromBase64String(currentBase64Image);
+                    File.WriteAllBytes(sfd.FileName, imageBytes);
+                    lblStatus.Text = $"💾 Image sauvegardée : {Path.GetFileName(sfd.FileName)}";
+                    MessageBox.Show("Image enregistrée avec succès !", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception)
+                {
+                    // 🛡️ Sentinel: Secure error handling to prevent stack trace leakage
+                    lblStatus.Text = "❌ Erreur de sauvegarde";
+                    MessageBox.Show("Impossible d'enregistrer l'image. Vérifiez les permissions du dossier.", "Erreur d'écriture", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 
@@ -366,15 +375,23 @@ namespace GrokImagineApp
             {
                 foreach (var file in ofd.FileNames)
                 {
-                    if (new FileInfo(file).Length > MaxFileSizeBytes)
+                    try
                     {
-                        MessageBox.Show($"L'image '{Path.GetFileName(file)}' dépasse la limite de 20 Mo et ne sera pas ajoutée.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        continue;
-                    }
+                        if (new FileInfo(file).Length > MaxFileSizeBytes)
+                        {
+                            MessageBox.Show($"L'image '{Path.GetFileName(file)}' dépasse la limite de 20 Mo et ne sera pas ajoutée.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            continue;
+                        }
 
-                    if (!selectedImages.Contains(file) && selectedImages.Count < 5)
+                        if (!selectedImages.Contains(file) && selectedImages.Count < 5)
+                        {
+                            selectedImages.Add(file);
+                        }
+                    }
+                    catch (Exception)
                     {
-                        selectedImages.Add(file);
+                        // 🛡️ Sentinel: Secure error handling to prevent stack trace leakage
+                        MessageBox.Show($"Impossible de lire les informations du fichier '{Path.GetFileName(file)}'. Il sera ignoré.", "Erreur de lecture", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }
                 }
                 UpdateImageButtonText();
