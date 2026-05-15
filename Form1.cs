@@ -78,12 +78,12 @@ namespace GrokImagineApp
             cmbAspectRatio.SelectedIndex = 1; // 16:9 par défaut
 
             // Multi-turn editing
-            chkMultiTurnEditing = new CheckBox 
-            { 
-                Text = "Éditer l'image actuelle (Multi-turn)", 
-                Location = new Point(440, 220), 
-                AutoSize = true, 
-                Anchor = AnchorStyles.Top | AnchorStyles.Left 
+            chkMultiTurnEditing = new CheckBox
+            {
+                Text = "Éditer l'image actuelle (Multi-turn)",
+                Location = new Point(440, 220),
+                AutoSize = true,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
 
             // Boutons
@@ -177,16 +177,37 @@ namespace GrokImagineApp
                                 return null;
                             }
 
-                            // Use the stream length since we just validated it
-                            byte[] buffer = new byte[stream.Length];
-                            int bytesRead = await stream.ReadAsync(buffer, 0, (int)stream.Length);
-                            if (bytesRead != stream.Length)
+                            var extIn = Path.GetExtension(imgPath).ToLower().TrimStart('.');
+                            if (extIn == "jpg") extIn = "jpeg";
+
+                            byte[] b64Bytes;
+                            using (var streamIn = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.Read))
                             {
-                                Array.Resize(ref buffer, bytesRead);
+                                using (var memoryStream = new MemoryStream())
+                                {
+                                    byte[] buffer = new byte[81920];
+                                    int bytesRead;
+                                    long totalRead = 0;
+                                    while ((bytesRead = await streamIn.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                                    {
+                                        totalRead += bytesRead;
+                                        if (totalRead > MaxFileSizeBytes)
+                                        {
+                                            // Update UI safely inside the async Task, though WinForms requires Invoke
+                                            // if not on UI thread. This Select is running on UI thread since it's
+                                            // awaited inside BtnGenerate_Click.
+                                            lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(imgPath)}";
+                                            MessageBox.Show($"L'image '{Path.GetFileName(imgPath)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                            return null;
+                                        }
+                                        memoryStream.Write(buffer, 0, bytesRead);
+                                    }
+                                    b64Bytes = memoryStream.ToArray();
+                                }
                             }
-                            b64Data = Convert.ToBase64String(buffer);
+                            b64Data = Convert.ToBase64String(b64Bytes);
+                            return (object?)new { type = "image_url", url = $"data:image/{ext};base64,{b64Data}" };
                         }
-                        return new { type = "image_url", url = $"data:image/{ext};base64,{b64Data}" };
                     });
                     var completedTasks = await Task.WhenAll(tasks);
                     imagesList.AddRange(completedTasks.Where(t => t != null)!);
@@ -239,7 +260,7 @@ namespace GrokImagineApp
 
                 // ⚡ Bolt Optimization: Create a per-request message to set headers safely with the shared client
                 using var requestMessage = new HttpRequestMessage(HttpMethod.Post, apiUrl);
-                requestMessage.Headers.Add("Authorization", $"Bearer {txtApiKey.Text.Trim()}");
+                requestMessage.Headers.Add("Authorization", $"Bearer {txtApiKey?.Text?.Trim()}");
                 requestMessage.Content = content;
 
                 // ⚡ Bolt Optimization: Use HttpCompletionOption.ResponseHeadersRead to stream the response
