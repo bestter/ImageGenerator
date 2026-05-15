@@ -47,6 +47,7 @@ jobs:
 
       - name: Add .NET tools to PATH
         run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+        shell: bash
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
