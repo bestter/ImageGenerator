@@ -19,6 +19,8 @@ on:
 jobs:
   SCS:
     runs-on: windows-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     permissions:
       contents: read
       security-events: write
@@ -41,12 +43,12 @@ jobs:
         uses: security-code-scan/security-code-scan-add-action@f8ff4f2763ed6f229eded80b1f9af82ae7f32a0d
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore -p:EnableWindowsTargeting=true
 
       - name: Build
-        run: dotnet build --no-restore --configuration Release
+        run: dotnet build --no-restore -p:EnableWindowsTargeting=true --configuration Release
 
-      - name: Convert SARIF for uploading to GitHub
+      - name: Convert sarif for uploading to GitHub
         uses: security-code-scan/security-code-scan-results-action@cdb3d5e639054395e45bf401cba8688fcaf7a687
 
       - name: Upload SARIF results
