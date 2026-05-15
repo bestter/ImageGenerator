@@ -6,7 +6,7 @@ Ce fichier fournit un contexte aux agents IA travaillant sur ce projet.
 - **Nom du projet** : Grok Imagine App
 - **Type d'application** : Application de bureau (Windows Forms)
 - **Langage principal** : C# (.NET)
-- **Objectif** : Fournir une interface graphique utilisateur (GUI) pour interagir avec l'API de génération et d'édition d'images de xAI (modèles `grok-imagine-image` et `grok-imagine-image-quality`).
+- **Objectif** : Fournir une interface graphique utilisateur (GUI) pour interagir avec l'API de génération et d'édition d'images de xAI (modèles `grok-imagine-image` et `grok-imagine-image-pro`).
 
 ## 📁 Structure du Répertoire
 L'application suit une structure standard de projet Windows Forms :
