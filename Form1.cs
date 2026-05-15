@@ -4,7 +4,6 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
@@ -250,23 +249,9 @@ namespace GrokImagineApp
                     {
                         using (JsonDocument doc = JsonDocument.Parse(errorString))
                         {
-                            if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                            if (doc.RootElement.TryGetProperty("error", out JsonElement errorElement) && errorElement.TryGetProperty("message", out JsonElement messageElement))
                             {
-                                if (doc.RootElement.TryGetProperty("error", out JsonElement errorElement))
-                                {
-                                    if (errorElement.ValueKind == JsonValueKind.Object && errorElement.TryGetProperty("message", out JsonElement messageElement))
-                                    {
-                                        safeErrorMessage = messageElement.GetString() ?? safeErrorMessage;
-                                    }
-                                    else if (errorElement.ValueKind == JsonValueKind.String)
-                                    {
-                                        safeErrorMessage = errorElement.GetString() ?? safeErrorMessage;
-                                    }
-                                }
-                                else if (doc.RootElement.TryGetProperty("message", out JsonElement messageElement2) && messageElement2.ValueKind == JsonValueKind.String)
-                                {
-                                    safeErrorMessage = messageElement2.GetString() ?? safeErrorMessage;
-                                }
+                                safeErrorMessage = messageElement.GetString() ?? safeErrorMessage;
                             }
                         }
                     }
@@ -279,9 +264,9 @@ namespace GrokImagineApp
                     return;
                 }
 
-                // ⚡ Bolt Optimization: Parse JSON directly from stream without reading it as a string first
-                var result = await JsonSerializer.DeserializeAsync<JsonElement>(responseStream);
-                var b64 = result.GetProperty("data")[0].GetProperty("b64_json").GetString();
+                // ⚡ Bolt Optimization: Parse JSON directly from stream
+                using var result = await JsonDocument.ParseAsync(responseStream);
+                var b64 = result.RootElement.GetProperty("data")[0].GetProperty("b64_json").GetString();
                 if (b64 == null)
                 {
                     lblStatus.Text = "❌ Réponse API invalide";
@@ -298,10 +283,10 @@ namespace GrokImagineApp
                 lblStatus.Text = $"✅ Image générée avec {cmbModel.Text} ({cmbResolution.Text})";
                 btnSave.Enabled = true;
             }
-            catch (Exception exception)
+            catch (Exception)
             {
                 lblStatus.Text = "❌ Erreur inattendue";
-                MessageBox.Show("Une erreur de communication est survenue. Veuillez vérifier votre connexion ou réessayer plus tard.: " + exception.Message, "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Une erreur de communication est survenue. Veuillez vérifier votre connexion ou réessayer plus tard.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
