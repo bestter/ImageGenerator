@@ -58,7 +58,7 @@ namespace GrokImagineApp
             // Modèle
             var lblModel = new Label { Text = "Modèle :", Location = new Point(20, 175), AutoSize = true };
             cmbModel = new ComboBox { Location = new Point(120, 172), Width = 300, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
-            cmbModel.Items.AddRange(new[] { "grok-imagine-image", "grok-imagine-image-pro" });
+            cmbModel.Items.AddRange(new[] { "grok-imagine-image", "grok-imagine-image-quality" });
             cmbModel.SelectedIndex = 0;
 
             // Résolution (haute dispo)
@@ -118,8 +118,7 @@ namespace GrokImagineApp
 
         private async void BtnGenerate_Click(object? sender, EventArgs e)
         {
-            string apiKey = txtApiKey.Text?.Trim() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(apiKey))
+            if (string.IsNullOrWhiteSpace(txtApiKey.Text))
             {
                 MessageBox.Show("Entre ta clé API xAI d'abord !", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
@@ -235,7 +234,7 @@ namespace GrokImagineApp
 
                 // ⚡ Bolt Optimization: Create a per-request message to set headers safely with the shared client
                 using var requestMessage = new HttpRequestMessage(HttpMethod.Post, apiUrl);
-                requestMessage.Headers.Add("Authorization", $"Bearer {apiKey}");
+                requestMessage.Headers.Add("Authorization", $"Bearer {txtApiKey.Text.Trim()}");
                 requestMessage.Content = content;
 
                 // ⚡ Bolt Optimization: Use HttpCompletionOption.ResponseHeadersRead to stream the response
