@@ -15,20 +15,20 @@ namespace GrokImagineApp
 {
     public partial class Form1 : Form
     {
-        private PictureBox pictureBox;
-        private TextBox txtApiKey;
-        private TextBox txtPrompt;
-        private ComboBox cmbModel;
-        private ComboBox cmbResolution;
-        private ComboBox cmbAspectRatio;
-        private Button btnGenerate;
-        private Button btnSave;
-        private Button btnClear;
-        private Label lblStatus;
-        private CheckBox chkMultiTurnEditing;
-        private string currentBase64Image = null;
+        private PictureBox pictureBox = null!;
+        private TextBox txtApiKey = null!;
+        private TextBox txtPrompt = null!;
+        private ComboBox cmbModel = null!;
+        private ComboBox cmbResolution = null!;
+        private ComboBox cmbAspectRatio = null!;
+        private Button btnGenerate = null!;
+        private Button btnSave = null!;
+        private Button btnClear = null!;
+        private Label lblStatus = null!;
+        private CheckBox chkMultiTurnEditing = null!;
+        private string? currentBase64Image = null;
         private List<string> selectedImages = new List<string>();
-        private Button btnAddImages;
+        private Button btnAddImages = null!;
         private const long MaxFileSizeBytes = 20 * 1024 * 1024; // 20 MB
 
         // ⚡ Bolt Optimization: Use a shared HttpClient instance for the lifetime of the application
@@ -116,7 +116,7 @@ namespace GrokImagineApp
             this.Resize += Form1_Resize;
         }
 
-        private async void BtnGenerate_Click(object sender, EventArgs e)
+        private async void BtnGenerate_Click(object? sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtApiKey.Text))
             {
@@ -129,14 +129,14 @@ namespace GrokImagineApp
                 return;
             }
 
-            string imageToEditBase64 = null;
+            string? imageToEditBase64 = null;
             if (chkMultiTurnEditing.Checked && !string.IsNullOrEmpty(currentBase64Image))
             {
                 imageToEditBase64 = currentBase64Image;
             }
 
-            Image previousImage = pictureBox.Image;
-            string previousBase64Image = currentBase64Image;
+            Image? previousImage = pictureBox.Image;
+            string? previousBase64Image = currentBase64Image;
 
             btnGenerate.Enabled = false;
             btnSave.Enabled = false;
@@ -179,7 +179,7 @@ namespace GrokImagineApp
                         return new { type = "image_url", url = $"data:image/{ext};base64,{b64Data}" };
                     });
                     var completedTasks = await Task.WhenAll(tasks);
-                    imagesList.AddRange(completedTasks.Where(t => t != null));
+                    imagesList.AddRange(completedTasks.Where(t => t != null)!);
 
                     if (imagesList.Count == 1)
                     {
@@ -300,7 +300,7 @@ namespace GrokImagineApp
             }
         }
 
-        private void BtnSave_Click(object sender, EventArgs e)
+        private void BtnSave_Click(object? sender, EventArgs e)
         {
             if (currentBase64Image == null) return;
 
@@ -331,7 +331,7 @@ namespace GrokImagineApp
             UpdateImageButtonText();
         }
 
-        private void BtnAddImages_Click(object sender, EventArgs e)
+        private void BtnAddImages_Click(object? sender, EventArgs e)
         {
             using var ofd = new OpenFileDialog
             {
@@ -384,7 +384,7 @@ namespace GrokImagineApp
             }
         }
 
-        private void Form1_Resize(object sender, EventArgs e)
+        private void Form1_Resize(object? sender, EventArgs e)
         {
             // PictureBox size is automatically adjusted via Anchor
             // If additional custom adjustments are needed, add here
