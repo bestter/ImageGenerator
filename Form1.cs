@@ -118,11 +118,18 @@ namespace GrokImagineApp
 
         private async void BtnGenerate_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtApiKey.Text))
+            string apiKey = txtApiKey.Text?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(apiKey))
             {
                 MessageBox.Show("Entre ta clé API xAI d'abord !", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+            if (apiKey.Contains("\r") || apiKey.Contains("\n"))
+            {
+                MessageBox.Show("La clé API ne doit pas contenir de retours à la ligne.", "Erreur de sécurité", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(txtPrompt.Text))
             {
                 MessageBox.Show("Écris un prompt !", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -254,7 +261,7 @@ namespace GrokImagineApp
 
                 // ⚡ Bolt Optimization: Create a per-request message to set headers safely with the shared client
                 using var requestMessage = new HttpRequestMessage(HttpMethod.Post, apiUrl);
-                requestMessage.Headers.Add("Authorization", $"Bearer {txtApiKey.Text.Trim()}");
+                requestMessage.Headers.Add("Authorization", $"Bearer {apiKey}");
                 requestMessage.Content = content;
 
                 var response = await _httpClient.SendAsync(requestMessage);
