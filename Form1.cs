@@ -57,6 +57,7 @@ namespace GrokImagineApp
             var lblModel = new Label { Text = "Modèle :", Location = new Point(20, 175), AutoSize = true };
             cmbModel = new ComboBox { Location = new Point(120, 172), Width = 300, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             cmbModel.Items.AddRange(new[] { "grok-imagine-image", "grok-imagine-image-pro" });
+            cmbModel.Items.AddRange(new[] { "grok-imagine-image", "grok-imagine-image-pro" });
             cmbModel.SelectedIndex = 0;
 
             // Résolution (haute dispo)
@@ -76,12 +77,12 @@ namespace GrokImagineApp
             cmbAspectRatio.SelectedIndex = 1; // 16:9 par défaut
 
             // Multi-turn editing
-            chkMultiTurnEditing = new CheckBox 
-            { 
-                Text = "Éditer l'image actuelle (Multi-turn)", 
-                Location = new Point(440, 220), 
-                AutoSize = true, 
-                Anchor = AnchorStyles.Top | AnchorStyles.Left 
+            chkMultiTurnEditing = new CheckBox
+            {
+                Text = "Éditer l'image actuelle (Multi-turn)",
+                Location = new Point(440, 220),
+                AutoSize = true,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
 
             // Boutons
@@ -116,8 +117,7 @@ namespace GrokImagineApp
 
         private async void BtnGenerate_Click(object? sender, EventArgs e)
         {
-            string apiKey = txtApiKey.Text?.Trim() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(apiKey))
+            if (string.IsNullOrWhiteSpace(txtApiKey.Text))
             {
                 MessageBox.Show("Entre ta clé API xAI d'abord !", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
@@ -169,13 +169,18 @@ namespace GrokImagineApp
 
                     var tasks = selectedImages.Select(async imgPath =>
                     {
-                        var fileInfo = new FileInfo(imgPath);
-                        if (fileInfo.Length > MaxFileSizeBytes)
+                        var ext = Path.GetExtension(imgPath).ToLower().TrimStart('.');
+                        if (ext == "jpg") ext = "jpeg";
+
+                        string b64Data;
+                        using (var stream = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.Read))
                         {
-                            lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(imgPath)}";
-                            MessageBox.Show($"L'image '{Path.GetFileName(imgPath)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            return null;
-                        }
+                            if (stream.Length > MaxFileSizeBytes)
+                            {
+                                lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(imgPath)}";
+                                MessageBox.Show($"L'image '{Path.GetFileName(imgPath)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                return null;
+                            }
 
                         var ext = Path.GetExtension(imgPath).ToLower().TrimStart('.');
                         if (ext == "jpg") ext = "jpeg";
@@ -256,7 +261,7 @@ namespace GrokImagineApp
 
                 // ⚡ Bolt Optimization: Create a per-request message to set headers safely with the shared client
                 using var requestMessage = new HttpRequestMessage(HttpMethod.Post, apiUrl);
-                requestMessage.Headers.Add("Authorization", $"Bearer {apiKey}");
+                requestMessage.Headers.Add("Authorization", $"Bearer {txtApiKey.Text.Trim()}");
                 requestMessage.Content = content;
 
                 var response = await _httpClient.SendAsync(requestMessage);
