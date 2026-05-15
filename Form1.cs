@@ -4,8 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Security.Cryptography;
-using System.Security.Principal;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -118,11 +117,18 @@ namespace GrokImagineApp
 
         private async void BtnGenerate_Click(object? sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtApiKey.Text))
+            string apiKey = txtApiKey.Text?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(apiKey))
             {
                 MessageBox.Show("Entre ta clé API xAI d'abord !", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+            if (apiKey.Contains("\r") || apiKey.Contains("\n"))
+            {
+                MessageBox.Show("La clé API ne doit pas contenir de retours à la ligne.", "Erreur de sécurité", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(txtPrompt.Text))
             {
                 MessageBox.Show("Écris un prompt !", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -174,7 +180,32 @@ namespace GrokImagineApp
 
                         var ext = Path.GetExtension(imgPath).ToLower().TrimStart('.');
                         if (ext == "jpg") ext = "jpeg";
-                        var b64Bytes = await File.ReadAllBytesAsync(imgPath);
+
+                        byte[] b64Bytes;
+                        using (var stream = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                        {
+                            using (var memoryStream = new MemoryStream())
+                            {
+                                byte[] buffer = new byte[81920];
+                                int bytesRead;
+                                long totalRead = 0;
+                                while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                                {
+                                    totalRead += bytesRead;
+                                    if (totalRead > MaxFileSizeBytes)
+                                    {
+                                        // Update UI safely inside the async Task, though WinForms requires Invoke
+                                        // if not on UI thread. This Select is running on UI thread since it's
+                                        // awaited inside BtnGenerate_Click.
+                                        lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(imgPath)}";
+                                        MessageBox.Show($"L'image '{Path.GetFileName(imgPath)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                        return null;
+                                    }
+                                    memoryStream.Write(buffer, 0, bytesRead);
+                                }
+                                b64Bytes = memoryStream.ToArray();
+                            }
+                        }
                         var b64Data = Convert.ToBase64String(b64Bytes);
                         return new { type = "image_url", url = $"data:image/{ext};base64,{b64Data}" };
                     });
@@ -190,7 +221,6 @@ namespace GrokImagineApp
                             image = imagesList[0],
                             n = 1,
                             resolution = cmbResolution.Text,
-                            user = GetOpaqueUserId(),
                             response_format = "b64_json"
                         };
                     }
@@ -204,7 +234,6 @@ namespace GrokImagineApp
                             n = 1,
                             resolution = cmbResolution.Text,
                             aspect_ratio = aspectRatioValue,
-                            user = GetOpaqueUserId(),
                             response_format = "b64_json"
                         };
                     }
@@ -219,17 +248,16 @@ namespace GrokImagineApp
                         n = 1,
                         resolution = cmbResolution.Text,
                         aspect_ratio = aspectRatioValue,
-                        user = GetOpaqueUserId(),
                         response_format = "b64_json"
                     };
                 }
 
-                var json = JsonSerializer.Serialize(requestBody);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                // ⚡ Bolt Optimization: Stream JSON serialization to avoid large string allocations for base64 images
+                using var content = JsonContent.Create(requestBody);
 
                 // ⚡ Bolt Optimization: Create a per-request message to set headers safely with the shared client
                 using var requestMessage = new HttpRequestMessage(HttpMethod.Post, apiUrl);
-                requestMessage.Headers.Add("Authorization", $"Bearer {txtApiKey.Text.Trim()}");
+                requestMessage.Headers.Add("Authorization", $"Bearer {apiKey}");
                 requestMessage.Content = content;
 
                 // ⚡ Bolt Optimization: Use HttpCompletionOption.ResponseHeadersRead to stream the response
@@ -264,9 +292,10 @@ namespace GrokImagineApp
                     return;
                 }
 
-                // ⚡ Bolt Optimization: Parse JSON directly from stream
-                using var result = await JsonDocument.ParseAsync(responseStream);
-                var b64 = result.RootElement.GetProperty("data")[0].GetProperty("b64_json").GetString();
+                // ⚡ Bolt Optimization: Parse JSON directly from stream without reading it as a string first
+                using var responseStream = await response.Content.ReadAsStreamAsync();
+                var result = await JsonSerializer.DeserializeAsync<JsonElement>(responseStream);
+                var b64 = result.GetProperty("data")[0].GetProperty("b64_json").GetString();
                 if (b64 == null)
                 {
                     lblStatus.Text = "❌ Réponse API invalide";
@@ -313,10 +342,19 @@ namespace GrokImagineApp
 
             if (sfd.ShowDialog() == DialogResult.OK)
             {
-                var imageBytes = Convert.FromBase64String(currentBase64Image);
-                File.WriteAllBytes(sfd.FileName, imageBytes);
-                lblStatus.Text = $"💾 Image sauvegardée : {Path.GetFileName(sfd.FileName)}";
-                MessageBox.Show("Image enregistrée avec succès !", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                try
+                {
+                    var imageBytes = Convert.FromBase64String(currentBase64Image);
+                    File.WriteAllBytes(sfd.FileName, imageBytes);
+                    lblStatus.Text = $"💾 Image sauvegardée : {Path.GetFileName(sfd.FileName)}";
+                    MessageBox.Show("Image enregistrée avec succès !", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception)
+                {
+                    // 🛡️ Sentinel: Secure error handling to prevent stack trace leakage
+                    lblStatus.Text = "❌ Erreur de sauvegarde";
+                    MessageBox.Show("Impossible d'enregistrer l'image. Vérifiez les permissions du dossier.", "Erreur d'écriture", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 
@@ -344,15 +382,23 @@ namespace GrokImagineApp
             {
                 foreach (var file in ofd.FileNames)
                 {
-                    if (new FileInfo(file).Length > MaxFileSizeBytes)
+                    try
                     {
-                        MessageBox.Show($"L'image '{Path.GetFileName(file)}' dépasse la limite de 20 Mo et ne sera pas ajoutée.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        continue;
-                    }
+                        if (new FileInfo(file).Length > MaxFileSizeBytes)
+                        {
+                            MessageBox.Show($"L'image '{Path.GetFileName(file)}' dépasse la limite de 20 Mo et ne sera pas ajoutée.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            continue;
+                        }
 
-                    if (!selectedImages.Contains(file) && selectedImages.Count < 5)
+                        if (!selectedImages.Contains(file) && selectedImages.Count < 5)
+                        {
+                            selectedImages.Add(file);
+                        }
+                    }
+                    catch (Exception)
                     {
-                        selectedImages.Add(file);
+                        // 🛡️ Sentinel: Secure error handling to prevent stack trace leakage
+                        MessageBox.Show($"Impossible de lire les informations du fichier '{Path.GetFileName(file)}'. Il sera ignoré.", "Erreur de lecture", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }
                 }
                 UpdateImageButtonText();
@@ -365,6 +411,7 @@ namespace GrokImagineApp
                 btnAddImages.Text = $"Ajouter images ({selectedImages.Count}/5)";
         }
 
+        
         private string GetOpaqueUserId()
         {
             // Compute a SHA-256 hash of the local username to prevent leaking PII
