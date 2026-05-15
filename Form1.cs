@@ -4,8 +4,6 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Security.Cryptography;
-using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -78,12 +76,12 @@ namespace GrokImagineApp
             cmbAspectRatio.SelectedIndex = 1; // 16:9 par défaut
 
             // Multi-turn editing
-            chkMultiTurnEditing = new CheckBox 
-            { 
-                Text = "Éditer l'image actuelle (Multi-turn)", 
-                Location = new Point(440, 220), 
-                AutoSize = true, 
-                Anchor = AnchorStyles.Top | AnchorStyles.Left 
+            chkMultiTurnEditing = new CheckBox
+            {
+                Text = "Éditer l'image actuelle (Multi-turn)",
+                Location = new Point(440, 220),
+                AutoSize = true,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
 
             // Boutons
@@ -118,11 +116,18 @@ namespace GrokImagineApp
 
         private async void BtnGenerate_Click(object? sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtApiKey.Text))
+            string apiKey = txtApiKey.Text?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(apiKey))
             {
                 MessageBox.Show("Entre ta clé API xAI d'abord !", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+            if (apiKey.Contains("\r") || apiKey.Contains("\n"))
+            {
+                MessageBox.Show("La clé API ne doit pas contenir de retours à la ligne.", "Erreur de sécurité", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(txtPrompt.Text))
             {
                 MessageBox.Show("Écris un prompt !", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -177,16 +182,37 @@ namespace GrokImagineApp
                                 return null;
                             }
 
-                            // Use the stream length since we just validated it
-                            byte[] buffer = new byte[stream.Length];
-                            int bytesRead = await stream.ReadAsync(buffer, 0, (int)stream.Length);
-                            if (bytesRead != stream.Length)
+                            var extIn = Path.GetExtension(imgPath).ToLower().TrimStart('.');
+                            if (extIn == "jpg") extIn = "jpeg";
+
+                            byte[] b64Bytes;
+                            using (var streamIn = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.Read))
                             {
-                                Array.Resize(ref buffer, bytesRead);
+                                using (var memoryStream = new MemoryStream())
+                                {
+                                    byte[] buffer = new byte[81920];
+                                    int bytesRead;
+                                    long totalRead = 0;
+                                    while ((bytesRead = await streamIn.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                                    {
+                                        totalRead += bytesRead;
+                                        if (totalRead > MaxFileSizeBytes)
+                                        {
+                                            // Update UI safely inside the async Task, though WinForms requires Invoke
+                                            // if not on UI thread. This Select is running on UI thread since it's
+                                            // awaited inside BtnGenerate_Click.
+                                            lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(imgPath)}";
+                                            MessageBox.Show($"L'image '{Path.GetFileName(imgPath)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                            return null;
+                                        }
+                                        memoryStream.Write(buffer, 0, bytesRead);
+                                    }
+                                    b64Bytes = memoryStream.ToArray();
+                                }
                             }
-                            b64Data = Convert.ToBase64String(buffer);
+                            b64Data = Convert.ToBase64String(b64Bytes);
+                            return (object?)new { type = "image_url", url = $"data:image/{ext};base64,{b64Data}" };
                         }
-                        return new { type = "image_url", url = $"data:image/{ext};base64,{b64Data}" };
                     });
                     var completedTasks = await Task.WhenAll(tasks);
                     imagesList.AddRange(completedTasks.Where(t => t != null)!);
@@ -200,7 +226,6 @@ namespace GrokImagineApp
                             image = imagesList[0],
                             n = 1,
                             resolution = cmbResolution.Text,
-                            user = GetOpaqueUserId(),
                             response_format = "b64_json"
                         };
                     }
@@ -214,7 +239,6 @@ namespace GrokImagineApp
                             n = 1,
                             resolution = cmbResolution.Text,
                             aspect_ratio = aspectRatioValue,
-                            user = GetOpaqueUserId(),
                             response_format = "b64_json"
                         };
                     }
@@ -229,7 +253,6 @@ namespace GrokImagineApp
                         n = 1,
                         resolution = cmbResolution.Text,
                         aspect_ratio = aspectRatioValue,
-                        user = GetOpaqueUserId(),
                         response_format = "b64_json"
                     };
                 }
@@ -239,25 +262,20 @@ namespace GrokImagineApp
 
                 // ⚡ Bolt Optimization: Create a per-request message to set headers safely with the shared client
                 using var requestMessage = new HttpRequestMessage(HttpMethod.Post, apiUrl);
-                requestMessage.Headers.Add("Authorization", $"Bearer {txtApiKey.Text.Trim()}");
+                requestMessage.Headers.Add("Authorization", $"Bearer {txtApiKey?.Text?.Trim()}");
                 requestMessage.Content = content;
 
-                // ⚡ Bolt Optimization: Use HttpCompletionOption.ResponseHeadersRead to stream the response
-                var response = await _httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead);
-
-                // ⚡ Bolt Optimization: Read directly from stream to avoid large string allocation
-                using var responseStream = await response.Content.ReadAsStreamAsync();
+                var response = await _httpClient.SendAsync(requestMessage);
+                var responseString = await response.Content.ReadAsStringAsync();
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    using var reader = new StreamReader(responseStream);
-                    var errorString = await reader.ReadToEndAsync();
                     lblStatus.Text = $"❌ Erreur {response.StatusCode}";
                     // Parse the JSON error message to prevent leaking raw HTML or echoing sensitive input/API internals
                     string safeErrorMessage = "Une erreur est survenue lors de la communication avec l'API.";
                     try
                     {
-                        using (JsonDocument doc = JsonDocument.Parse(errorString))
+                        using (JsonDocument doc = JsonDocument.Parse(responseString))
                         {
                             if (doc.RootElement.TryGetProperty("error", out JsonElement errorElement) && errorElement.TryGetProperty("message", out JsonElement messageElement))
                             {
@@ -275,8 +293,8 @@ namespace GrokImagineApp
                 }
 
                 // ⚡ Bolt Optimization: Parse JSON directly from stream
-                using var result = await JsonDocument.ParseAsync(responseStream);
-                var b64 = result.RootElement.GetProperty("data")[0].GetProperty("b64_json").GetString();
+                var result = JsonSerializer.Deserialize<JsonElement>(responseString);
+                var b64 = result.GetProperty("data")[0].GetProperty("b64_json").GetString();
                 if (b64 == null)
                 {
                     lblStatus.Text = "❌ Réponse API invalide";
@@ -373,25 +391,6 @@ namespace GrokImagineApp
         {
             if (btnAddImages != null)
                 btnAddImages.Text = $"Ajouter images ({selectedImages.Count}/5)";
-        }
-
-        private string GetOpaqueUserId()
-        {
-            // Compute a SHA-256 hash of the local username to prevent leaking PII
-            // Adding a static salt to prevent rainbow table attacks
-            string salt = "GrokImagineApp_Salt_2023";
-            string rawData = WindowsIdentity.GetCurrent().Name + salt;
-
-            using (SHA256 sha256Hash = SHA256.Create())
-            {
-                byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(rawData));
-                StringBuilder builder = new StringBuilder();
-                for (int i = 0; i < bytes.Length; i++)
-                {
-                    builder.Append(bytes[i].ToString("x2"));
-                }
-                return builder.ToString();
-            }
         }
 
         private void Form1_Resize(object? sender, EventArgs e)
