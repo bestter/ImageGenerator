@@ -118,11 +118,18 @@ namespace GrokImagineApp
 
         private async void BtnGenerate_Click(object? sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtApiKey.Text))
+            string apiKey = txtApiKey.Text?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(apiKey))
             {
                 MessageBox.Show("Entre ta clé API xAI d'abord !", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+            if (apiKey.Contains("\r") || apiKey.Contains("\n"))
+            {
+                MessageBox.Show("La clé API ne doit pas contenir de retours à la ligne.", "Erreur de sécurité", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(txtPrompt.Text))
             {
                 MessageBox.Show("Écris un prompt !", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -167,47 +174,30 @@ namespace GrokImagineApp
                         var ext = Path.GetExtension(imgPath).ToLower().TrimStart('.');
                         if (ext == "jpg") ext = "jpeg";
 
-                        string b64Data;
+                        byte[] b64Bytes;
                         using (var stream = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.Read))
                         {
-                            if (stream.Length > MaxFileSizeBytes)
+                            using (var memoryStream = new MemoryStream())
                             {
-                                lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(imgPath)}";
-                                MessageBox.Show($"L'image '{Path.GetFileName(imgPath)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                return null;
-                            }
-
-                            var extIn = Path.GetExtension(imgPath).ToLower().TrimStart('.');
-                            if (extIn == "jpg") extIn = "jpeg";
-
-                            byte[] b64Bytes;
-                            using (var streamIn = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.Read))
-                            {
-                                using (var memoryStream = new MemoryStream())
+                                byte[] buffer = new byte[81920];
+                                int bytesRead;
+                                long totalRead = 0;
+                                while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                                 {
-                                    byte[] buffer = new byte[81920];
-                                    int bytesRead;
-                                    long totalRead = 0;
-                                    while ((bytesRead = await streamIn.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                                    totalRead += bytesRead;
+                                    if (totalRead > MaxFileSizeBytes)
                                     {
-                                        totalRead += bytesRead;
-                                        if (totalRead > MaxFileSizeBytes)
-                                        {
-                                            // Update UI safely inside the async Task, though WinForms requires Invoke
-                                            // if not on UI thread. This Select is running on UI thread since it's
-                                            // awaited inside BtnGenerate_Click.
-                                            lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(imgPath)}";
-                                            MessageBox.Show($"L'image '{Path.GetFileName(imgPath)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                            return null;
-                                        }
-                                        memoryStream.Write(buffer, 0, bytesRead);
+                                        lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(imgPath)}";
+                                        MessageBox.Show($"L'image '{Path.GetFileName(imgPath)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                        return null;
                                     }
-                                    b64Bytes = memoryStream.ToArray();
+                                    memoryStream.Write(buffer, 0, bytesRead);
                                 }
+                                b64Bytes = memoryStream.ToArray();
                             }
-                            b64Data = Convert.ToBase64String(b64Bytes);
-                            return (object?)new { type = "image_url", url = $"data:image/{ext};base64,{b64Data}" };
                         }
+                        var b64Data = Convert.ToBase64String(b64Bytes);
+                        return (object?)new { type = "image_url", url = $"data:image/{ext};base64,{b64Data}" };
                     });
                     var completedTasks = await Task.WhenAll(tasks);
                     imagesList.AddRange(completedTasks.Where(t => t != null)!);
@@ -221,6 +211,7 @@ namespace GrokImagineApp
                             image = imagesList[0],
                             n = 1,
                             resolution = cmbResolution.Text,
+                            aspect_ratio = aspectRatioValue,
                             user = GetOpaqueUserId(),
                             response_format = "b64_json"
                         };
@@ -260,7 +251,7 @@ namespace GrokImagineApp
 
                 // ⚡ Bolt Optimization: Create a per-request message to set headers safely with the shared client
                 using var requestMessage = new HttpRequestMessage(HttpMethod.Post, apiUrl);
-                requestMessage.Headers.Add("Authorization", $"Bearer {txtApiKey?.Text?.Trim()}");
+                requestMessage.Headers.Add("Authorization", $"Bearer {apiKey}");
                 requestMessage.Content = content;
 
                 // ⚡ Bolt Optimization: Use HttpCompletionOption.ResponseHeadersRead to stream the response
@@ -308,7 +299,7 @@ namespace GrokImagineApp
 
                 // Affichage de l'image
                 var imageBytes = Convert.FromBase64String(b64);
-                using var ms = new MemoryStream(imageBytes);
+                var ms = new MemoryStream(imageBytes);
                 pictureBox.Image = Image.FromStream(ms);
 
                 lblStatus.Text = $"✅ Image générée avec {cmbModel.Text} ({cmbResolution.Text})";
