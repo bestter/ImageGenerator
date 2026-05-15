@@ -58,7 +58,7 @@ namespace GrokImagineApp
             // Modèle
             var lblModel = new Label { Text = "Modèle :", Location = new Point(20, 175), AutoSize = true };
             cmbModel = new ComboBox { Location = new Point(120, 172), Width = 300, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
-            cmbModel.Items.AddRange(new[] { "grok-imagine-image", "grok-imagine-image-pro" });
+            cmbModel.Items.AddRange(new[] { "grok-imagine-image", "grok-imagine-image-quality" });
             cmbModel.SelectedIndex = 0;
 
             // Résolution (haute dispo)
