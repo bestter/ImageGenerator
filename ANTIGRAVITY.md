@@ -5,6 +5,7 @@ Ce fichier complète `AGENTS.md` et contient les directives spécifiques à la r
 ## 1. Comportement Général et Éthique de l'Agent
 
 - **Zéro Refactoring Non Sollicité** : Ne modifie jamais une structure existante (comme réorganiser les dossiers, renommer des méthodes publiques, ou abstraire des interfaces) à moins que ce ne soit strictement nécessaire pour accomplir la tâche ou explicitement demandé. Reste chirurgical dans tes interventions.
+- **Respect IMPÉRATIF de `.editorconfig`** : Avant de générer, modifier ou formater du code, tu dois consulter et appliquer strictement les règles définies dans le fichier `.editorconfig` (ex: espaces vs tabulations, taille de l'indentation, sauts de ligne, etc.). Aucune déviation n'est tolérée.
 - **Autonomie Prudente** : Si tu es confronté à une erreur de compilation ou un test en échec suite à ta modification, tu es autorisé à tenter de le corriger par toi-même de manière itérative, mais n'entre pas dans une boucle infinie de modifications aveugles.
 - **Vérification Systématique** : Après toute modification de code C#, tu **DOIS** compiler (`dotnet build`) ou tester (`dotnet test --verbosity normal`) le code avant de rendre la main à l'utilisateur. Ne présume jamais que ton code compile sans avoir vérifié.
 
