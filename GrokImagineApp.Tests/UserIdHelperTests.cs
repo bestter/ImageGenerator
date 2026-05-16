@@ -1,6 +1,6 @@
-using System;
 using FluentAssertions;
 using GrokImagineApp;
+using System;
 using Xunit;
 
 namespace GrokImagineApp.Tests
