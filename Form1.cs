@@ -218,10 +218,10 @@ namespace GrokImagineApp
                 lblStatus.Text = $"❌ Erreur {ex.StatusCode}";
                 MessageBox.Show($"Erreur API :\n{ex.Message}", "Erreur API", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 lblStatus.Text = "❌ Erreur inattendue";
-                MessageBox.Show($"Une erreur est survenue :\n{ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Une erreur inattendue est survenue lors de la génération.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
@@ -252,13 +252,13 @@ namespace GrokImagineApp
                 {
                     var imageBytes = Convert.FromBase64String(currentBase64Image);
                     File.WriteAllBytes(sfd.FileName, imageBytes);
-                    lblStatus.Text = $"💾 Image sauvegardée : {Path.GetFileName(sfd.FileName)}";
+                    lblStatus.Text = "💾 Image sauvegardée avec succès.";
                     MessageBox.Show("Image enregistrée avec succès !", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     lblStatus.Text = "❌ Erreur de sauvegarde";
-                    MessageBox.Show($"Erreur lors de la sauvegarde de l'image :\n{ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Une erreur est survenue lors de la sauvegarde de l'image.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
@@ -276,29 +276,36 @@ namespace GrokImagineApp
 
         private void BtnAddImages_Click(object? sender, EventArgs e)
         {
-            using var ofd = new OpenFileDialog
+            try
             {
-                Filter = "Images|*.jpg;*.jpeg;*.png;*.webp",
-                Multiselect = true,
-                Title = "Sélectionner des images (max 5)"
-            };
-
-            if (ofd.ShowDialog() == DialogResult.OK)
-            {
-                foreach (var file in ofd.FileNames)
+                using var ofd = new OpenFileDialog
                 {
-                    if (new FileInfo(file).Length > MaxFileSizeBytes)
-                    {
-                        MessageBox.Show($"L'image '{Path.GetFileName(file)}' dépasse la limite de 20 Mo et ne sera pas ajoutée.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        continue;
-                    }
+                    Filter = "Images|*.jpg;*.jpeg;*.png;*.webp",
+                    Multiselect = true,
+                    Title = "Sélectionner des images (max 5)"
+                };
 
-                    if (!selectedImages.Contains(file) && selectedImages.Count < 5)
+                if (ofd.ShowDialog() == DialogResult.OK)
+                {
+                    foreach (var file in ofd.FileNames)
                     {
-                        selectedImages.Add(file);
+                        if (new FileInfo(file).Length > MaxFileSizeBytes)
+                        {
+                            MessageBox.Show($"L'image sélectionnée dépasse la limite de 20 Mo et ne sera pas ajoutée.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            continue;
+                        }
+
+                        if (!selectedImages.Contains(file) && selectedImages.Count < 5)
+                        {
+                            selectedImages.Add(file);
+                        }
                     }
+                    UpdateImageButtonText();
                 }
-                UpdateImageButtonText();
+            }
+            catch (Exception)
+            {
+                MessageBox.Show("Une erreur est survenue lors de la sélection des images.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
