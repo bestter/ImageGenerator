@@ -2,7 +2,7 @@
 
 Ce fichier fournit un contexte aux agents IA travaillant sur ce projet.
 
-**Version** : 1.1  
+**Version** : 1.2  
 **Dernière mise à jour** : 15 mai 2026  
 **Propriétaire** : Martin Labelle (@bestter)
 
@@ -10,7 +10,7 @@ Ce fichier fournit un contexte aux agents IA travaillant sur ce projet.
 
 ## Golden Rules – Règles Absolues (Ne jamais transgresser)
 
-1. **Ne modifie jamais les fichiers AGENTS.md et ANTIGRAVITY.md sans autorisation explicite**  
+1. **Ne modifie jamais les fichiers AGENTS.md, ANTIGRAVITY.md et .editorconfig sans autorisation explicite**  
    Ces fichiers sont la source de vérité pour l’agent IA.  
    **Toute modification nécessite une autorisation claire et explicite du propriétaire du projet** (exemple : « Tu peux réécrire AGENTS.md » ou « Mets à jour la section X »). Sans cette autorisation, tu n’y touches pas.
 
@@ -89,3 +89,4 @@ L'application suit une structure standard de projet Windows Forms :
 - **Architecture** : L'interface graphique est codée manuellement dans `InitializeControls()` (dans `Form1.cs`) plutôt que de s'appuyer exclusivement sur le Designer. Toute modification de l'UI doit idéalement se faire dans cette méthode.
 - **Sécurité** : Les clés API sont stockées temporairement dans le champ de texte `txtApiKey` et passées en `Bearer token` dans l'en-tête HTTP. Il n'y a pas de sauvegarde persistante implémentée pour l'instant.
 - **Dépendances** : Le projet utilise les bibliothèques standards `System.Net.Http` pour les appels d'API. Pas de dépendances externes complexes (comme RestSharp ou Newtonsoft.Json) repérées.
+- **Tests** : Le projet inclut des tests unitaires dans le dossier `GrokImagineApp.Tests`. Tu dois t'assurer que tous les tests passent après chaque modification. Toute modification doit être accompagnée de tests unitaires. Toute modification d'une méthode existante doit être accompagnée de tests unitaires couvrant les cas d'utilisation existants et les nouveaux cas d'utilisation introduits par la modification.
