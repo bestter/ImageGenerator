@@ -34,6 +34,7 @@ namespace GrokImagineApp
         // ⚡ Bolt Optimization: Use a shared HttpClient instance for the lifetime of the application
         // This avoids socket exhaustion (TIME_WAIT state) and eliminates TCP/TLS handshake latency on subsequent requests
         private static readonly HttpClient _httpClient = new HttpClient();
+        private readonly GrokImagineClient _grokClient = new GrokImagineClient(_httpClient);
 
         public Form1()
         {
@@ -119,22 +120,7 @@ namespace GrokImagineApp
         private async void BtnGenerate_Click(object? sender, EventArgs e)
         {
             string apiKey = txtApiKey.Text?.Trim() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(apiKey))
-            {
-                MessageBox.Show("Entre ta clé API xAI d'abord !", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-            if (apiKey.Contains("\r") || apiKey.Contains("\n"))
-            {
-                MessageBox.Show("La clé API ne doit pas contenir de retours à la ligne.", "Erreur de sécurité", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
 
-            if (string.IsNullOrWhiteSpace(txtPrompt.Text))
-            {
-                MessageBox.Show("Écris un prompt !", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
 
             string? imageToEditBase64 = null;
             if (chkMultiTurnEditing.Checked && !string.IsNullOrEmpty(currentBase64Image))
@@ -153,17 +139,14 @@ namespace GrokImagineApp
 
             try
             {
-                object requestBody;
-                string apiUrl;
-
                 string selectedRatioText = cmbAspectRatio.SelectedItem?.ToString() ?? "16:9";
                 string aspectRatioValue = selectedRatioText.Split(' ')[0];
+                string opaqueUserId = UserIdHelper.GetOpaqueUserId();
+
+                var imagesList = new List<object>();
 
                 if (selectedImages.Count > 0 || !string.IsNullOrEmpty(imageToEditBase64))
                 {
-                    apiUrl = "https://api.x.ai/v1/images/edits";
-                    var imagesList = new List<object>();
-
                     if (!string.IsNullOrEmpty(imageToEditBase64))
                     {
                         imagesList.Add(new { type = "image_url", url = $"data:image/png;base64,{imageToEditBase64}" });
@@ -198,111 +181,25 @@ namespace GrokImagineApp
                         }
                         var b64Data = Convert.ToBase64String(b64Bytes);
                         return (object?)new { type = "image_url", url = $"data:image/{ext};base64,{b64Data}" };
-                    });
-                    var completedTasks = await Task.WhenAll(tasks);
-                    imagesList.AddRange(completedTasks.Where(t => t != null)!);
+                    }).ToArray();
 
-                    if (imagesList.Count == 1)
+                    var results = await Task.WhenAll(tasks);
+                    foreach (var res in results)
                     {
-                        requestBody = new
-                        {
-                            model = cmbModel.Text,
-                            prompt = txtPrompt.Text.Trim(),
-                            image = imagesList[0],
-                            n = 1,
-                            resolution = cmbResolution.Text,
-                            aspect_ratio = aspectRatioValue,
-                            user = GetOpaqueUserId(),
-                            response_format = "b64_json"
-                        };
-                    }
-                    else
-                    {
-                        requestBody = new
-                        {
-                            model = cmbModel.Text,
-                            prompt = txtPrompt.Text.Trim(),
-                            images = imagesList,
-                            n = 1,
-                            resolution = cmbResolution.Text,
-                            aspect_ratio = aspectRatioValue,
-                            user = GetOpaqueUserId(),
-                            response_format = "b64_json"
-                        };
+                        if (res != null) imagesList.Add(res);
                     }
                 }
-                else
-                {
-                    apiUrl = "https://api.x.ai/v1/images/generations";
-                    requestBody = new
-                    {
-                        model = cmbModel.Text,
-                        prompt = txtPrompt.Text.Trim(),
-                        n = 1,
-                        resolution = cmbResolution.Text,
-                        aspect_ratio = aspectRatioValue,
-                        user = GetOpaqueUserId(),
-                        response_format = "b64_json"
-                    };
-                }
 
-                var json = JsonSerializer.Serialize(requestBody);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                currentBase64Image = await _grokClient.GenerateImageAsync(
+                    apiKey,
+                    txtPrompt.Text.Trim(),
+                    cmbModel.Text,
+                    cmbResolution.Text,
+                    aspectRatioValue,
+                    opaqueUserId,
+                    imagesList);
 
-                // ⚡ Bolt Optimization: Create a per-request message to set headers safely with the shared client
-                using var requestMessage = new HttpRequestMessage(HttpMethod.Post, apiUrl);
-                requestMessage.Headers.Add("Authorization", $"Bearer {apiKey}");
-                requestMessage.Content = content;
-
-                // ⚡ Bolt Optimization: Use HttpCompletionOption.ResponseHeadersRead to stream the response
-                var response = await _httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead);
-
-                // ⚡ Bolt Optimization: Read directly from stream to avoid large string allocation
-                using var responseStream = await response.Content.ReadAsStreamAsync();
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    using var reader = new StreamReader(responseStream);
-                    var errorString = await reader.ReadToEndAsync();
-                    lblStatus.Text = $"❌ Erreur {response.StatusCode}";
-                    // Parse the JSON error message to prevent leaking raw HTML or echoing sensitive input/API internals
-                    string safeErrorMessage = string.Empty;
-                    try
-                    {
-                        using (JsonDocument doc = JsonDocument.Parse(errorString))
-                        {
-                            if (doc.RootElement.TryGetProperty("error", out JsonElement errorElement) && errorElement.TryGetProperty("message", out JsonElement messageElement))
-                            {
-                                safeErrorMessage = messageElement.GetString() ?? string.Empty;
-                            }
-                        }
-                    }
-                    catch (JsonException)
-                    {
-                        // Fallback to generic message if parsing fails
-                    }
-
-                    if (string.IsNullOrWhiteSpace(safeErrorMessage))
-                    {
-                        safeErrorMessage = string.IsNullOrWhiteSpace(errorString) 
-                            ? "Une erreur est survenue lors de la communication avec l'API." 
-                            : errorString;
-                    }
-
-                    MessageBox.Show($"Erreur API ({(int)response.StatusCode} {response.StatusCode}) :\n{safeErrorMessage}", "Erreur API", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-
-                // ⚡ Bolt Optimization: Parse JSON directly from stream
-                using var result = await JsonDocument.ParseAsync(responseStream);
-                var b64 = result.RootElement.GetProperty("data")[0].GetProperty("b64_json").GetString();
-                if (b64 == null)
-                {
-                    lblStatus.Text = "❌ Réponse API invalide";
-                    MessageBox.Show("La réponse de l'API ne contient pas d'image valide.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-                currentBase64Image = b64;
+                var b64 = currentBase64Image;
 
                 // Affichage de l'image
                 var imageBytes = Convert.FromBase64String(b64);
@@ -311,6 +208,15 @@ namespace GrokImagineApp
 
                 lblStatus.Text = $"✅ Image générée avec {cmbModel.Text} ({cmbResolution.Text})";
                 btnSave.Enabled = true;
+            }
+            catch (ArgumentException ex)
+            {
+                MessageBox.Show(ex.Message, "Erreur de validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            catch (GrokImagineException ex)
+            {
+                lblStatus.Text = $"❌ Erreur {ex.StatusCode}";
+                MessageBox.Show($"Erreur API :\n{ex.Message}", "Erreur API", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (Exception ex)
             {
@@ -402,24 +308,6 @@ namespace GrokImagineApp
                 btnAddImages.Text = $"Ajouter images ({selectedImages.Count}/5)";
         }
 
-        private string GetOpaqueUserId()
-        {
-            // Compute a SHA-256 hash of the local username to prevent leaking PII
-            // Adding a static salt to prevent rainbow table attacks
-            string salt = "GrokImagineApp_Salt_2023";
-            string rawData = WindowsIdentity.GetCurrent().Name + salt;
-
-            using (SHA256 sha256Hash = SHA256.Create())
-            {
-                byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(rawData));
-                StringBuilder builder = new StringBuilder();
-                for (int i = 0; i < bytes.Length; i++)
-                {
-                    builder.Append(bytes[i].ToString("x2"));
-                }
-                return builder.ToString();
-            }
-        }
 
         private void Form1_Resize(object? sender, EventArgs e)
         {
