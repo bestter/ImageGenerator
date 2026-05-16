@@ -65,8 +65,9 @@ namespace GrokImagineApp
                 apiUrl = "https://api.x.ai/v1/images/generations";
             }
 
-            var json = JsonSerializer.Serialize(requestBody);
-            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+            // ⚡ Bolt: Using JsonContent.Create prevents large string allocations in memory by streaming the JSON
+            // directly to the request stream, which is crucial since requestBody may contain large base64 strings.
+            using var content = JsonContent.Create(requestBody);
 
             using var requestMessage = new HttpRequestMessage(HttpMethod.Post, apiUrl);
             requestMessage.Headers.Add("Authorization", $"Bearer {apiKey}");
