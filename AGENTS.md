@@ -66,14 +66,17 @@ Pour toute modification de l’interface utilisateur, l’agent doit impérative
 - **Objectif** : Fournir une interface graphique utilisateur (GUI) pour interagir avec l’API de génération et d’édition d’images de xAI (modèles `grok-imagine-image` et `grok-imagine-image-quality`).
 
 ## 📁 Structure du Répertoire
-L'application suit une structure standard de projet Windows Forms :
+L'application suit une structure modulaire séparant l'UI de la logique réseau :
 
-- **`Form1.cs`** : C'est le fichier central contenant la logique métier et l'initialisation de l'interface graphique.
+- **`Form1.cs`** : Fichier gérant exclusivement la couche UI (Interface Utilisateur).
   - Gère les contrôles de l'interface (clés API, prompt, sélection de modèle, résolution, aspect ratio).
-  - Implémente la communication HTTP (via `HttpClient`) avec les endpoints de xAI :
-    - `https://api.x.ai/v1/images/generations` (pour la génération classique).
-    - `https://api.x.ai/v1/images/edits` (pour l'édition multi-tour ou basée sur des images uploadées).
   - Gère l'affichage, la mise en cache (Base64) et la sauvegarde locale des images.
+  - Délègue la logique métier et les appels réseau à la couche client.
+- **`GrokImagineClient.cs`** : Implémente la communication HTTP (via `HttpClient`) avec les endpoints de xAI et gère le parsing JSON.
+  - `https://api.x.ai/v1/images/generations` (pour la génération classique).
+  - `https://api.x.ai/v1/images/edits` (pour l'édition multi-tour ou basée sur des images uploadées).
+- **`GrokImagineRequest.cs` & `GrokImagineException.cs`** : Modèles de requêtes et gestionnaire d'exceptions spécifiques à l'API xAI.
+- **`UserIdHelper.cs`** : Utilitaire pour la gestion des identifiants (notamment pour la protection PII).
 - **`Form1.Designer.cs` & `Form1.resx`** : Fichiers générés automatiquement gérant la disposition des éléments d'interface (bien que `Form1.cs` contienne une méthode personnalisée `InitializeControls()` créant l'interface par le code).
 - **`Program.cs`** : Point d'entrée de l'application (contient la méthode `Main`).
 - **`GrokImagineApp.csproj`** : Le fichier de définition du projet C# détaillant les dépendances et la configuration de compilation.
@@ -86,7 +89,7 @@ L'application suit une structure standard de projet Windows Forms :
 4. **Enregistrement des résultats** : L'image générée (reçue en base64) peut être téléchargée au format PNG sur la machine de l'utilisateur.
 
 ## 🛠️ Directives de développement (Pour les agents)
-- **Architecture** : L'interface graphique est codée manuellement dans `InitializeControls()` (dans `Form1.cs`) plutôt que de s'appuyer exclusivement sur le Designer. Toute modification de l'UI doit idéalement se faire dans cette méthode.
+- **Architecture** : L'interface graphique est codée manuellement dans `InitializeControls()` (dans `Form1.cs`) plutôt que de s'appuyer exclusivement sur le Designer. Toute modification de l'UI doit idéalement se faire dans cette méthode. La logique réseau doit être maintenue séparée dans la couche client (`GrokImagineClient.cs` et associés).
 - **Sécurité** : Les clés API sont stockées temporairement dans le champ de texte `txtApiKey` et passées en `Bearer token` dans l'en-tête HTTP. Il n'y a pas de sauvegarde persistante implémentée pour l'instant.
-- **Dépendances** : Le projet utilise les bibliothèques standards `System.Net.Http` pour les appels d'API. Pas de dépendances externes complexes (comme RestSharp ou Newtonsoft.Json) repérées.
-- **Tests** : Le projet inclut des tests unitaires dans le dossier `GrokImagineApp.Tests`. Tu dois t'assurer que tous les tests passent après chaque modification. Toute modification doit être accompagnée de tests unitaires. Toute modification d'une méthode existante doit être accompagnée de tests unitaires couvrant les cas d'utilisation existants et les nouveaux cas d'utilisation introduits par la modification.
+- **Dépendances** : Le projet utilise les bibliothèques standards `System.Net.Http` pour les appels d'API et `System.Text.Json` pour la manipulation des données JSON. Pas de dépendances externes complexes (comme RestSharp ou Newtonsoft.Json) repérées.
+- **Tests** : Le projet inclut des tests unitaires dans le dossier `GrokImagineApp.Tests` (ex: `GrokImagineClientTests.cs`). Tu dois t'assurer que tous les tests passent après chaque modification. Toute modification d'une méthode existante ou ajout de fonctionnalité doit être accompagnée de tests unitaires couvrant les cas d'utilisation concernés.
