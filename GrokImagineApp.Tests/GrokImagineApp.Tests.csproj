@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+
+
+
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="*" />
+    <PackageReference Include="xunit" Version="*" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="*" />
+    <PackageReference Include="Moq" Version="*" />
+    <PackageReference Include="FluentAssertions" Version="*" />
+  </ItemGroup>
+
+  <ItemGroup>
+
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\GrokImagineClient.cs" />
+    <Compile Include="..\UserIdHelper.cs" />
+    <Compile Include="..\GrokImagineRequest.cs" />
+    <Compile Include="..\GrokImagineException.cs" />
+  </ItemGroup>
+</Project>

@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="GrokImagineApp.csproj" />
+  <Project Path="GrokImagineApp.Tests/GrokImagineApp.Tests.csproj" />
 </Solution>
