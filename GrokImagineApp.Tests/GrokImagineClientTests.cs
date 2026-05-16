@@ -163,6 +163,38 @@ namespace GrokImagineApp.Tests
         }
 
         [Fact]
+        public async Task GenerateImageAsync_ApiReturnsErrorMessageAsObject_ParsesRawTextAndThrowsGrokImagineException()
+        {
+            // Arrange — message is a JSON object, not a string
+            var errorJson = "{\"error\":{\"message\":{\"detail\":\"quota exceeded\",\"code\":\"rate_limit\"}}}";
+
+            var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+            handlerMock
+               .Protected()
+               .Setup<Task<HttpResponseMessage>>(
+                  "SendAsync",
+                  ItExpr.IsAny<HttpRequestMessage>(),
+                  ItExpr.IsAny<CancellationToken>()
+               )
+               .ReturnsAsync(new HttpResponseMessage()
+               {
+                   StatusCode = HttpStatusCode.TooManyRequests,
+                   Content = new StringContent(errorJson),
+               });
+
+            var httpClient = new HttpClient(handlerMock.Object);
+            var client = new GrokImagineClient(httpClient);
+
+            // Act
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "model", "1k", "16:9", "user", new List<object>());
+
+            // Assert — should contain the raw JSON text of the message object, not throw InvalidOperationException
+            var exception = await act.Should().ThrowAsync<GrokImagineException>();
+            exception.Which.Message.Should().Contain("quota exceeded");
+            exception.Which.StatusCode.Should().Be(429);
+        }
+
+        [Fact]
         public async Task GenerateImageAsync_ApiReturnsMalformedJson_ThrowsGrokImagineException()
         {
             // Arrange

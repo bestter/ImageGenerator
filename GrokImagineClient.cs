@@ -88,11 +88,13 @@ namespace GrokImagineApp
                         if (doc.RootElement.TryGetProperty("error", out JsonElement errorElement) &&
                             errorElement.TryGetProperty("message", out JsonElement messageElement))
                         {
-                            safeErrorMessage = messageElement.GetString() ?? string.Empty;
+                            safeErrorMessage = messageElement.ValueKind == JsonValueKind.String
+                                ? messageElement.GetString() ?? string.Empty
+                                : messageElement.GetRawText();
                         }
                     }
                 }
-                catch (JsonException)
+                catch (Exception e) when (e is JsonException || e is InvalidOperationException)
                 {
                     // Fallback to generic message if parsing fails
                 }
