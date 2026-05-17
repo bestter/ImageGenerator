@@ -141,7 +141,7 @@ namespace GrokImagineApp
             {
                 string selectedRatioText = cmbAspectRatio.SelectedItem?.ToString() ?? "16:9";
                 string aspectRatioValue = selectedRatioText.Split(' ')[0];
-                string opaqueUserId = UserIdHelper.GetOpaqueUserId();
+                string? opaqueUserId = UserIdHelper.GetOpaqueUserId();
 
                 var imagesList = new List<object>();
 

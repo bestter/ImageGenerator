@@ -1,31 +1,21 @@
+using System;
 using System.Security.Cryptography;
-using System.Security.Principal;
 using System.Text;
 
 namespace GrokImagineApp
 {
     public static class UserIdHelper
     {
-        public static string GetOpaqueUserId(string? identityName = null)
+        public static string? GetOpaqueUserId(string? identityName = null)
         {
-            string name = identityName ?? "unknown_user";
-            if (identityName == null)
+            // 🛡️ Sentinel: Omit user tracking field entirely when no identity is provided to prevent PII leakage
+            if (string.IsNullOrWhiteSpace(identityName))
             {
-                try
-                {
-                    if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
-                    {
-                        name = WindowsIdentity.GetCurrent().Name ?? "unknown_user";
-                    }
-                }
-                catch
-                {
-                    // Fallback if anything goes wrong
-                }
+                return null;
             }
 
             string salt = "GrokImagineApp_Salt_2023";
-            string rawData = name + salt;
+            string rawData = identityName + salt;
 
             using (SHA256 sha256Hash = SHA256.Create())
             {
