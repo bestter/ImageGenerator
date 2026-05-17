@@ -1,5 +1,5 @@
-using System;
 using System.Security.Cryptography;
+using System.Security.Principal;
 using System.Text;
 
 namespace GrokImagineApp
@@ -20,10 +20,7 @@ namespace GrokImagineApp
             {
                 try
                 {
-                    if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
-                    {
-                        name = WindowsIdentity.GetCurrent().Name ?? "unknown_user";
-                    }
+                    name = Environment.UserName ?? "unknown_user";
                 }
                 catch
                 {
@@ -32,7 +29,7 @@ namespace GrokImagineApp
             }
 
             string salt = "GrokImagineApp_Salt_2023";
-            string rawData = identityName + salt;
+            string rawData = name + salt;
 
             using (SHA256 sha256Hash = SHA256.Create())
             {
@@ -46,8 +43,8 @@ namespace GrokImagineApp
                 string result = builder.ToString();
 
                 // ⚡ Bolt Optimization: Cache the computed hashed user ID for the default user.
-                // WindowsIdentity.GetCurrent().Name is an expensive interop call.
-                // Since the user doesn't change during the application's lifetime, caching prevents redundant P/Invoke and SHA256 computations per request.
+                // Replaced expensive WindowsIdentity.GetCurrent() interop call with Environment.UserName,
+                // and cached the result to prevent redundant SHA256 computations per request.
                 if (identityName == null)
                 {
                     _cachedDefaultUserId = result;
