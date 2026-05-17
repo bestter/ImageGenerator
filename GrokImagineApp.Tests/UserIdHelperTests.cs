@@ -14,8 +14,8 @@ namespace GrokImagineApp.Tests
             string name = "test_user";
 
             // Act
-            string? hash1 = UserIdHelper.GetOpaqueUserId(name);
-            string? hash2 = UserIdHelper.GetOpaqueUserId(name);
+            string hash1 = UserIdHelper.GetOpaqueUserId(name);
+            string hash2 = UserIdHelper.GetOpaqueUserId(name);
 
             // Assert
             hash1.Should().NotBeNullOrWhiteSpace();
@@ -31,21 +31,21 @@ namespace GrokImagineApp.Tests
             string name2 = "user_two";
 
             // Act
-            string? hash1 = UserIdHelper.GetOpaqueUserId(name1);
-            string? hash2 = UserIdHelper.GetOpaqueUserId(name2);
+            string hash1 = UserIdHelper.GetOpaqueUserId(name1);
+            string hash2 = UserIdHelper.GetOpaqueUserId(name2);
 
             // Assert
             hash1.Should().NotBe(hash2);
         }
 
         [Fact]
-        public void GetOpaqueUserId_NullName_ReturnsNull()
+        public void GetOpaqueUserId_NullName_DoesNotThrow()
         {
             // Act
-            string? result = UserIdHelper.GetOpaqueUserId(null);
+            Action act = () => UserIdHelper.GetOpaqueUserId(null);
 
             // Assert
-            result.Should().BeNull();
+            act.Should().NotThrow();
         }
     }
 }
