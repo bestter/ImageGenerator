@@ -1,5 +1,5 @@
+using System;
 using System.Security.Cryptography;
-using System.Security.Principal;
 using System.Text;
 
 namespace GrokImagineApp
@@ -32,7 +32,7 @@ namespace GrokImagineApp
             }
 
             string salt = "GrokImagineApp_Salt_2023";
-            string rawData = name + salt;
+            string rawData = identityName + salt;
 
             using (SHA256 sha256Hash = SHA256.Create())
             {

@@ -24,7 +24,7 @@ namespace GrokImagineApp
             string model,
             string resolution,
             string aspectRatio,
-            string opaqueUserId,
+            string? opaqueUserId,
             List<object> imagesList)
         {
             if (string.IsNullOrWhiteSpace(apiKey))

@@ -23,3 +23,8 @@
 **Vulnerability:** Checking file length via `FileInfo.Length` before using `File.ReadAllBytesAsync` creates a TOCTOU (Time of check to time of use) race condition. An attacker can replace a small file with a large one after the check but before the read, causing an out-of-memory denial of service.
 **Learning:** Performing a security check (size, permissions) on a path before opening it is insecure because the file system can change.
 **Prevention:** Always open a `FileStream` first, and then perform security validations (like `stream.Length`) on the opened handle before reading.
+
+## 2026-05-17 - Prevent PII Leakage in API Requests
+**Vulnerability:** The code explicitly called `WindowsIdentity.GetCurrent().Name` and included it in the JSON payload sent to an external API, exposing Personally Identifiable Information (PII) if `identityName` was null.
+**Learning:** Returning a randomized GUID per-request breaks user tracking functionality, but exposing PII is a security risk. Omit user tracking fields entirely if optional.
+**Prevention:** If user tracking is optional in an API, omit it instead of populating it with local PII or random GUIDs.
