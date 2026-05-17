@@ -20,8 +20,7 @@ namespace GrokImagineApp
         public string AspectRatio { get; set; } = string.Empty;
 
         [JsonPropertyName("user")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? User { get; set; }
+        public string User { get; set; } = string.Empty;
 
         [JsonPropertyName("response_format")]
         public string ResponseFormat { get; set; } = "b64_json";
