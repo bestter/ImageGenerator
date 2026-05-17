@@ -6,8 +6,15 @@ namespace GrokImagineApp
 {
     public static class UserIdHelper
     {
+        private static string? _cachedDefaultUserId;
+
         public static string GetOpaqueUserId(string? identityName = null)
         {
+            if (identityName == null && _cachedDefaultUserId != null)
+            {
+                return _cachedDefaultUserId;
+            }
+
             string name = identityName ?? "unknown_user";
             if (identityName == null)
             {
@@ -35,7 +42,18 @@ namespace GrokImagineApp
                 {
                     builder.Append(bytes[i].ToString("x2"));
                 }
-                return builder.ToString();
+
+                string result = builder.ToString();
+
+                // ⚡ Bolt Optimization: Cache the computed hashed user ID for the default user.
+                // WindowsIdentity.GetCurrent().Name is an expensive interop call.
+                // Since the user doesn't change during the application's lifetime, caching prevents redundant P/Invoke and SHA256 computations per request.
+                if (identityName == null)
+                {
+                    _cachedDefaultUserId = result;
+                }
+
+                return result;
             }
         }
     }
