@@ -100,9 +100,7 @@ namespace GrokImagineApp
 
                 if (string.IsNullOrWhiteSpace(safeErrorMessage))
                 {
-                    safeErrorMessage = string.IsNullOrWhiteSpace(errorString)
-                        ? "Une erreur est survenue lors de la communication avec l'API."
-                        : errorString;
+                    safeErrorMessage = "Une erreur est survenue lors de la communication avec l'API.";
                 }
 
                 throw new GrokImagineException(safeErrorMessage, (int)response.StatusCode);

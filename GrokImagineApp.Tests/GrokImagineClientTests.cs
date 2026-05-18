@@ -132,6 +132,37 @@ namespace GrokImagineApp.Tests
         }
 
         [Fact]
+        public async Task GenerateImageAsync_ApiReturnsErrorWithNonJsonContent_ThrowsGenericGrokImagineExceptionAndDoesNotLeakHtml()
+        {
+            // Arrange
+            var htmlErrorResponse = "<html><body><h1>502 Bad Gateway</h1></body></html>";
+
+            var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+            handlerMock
+               .Protected()
+               .Setup<Task<HttpResponseMessage>>(
+                  "SendAsync",
+                  ItExpr.IsAny<HttpRequestMessage>(),
+                  ItExpr.IsAny<CancellationToken>()
+               )
+               .ReturnsAsync(new HttpResponseMessage()
+               {
+                   StatusCode = HttpStatusCode.BadGateway,
+                   Content = new StringContent(htmlErrorResponse),
+               });
+
+            var httpClient = new HttpClient(handlerMock.Object);
+            var client = new GrokImagineClient(httpClient);
+
+            // Act
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "model", "1k", "16:9", "user", new List<object>());
+
+            // Assert
+            var exception = await act.Should().ThrowAsync<GrokImagineException>().WithMessage("Une erreur est survenue lors de la communication avec l'API.");
+            exception.Which.StatusCode.Should().Be(502);
+        }
+
+        [Fact]
         public async Task GenerateImageAsync_ApiReturnsError_ParsesErrorMessageAndThrowsGrokImagineException()
         {
             // Arrange
