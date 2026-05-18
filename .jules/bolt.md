@@ -7,3 +7,6 @@
 ## 2026-05-17 - [Optimize OS-level User Identity Lookups]
 **Learning:** `WindowsIdentity.GetCurrent().Name` makes expensive Windows interop calls to look up the current user, causing CPU overhead and latency. It can also cause compilation errors on cross-platform targets if the compatibility pack isn't referenced correctly.
 **Action:** Replace `WindowsIdentity.GetCurrent().Name` with `Environment.UserName` which avoids P/Invoke and works natively cross-platform. Additionally, cache stable values like user hashes to prevent redundant computations on every request.
+## 2026-05-18 - [Optimize Large File Reading]
+**Learning:** Using `MemoryStream` chunking to read large files (e.g., images up to 20MB) causes excessive Large Object Heap (LOH) allocations and memory copying due to buffer resizing. This drastically impacts performance.
+**Action:** Prefer `File.ReadAllBytesAsync` over reading chunks into a `MemoryStream` when reading entire files into memory.

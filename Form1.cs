@@ -157,28 +157,17 @@ namespace GrokImagineApp
                         var ext = Path.GetExtension(imgPath).ToLower().TrimStart('.');
                         if (ext == "jpg") ext = "jpeg";
 
-                        byte[] b64Bytes;
-                        using (var stream = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                        if (new FileInfo(imgPath).Length > MaxFileSizeBytes)
                         {
-                            using (var memoryStream = new MemoryStream())
-                            {
-                                byte[] buffer = new byte[81920];
-                                int bytesRead;
-                                long totalRead = 0;
-                                while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
-                                {
-                                    totalRead += bytesRead;
-                                    if (totalRead > MaxFileSizeBytes)
-                                    {
-                                        lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(imgPath)}";
-                                        MessageBox.Show($"L'image '{Path.GetFileName(imgPath)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                        return null;
-                                    }
-                                    memoryStream.Write(buffer, 0, bytesRead);
-                                }
-                                b64Bytes = memoryStream.ToArray();
-                            }
+                            lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(imgPath)}";
+                            MessageBox.Show($"L'image '{Path.GetFileName(imgPath)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return null;
                         }
+
+                        // ⚡ Bolt Optimization: Use File.ReadAllBytesAsync instead of MemoryStream chunking.
+                        // This avoids excessive Large Object Heap (LOH) allocations and memory copying
+                        // that drasticly impacts performance when dealing with large files (up to 20MB).
+                        byte[] b64Bytes = await File.ReadAllBytesAsync(imgPath);
                         var b64Data = Convert.ToBase64String(b64Bytes);
                         return (object?)new { type = "image_url", url = $"data:image/{ext};base64,{b64Data}" };
                     }).ToArray();
