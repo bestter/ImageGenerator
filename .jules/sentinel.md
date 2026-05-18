@@ -23,3 +23,7 @@
 **Vulnerability:** Checking file length via `FileInfo.Length` before using `File.ReadAllBytesAsync` creates a TOCTOU (Time of check to time of use) race condition. An attacker can replace a small file with a large one after the check but before the read, causing an out-of-memory denial of service.
 **Learning:** Performing a security check (size, permissions) on a path before opening it is insecure because the file system can change.
 **Prevention:** Always open a `FileStream` first, and then perform security validations (like `stream.Length`) on the opened handle before reading.
+## 2026-05-18 - Prevent Information Disclosure in Error Messages
+**Vulnerability:** When the API returned a non-JSON error (e.g., 502 Bad Gateway HTML), the raw response body was used as the exception message and shown in the UI, potentially leaking server details or proxy versions.
+**Learning:** Unhandled fallback error messages should never expose raw HTTP response bodies directly to the user.
+**Prevention:** Always use a generic, safe string as a fallback when an error response cannot be safely parsed as JSON.
