@@ -1,3 +1,4 @@
+using System.IO;
 using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
@@ -10,24 +11,44 @@ namespace GrokImagineApp
 
         public static string GetOpaqueUserId(string? identityName = null)
         {
-            if (identityName == null && _cachedDefaultUserId != null)
+            if (identityName != null)
+            {
+                return ComputeHash(identityName);
+            }
+
+            if (_cachedDefaultUserId != null)
             {
                 return _cachedDefaultUserId;
             }
 
-            string name = identityName ?? "unknown_user";
-            if (identityName == null)
+            try
             {
-                try
+                // 🛡️ Sentinel: Prevent PII leakage by using a stable GUID instead of Environment.UserName
+                string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GrokImagineApp");
+                Directory.CreateDirectory(folder);
+                string filePath = Path.Combine(folder, "device_id.txt");
+
+                if (File.Exists(filePath))
                 {
-                    name = Environment.UserName ?? "unknown_user";
+                    _cachedDefaultUserId = File.ReadAllText(filePath).Trim();
                 }
-                catch
+                else
                 {
-                    // Fallback if anything goes wrong
+                    _cachedDefaultUserId = Guid.NewGuid().ToString("N");
+                    File.WriteAllText(filePath, _cachedDefaultUserId);
                 }
             }
+            catch
+            {
+                // Fallback for session if IO fails
+                _cachedDefaultUserId = Guid.NewGuid().ToString("N");
+            }
 
+            return _cachedDefaultUserId;
+        }
+
+        private static string ComputeHash(string name)
+        {
             string salt = "GrokImagineApp_Salt_2023";
             string rawData = name + salt;
 
@@ -40,17 +61,7 @@ namespace GrokImagineApp
                     builder.Append(bytes[i].ToString("x2"));
                 }
 
-                string result = builder.ToString();
-
-                // ⚡ Bolt Optimization: Cache the computed hashed user ID for the default user.
-                // Replaced expensive WindowsIdentity.GetCurrent() interop call with Environment.UserName,
-                // and cached the result to prevent redundant SHA256 computations per request.
-                if (identityName == null)
-                {
-                    _cachedDefaultUserId = result;
-                }
-
-                return result;
+                return builder.ToString();
             }
         }
     }
