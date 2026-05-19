@@ -15,25 +15,26 @@ namespace GrokImagineApp
 {
     public partial class Form1 : Form
     {
-        private PictureBox pictureBox;
-        private TextBox txtApiKey;
-        private TextBox txtPrompt;
-        private ComboBox cmbModel;
-        private ComboBox cmbResolution;
-        private ComboBox cmbAspectRatio;
-        private Button btnGenerate;
-        private Button btnSave;
-        private Button btnClear;
-        private Label lblStatus;
-        private CheckBox chkMultiTurnEditing;
-        private string currentBase64Image = null;
+        private PictureBox pictureBox = null!;
+        private TextBox txtApiKey = null!;
+        private TextBox txtPrompt = null!;
+        private ComboBox cmbModel = null!;
+        private ComboBox cmbResolution = null!;
+        private ComboBox cmbAspectRatio = null!;
+        private Button btnGenerate = null!;
+        private Button btnSave = null!;
+        private Button btnClear = null!;
+        private Label lblStatus = null!;
+        private CheckBox chkMultiTurnEditing = null!;
+        private string? currentBase64Image = null;
         private List<string> selectedImages = new List<string>();
-        private Button btnAddImages;
+        private Button btnAddImages = null!;
         private const long MaxFileSizeBytes = 20 * 1024 * 1024; // 20 MB
 
         // ⚡ Bolt Optimization: Use a shared HttpClient instance for the lifetime of the application
         // This avoids socket exhaustion (TIME_WAIT state) and eliminates TCP/TLS handshake latency on subsequent requests
         private static readonly HttpClient _httpClient = new HttpClient();
+        private readonly GrokImagineClient _grokClient = new GrokImagineClient(_httpClient);
 
         public Form1()
         {
@@ -78,12 +79,12 @@ namespace GrokImagineApp
             cmbAspectRatio.SelectedIndex = 1; // 16:9 par défaut
 
             // Multi-turn editing
-            chkMultiTurnEditing = new CheckBox 
-            { 
-                Text = "Éditer l'image actuelle (Multi-turn)", 
-                Location = new Point(440, 220), 
-                AutoSize = true, 
-                Anchor = AnchorStyles.Top | AnchorStyles.Left 
+            chkMultiTurnEditing = new CheckBox
+            {
+                Text = "Éditer l'image actuelle (Multi-turn)",
+                Location = new Point(440, 220),
+                AutoSize = true,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
 
             // Boutons
@@ -116,27 +117,19 @@ namespace GrokImagineApp
             this.Resize += Form1_Resize;
         }
 
-        private async void BtnGenerate_Click(object sender, EventArgs e)
+        private async void BtnGenerate_Click(object? sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtApiKey.Text))
-            {
-                MessageBox.Show("Entre ta clé API xAI d'abord !", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-            if (string.IsNullOrWhiteSpace(txtPrompt.Text))
-            {
-                MessageBox.Show("Écris un prompt !", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+            string apiKey = txtApiKey.Text?.Trim() ?? string.Empty;
 
-            string imageToEditBase64 = null;
+
+            string? imageToEditBase64 = null;
             if (chkMultiTurnEditing.Checked && !string.IsNullOrEmpty(currentBase64Image))
             {
                 imageToEditBase64 = currentBase64Image;
             }
 
-            Image previousImage = pictureBox.Image;
-            string previousBase64Image = currentBase64Image;
+            Image? previousImage = pictureBox.Image;
+            string? previousBase64Image = currentBase64Image;
 
             btnGenerate.Enabled = false;
             btnSave.Enabled = false;
@@ -146,17 +139,14 @@ namespace GrokImagineApp
 
             try
             {
-                object requestBody;
-                string apiUrl;
-
                 string selectedRatioText = cmbAspectRatio.SelectedItem?.ToString() ?? "16:9";
                 string aspectRatioValue = selectedRatioText.Split(' ')[0];
+                string opaqueUserId = UserIdHelper.GetOpaqueUserId();
+
+                var imagesList = new List<object>();
 
                 if (selectedImages.Count > 0 || !string.IsNullOrEmpty(imageToEditBase64))
                 {
-                    apiUrl = "https://api.x.ai/v1/images/edits";
-                    var imagesList = new List<object>();
-
                     if (!string.IsNullOrEmpty(imageToEditBase64))
                     {
                         imagesList.Add(new { type = "image_url", url = $"data:image/png;base64,{imageToEditBase64}" });
@@ -164,124 +154,74 @@ namespace GrokImagineApp
 
                     var tasks = selectedImages.Select(async imgPath =>
                     {
-                        var fileInfo = new FileInfo(imgPath);
-                        if (fileInfo.Length > MaxFileSizeBytes)
+                        var ext = Path.GetExtension(imgPath).ToLower().TrimStart('.');
+                        if (ext == "jpg") ext = "jpeg";
+
+                        if (new FileInfo(imgPath).Length > MaxFileSizeBytes)
                         {
                             lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(imgPath)}";
                             MessageBox.Show($"L'image '{Path.GetFileName(imgPath)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
                             return null;
                         }
 
-                        var ext = Path.GetExtension(imgPath).ToLower().TrimStart('.');
-                        if (ext == "jpg") ext = "jpeg";
-                        var b64Bytes = await File.ReadAllBytesAsync(imgPath);
-                        var b64Data = Convert.ToBase64String(b64Bytes);
-                        return new { type = "image_url", url = $"data:image/{ext};base64,{b64Data}" };
-                    });
-                    var completedTasks = await Task.WhenAll(tasks);
-                    imagesList.AddRange(completedTasks.Where(t => t != null));
+                        // ⚡ Bolt Optimization: Use File.ReadAllBytesAsync instead of MemoryStream chunking.
+                        // This avoids excessive Large Object Heap (LOH) allocations and memory copying
+                        // that drasticly impacts performance when dealing with large files (up to 20MB).
+                        byte[] b64Bytes = await File.ReadAllBytesAsync(imgPath);
 
-                    if (imagesList.Count == 1)
-                    {
-                        requestBody = new
+                        // ⚡ Bolt Optimization: Use string.Create to build the data URI directly into a pre-allocated string.
+                        // This eliminates the intermediate base64 string allocation (~26MB chars for a 20MB file),
+                        // significantly reducing Large Object Heap (LOH) fragmentation and memory pressure.
+                        string prefix = $"data:image/{ext};base64,";
+                        int b64Length = ((b64Bytes.Length + 2) / 3) * 4;
+                        string url = string.Create(prefix.Length + b64Length, (prefix, b64Bytes), (span, state) =>
                         {
-                            model = cmbModel.Text,
-                            prompt = txtPrompt.Text.Trim(),
-                            image = imagesList[0],
-                            n = 1,
-                            resolution = cmbResolution.Text,
-                            user = GetOpaqueUserId(),
-                            response_format = "b64_json"
-                        };
-                    }
-                    else
+                            state.prefix.AsSpan().CopyTo(span);
+                            Convert.TryToBase64Chars(state.b64Bytes, span.Slice(state.prefix.Length), out _);
+                        });
+
+                        return (object?)new { type = "image_url", url = url };
+                    }).ToArray();
+
+                    var results = await Task.WhenAll(tasks);
+                    foreach (var res in results)
                     {
-                        requestBody = new
-                        {
-                            model = cmbModel.Text,
-                            prompt = txtPrompt.Text.Trim(),
-                            images = imagesList,
-                            n = 1,
-                            resolution = cmbResolution.Text,
-                            aspect_ratio = aspectRatioValue,
-                            user = GetOpaqueUserId(),
-                            response_format = "b64_json"
-                        };
+                        if (res != null) imagesList.Add(res);
                     }
                 }
-                else
-                {
-                    apiUrl = "https://api.x.ai/v1/images/generations";
-                    requestBody = new
-                    {
-                        model = cmbModel.Text,
-                        prompt = txtPrompt.Text.Trim(),
-                        n = 1,
-                        resolution = cmbResolution.Text,
-                        aspect_ratio = aspectRatioValue,
-                        user = GetOpaqueUserId(),
-                        response_format = "b64_json"
-                    };
-                }
 
-                var json = JsonSerializer.Serialize(requestBody);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                currentBase64Image = await _grokClient.GenerateImageAsync(
+                    apiKey,
+                    txtPrompt.Text.Trim(),
+                    cmbModel.Text,
+                    cmbResolution.Text,
+                    aspectRatioValue,
+                    opaqueUserId,
+                    imagesList);
 
-                // ⚡ Bolt Optimization: Create a per-request message to set headers safely with the shared client
-                using var requestMessage = new HttpRequestMessage(HttpMethod.Post, apiUrl);
-                requestMessage.Headers.Add("Authorization", $"Bearer {txtApiKey.Text.Trim()}");
-                requestMessage.Content = content;
-
-                // ⚡ Bolt Optimization: Use HttpCompletionOption.ResponseHeadersRead to stream the response
-                var response = await _httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead);
-
-                // ⚡ Bolt Optimization: Read directly from stream to avoid large string allocation
-                using var responseStream = await response.Content.ReadAsStreamAsync();
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    using var reader = new StreamReader(responseStream);
-                    var errorString = await reader.ReadToEndAsync();
-                    lblStatus.Text = $"❌ Erreur {response.StatusCode}";
-                    // Parse the JSON error message to prevent leaking raw HTML or echoing sensitive input/API internals
-                    string safeErrorMessage = "Une erreur est survenue lors de la communication avec l'API.";
-                    try
-                    {
-                        using (JsonDocument doc = JsonDocument.Parse(errorString))
-                        {
-                            if (doc.RootElement.TryGetProperty("error", out JsonElement errorElement) && errorElement.TryGetProperty("message", out JsonElement messageElement))
-                            {
-                                safeErrorMessage = messageElement.GetString() ?? safeErrorMessage;
-                            }
-                        }
-                    }
-                    catch (JsonException)
-                    {
-                        // Fallback to generic message if parsing fails
-                    }
-
-                    MessageBox.Show($"Erreur API :\n{safeErrorMessage}", "Erreur API", MessageBoxButtons.OK, MessageBoxIcon.Error);                    
-                    return;
-                }
-
-                // ⚡ Bolt Optimization: Parse JSON directly from stream
-                using var result = await JsonDocument.ParseAsync(responseStream);
-                var b64 = result.RootElement.GetProperty("data")[0].GetProperty("b64_json").GetString();
-
-                currentBase64Image = b64;
+                var b64 = currentBase64Image;
 
                 // Affichage de l'image
                 var imageBytes = Convert.FromBase64String(b64);
-                using var ms = new MemoryStream(imageBytes);
+                var ms = new MemoryStream(imageBytes);
                 pictureBox.Image = Image.FromStream(ms);
 
                 lblStatus.Text = $"✅ Image générée avec {cmbModel.Text} ({cmbResolution.Text})";
                 btnSave.Enabled = true;
             }
+            catch (ArgumentException ex)
+            {
+                MessageBox.Show(ex.Message, "Erreur de validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            catch (GrokImagineException ex)
+            {
+                lblStatus.Text = $"❌ Erreur {ex.StatusCode}";
+                MessageBox.Show($"Erreur API :\n{ex.Message}", "Erreur API", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
             catch (Exception)
             {
                 lblStatus.Text = "❌ Erreur inattendue";
-                MessageBox.Show("Une erreur de communication est survenue. Veuillez vérifier votre connexion ou réessayer plus tard.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Une erreur inattendue est survenue lors de la génération.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
@@ -295,7 +235,7 @@ namespace GrokImagineApp
             }
         }
 
-        private void BtnSave_Click(object sender, EventArgs e)
+        private void BtnSave_Click(object? sender, EventArgs e)
         {
             if (currentBase64Image == null) return;
 
@@ -308,10 +248,18 @@ namespace GrokImagineApp
 
             if (sfd.ShowDialog() == DialogResult.OK)
             {
-                var imageBytes = Convert.FromBase64String(currentBase64Image);
-                File.WriteAllBytes(sfd.FileName, imageBytes);
-                lblStatus.Text = $"💾 Image sauvegardée : {Path.GetFileName(sfd.FileName)}";
-                MessageBox.Show("Image enregistrée avec succès !", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                try
+                {
+                    var imageBytes = Convert.FromBase64String(currentBase64Image);
+                    File.WriteAllBytes(sfd.FileName, imageBytes);
+                    lblStatus.Text = "💾 Image sauvegardée avec succès.";
+                    MessageBox.Show("Image enregistrée avec succès !", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception)
+                {
+                    lblStatus.Text = "❌ Erreur de sauvegarde";
+                    MessageBox.Show("Une erreur est survenue lors de la sauvegarde de l'image.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 
@@ -326,31 +274,38 @@ namespace GrokImagineApp
             UpdateImageButtonText();
         }
 
-        private void BtnAddImages_Click(object sender, EventArgs e)
+        private void BtnAddImages_Click(object? sender, EventArgs e)
         {
-            using var ofd = new OpenFileDialog
+            try
             {
-                Filter = "Images|*.jpg;*.jpeg;*.png;*.webp",
-                Multiselect = true,
-                Title = "Sélectionner des images (max 5)"
-            };
-
-            if (ofd.ShowDialog() == DialogResult.OK)
-            {
-                foreach (var file in ofd.FileNames)
+                using var ofd = new OpenFileDialog
                 {
-                    if (new FileInfo(file).Length > MaxFileSizeBytes)
-                    {
-                        MessageBox.Show($"L'image '{Path.GetFileName(file)}' dépasse la limite de 20 Mo et ne sera pas ajoutée.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        continue;
-                    }
+                    Filter = "Images|*.jpg;*.jpeg;*.png;*.webp",
+                    Multiselect = true,
+                    Title = "Sélectionner des images (max 5)"
+                };
 
-                    if (!selectedImages.Contains(file) && selectedImages.Count < 5)
+                if (ofd.ShowDialog() == DialogResult.OK)
+                {
+                    foreach (var file in ofd.FileNames)
                     {
-                        selectedImages.Add(file);
+                        if (new FileInfo(file).Length > MaxFileSizeBytes)
+                        {
+                            MessageBox.Show($"L'image sélectionnée dépasse la limite de 20 Mo et ne sera pas ajoutée.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            continue;
+                        }
+
+                        if (!selectedImages.Contains(file) && selectedImages.Count < 5)
+                        {
+                            selectedImages.Add(file);
+                        }
                     }
+                    UpdateImageButtonText();
                 }
-                UpdateImageButtonText();
+            }
+            catch (Exception)
+            {
+                MessageBox.Show("Une erreur est survenue lors de la sélection des images.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -360,26 +315,8 @@ namespace GrokImagineApp
                 btnAddImages.Text = $"Ajouter images ({selectedImages.Count}/5)";
         }
 
-        private string GetOpaqueUserId()
-        {
-            // Compute a SHA-256 hash of the local username to prevent leaking PII
-            // Adding a static salt to prevent rainbow table attacks
-            string salt = "GrokImagineApp_Salt_2023";
-            string rawData = WindowsIdentity.GetCurrent().Name + salt;
 
-            using (SHA256 sha256Hash = SHA256.Create())
-            {
-                byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(rawData));
-                StringBuilder builder = new StringBuilder();
-                for (int i = 0; i < bytes.Length; i++)
-                {
-                    builder.Append(bytes[i].ToString("x2"));
-                }
-                return builder.ToString();
-            }
-        }
-
-        private void Form1_Resize(object sender, EventArgs e)
+        private void Form1_Resize(object? sender, EventArgs e)
         {
             // PictureBox size is automatically adjusted via Anchor
             // If additional custom adjustments are needed, add here
