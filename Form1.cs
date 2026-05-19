@@ -247,7 +247,7 @@ namespace GrokImagineApp
                     string safeErrorMessage = "Une erreur est survenue lors de la communication avec l'API.";
                     try
                     {
-                        using (JsonDocument doc = JsonDocument.Parse(responseString))
+                        using (JsonDocument doc = JsonDocument.Parse(errorString))
                         {
                             if (doc.RootElement.TryGetProperty("error", out JsonElement errorElement) && errorElement.TryGetProperty("message", out JsonElement messageElement))
                             {

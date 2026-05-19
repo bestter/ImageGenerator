@@ -8,8 +8,4 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="System.Text.Json" Version="10.0.6" />
-  </ItemGroup>
-
 </Project>
