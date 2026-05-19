@@ -27,3 +27,8 @@
 **Vulnerability:** When the API returned a non-JSON error (e.g., 502 Bad Gateway HTML), the raw response body was used as the exception message and shown in the UI, potentially leaking server details or proxy versions.
 **Learning:** Unhandled fallback error messages should never expose raw HTTP response bodies directly to the user.
 **Prevention:** Always use a generic, safe string as a fallback when an error response cannot be safely parsed as JSON.
+
+## 2024-05-15 - PII Leakage via Predictable User Hashes
+**Vulnerability:** The application was hashing `Environment.UserName` to create an opaque user ID for the xAI API. Since the username space is small and the salt is hardcoded, these hashes could be subjected to dictionary attacks to reveal the user's local operating system account name, leaking PII to external services.
+**Learning:** Using simple hashing on low-entropy OS-level personal data (like Windows usernames) is insufficient for anonymization when the data is sent to a third-party service, especially when the salt is public/hardcoded.
+**Prevention:** For long-term user tracking that requires anonymity, generate a high-entropy stable identifier (like a random GUID), store it securely on the client side (e.g., in `LocalApplicationData`), and send that instead.
