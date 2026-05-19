@@ -10,3 +10,6 @@
 ## 2026-05-18 - [Optimize Large File Reading]
 **Learning:** Using `MemoryStream` chunking to read large files (e.g., images up to 20MB) causes excessive Large Object Heap (LOH) allocations and memory copying due to buffer resizing. This drastically impacts performance.
 **Action:** Prefer `File.ReadAllBytesAsync` over reading chunks into a `MemoryStream` when reading entire files into memory.
+## 2026-05-19 - [Optimize Base64 Data URI Construction]
+**Learning:** Constructing base64 data URIs from large binary arrays (e.g. 20MB files) by using `Convert.ToBase64String` and string interpolation causes huge allocations on the Large Object Heap (LOH) for the intermediate base64 string, fragmenting memory and severely impacting performance.
+**Action:** Always use `string.Create` paired with `Convert.TryToBase64Chars` when constructing data URIs from large binary arrays. This allows you to pre-allocate the final string size and write the base64 characters directly into memory, completely bypassing the intermediate string allocation and reducing memory overhead by nearly half.
