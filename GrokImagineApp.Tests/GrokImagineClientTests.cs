@@ -250,5 +250,96 @@ namespace GrokImagineApp.Tests
             // Assert
             await act.Should().ThrowAsync<GrokImagineException>().WithMessage("La réponse de l'API ne contient pas d'image valide.");
         }
+
+        [Fact]
+        public async Task GenerateImageAsync_ApiReturnsSimpleStringError_ParsesErrorMessageAndThrowsGrokImagineException()
+        {
+            // Arrange
+            var errorResponse = new { error = "Unauthorized access token" };
+
+            var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+            handlerMock
+               .Protected()
+               .Setup<Task<HttpResponseMessage>>(
+                  "SendAsync",
+                  ItExpr.IsAny<HttpRequestMessage>(),
+                  ItExpr.IsAny<CancellationToken>()
+               )
+               .ReturnsAsync(new HttpResponseMessage()
+               {
+                   StatusCode = HttpStatusCode.Unauthorized,
+                   Content = new StringContent(JsonSerializer.Serialize(errorResponse)),
+               });
+
+            var httpClient = new HttpClient(handlerMock.Object);
+            var client = new GrokImagineClient(httpClient);
+
+            // Act
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "model", "1k", "16:9", "user", new List<object>());
+
+            // Assert
+            var exception = await act.Should().ThrowAsync<GrokImagineException>().WithMessage("Unauthorized access token");
+            exception.Which.StatusCode.Should().Be(401);
+        }
+
+        [Fact]
+        public async Task GenerateImageAsync_ApiReturnsNonStringMessageError_FallsBackToRawTextAndThrowsGrokImagineException()
+        {
+            // Arrange
+            var errorResponse = new { error = new { message = 500 } };
+
+            var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+            handlerMock
+               .Protected()
+               .Setup<Task<HttpResponseMessage>>(
+                  "SendAsync",
+                  ItExpr.IsAny<HttpRequestMessage>(),
+                  ItExpr.IsAny<CancellationToken>()
+               )
+               .ReturnsAsync(new HttpResponseMessage()
+               {
+                   StatusCode = HttpStatusCode.InternalServerError,
+                   Content = new StringContent(JsonSerializer.Serialize(errorResponse)),
+               });
+
+            var httpClient = new HttpClient(handlerMock.Object);
+            var client = new GrokImagineClient(httpClient);
+
+            // Act
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "model", "1k", "16:9", "user", new List<object>());
+
+            // Assert
+            var exception = await act.Should().ThrowAsync<GrokImagineException>().WithMessage("500");
+            exception.Which.StatusCode.Should().Be(500);
+        }
+
+        [Fact]
+        public async Task GenerateImageAsync_ApiReturnsArrayJsonError_ThrowsGenericGrokImagineException()
+        {
+            // Arrange
+            var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+            handlerMock
+               .Protected()
+               .Setup<Task<HttpResponseMessage>>(
+                  "SendAsync",
+                  ItExpr.IsAny<HttpRequestMessage>(),
+                  ItExpr.IsAny<CancellationToken>()
+               )
+               .ReturnsAsync(new HttpResponseMessage()
+               {
+                   StatusCode = HttpStatusCode.BadRequest,
+                   Content = new StringContent("[1, 2, 3]"),
+               });
+
+            var httpClient = new HttpClient(handlerMock.Object);
+            var client = new GrokImagineClient(httpClient);
+
+            // Act
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "model", "1k", "16:9", "user", new List<object>());
+
+            // Assert
+            var exception = await act.Should().ThrowAsync<GrokImagineException>().WithMessage("Une erreur est survenue lors de la communication avec l'API.");
+            exception.Which.StatusCode.Should().Be(400);
+        }
     }
 }

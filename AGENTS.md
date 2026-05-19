@@ -2,27 +2,27 @@
 
 Ce fichier fournit un contexte aux agents IA travaillant sur ce projet.
 
-**Version** : 1.2  
-**Dernière mise à jour** : 15 mai 2026  
+**Version** : 1.2
+**Dernière mise à jour** : 15 mai 2026
 **Propriétaire** : Martin Labelle (@bestter)
 
 ---
 
 ## Golden Rules – Règles Absolues (Ne jamais transgresser)
 
-1. **Ne modifie jamais les fichiers AGENTS.md, ANTIGRAVITY.md et .editorconfig sans autorisation explicite**  
-   Ces fichiers sont la source de vérité pour l’agent IA.  
+1. **Ne modifie jamais les fichiers AGENTS.md, ANTIGRAVITY.md et .editorconfig sans autorisation explicite**
+   Ces fichiers sont la source de vérité pour l’agent IA.
    **Toute modification nécessite une autorisation claire et explicite du propriétaire du projet** (exemple : « Tu peux réécrire AGENTS.md » ou « Mets à jour la section X »). Sans cette autorisation, tu n’y touches pas.
 
-2. **Minimalisme extrême**  
-   Priorise toujours un code fonctionnel, durable et facilement maintenable.  
+2. **Minimalisme extrême**
+   Priorise toujours un code fonctionnel, durable et facilement maintenable.
    **Aucune nouvelle dépendance** (NuGet ou autre) ne doit être ajoutée sans validation explicite, même pour des utilitaires « petits ».
 
-3. **Demande avant d’improviser**  
+3. **Demande avant d’improviser**
    Si une fonctionnalité, un pattern ou une décision d’architecture n’est pas clairement documenté dans `AGENTS.md` ou `ANTIGRAVITY.md` → **pose la question** au lieu de deviner.
 
-4. **Respecte .editorconfig + langue dans le code**  
-   Avant de générer ou de modifier du code, analyse et respecte **impérativement** les règles du fichier `.editorconfig`.  
+4. **Respecte .editorconfig + langue dans le code**
+   Avant de générer ou de modifier du code, analyse et respecte **impérativement** les règles du fichier `.editorconfig`.
    Tous les commentaires de code, messages de commit et documentation technique doivent être rédigés **en anglais**, à l’exception des fichiers `AGENTS.md` et `ANTIGRAVITY.md` qui doivent rester en français.
 
 ---
@@ -43,16 +43,16 @@ Avant toute modification, suis toujours cet ordre :
 
 Pour toute modification de l’interface utilisateur, l’agent doit impérativement suivre cette approche hiérarchique :
 
-1. **Édition via `InitializeControls()` (Priorité 1)**  
-   - Toute modification de layout, ajout/suppression de contrôles ou ajustement de propriétés visuelles doit se faire dans la méthode `InitializeControls()` située dans `Form1.cs`.  
-   - Le fichier `Form1.Designer.cs` contient **uniquement** le code standard généré par le Designer (`InitializeComponent()`) et ne doit **jamais** être modifié manuellement pour le layout.  
+1. **Édition via `InitializeControls()` (Priorité 1)**
+   - Toute modification de layout, ajout/suppression de contrôles ou ajustement de propriétés visuelles doit se faire dans la méthode `InitializeControls()` située dans `Form1.cs`.
+   - Le fichier `Form1.Designer.cs` contient **uniquement** le code standard généré par le Designer (`InitializeComponent()`) et ne doit **jamais** être modifié manuellement pour le layout.
    - **Règle stricte** : La logique métier et les gestionnaires d’événements restent dans `Form1.cs`, séparés visuellement de `InitializeControls()`.
 
-2. **Design-First, pas Code-First**  
+2. **Design-First, pas Code-First**
    Avant de générer du code de formulaire, l’agent doit **imaginer** le design complet (positionnement, tailles, ancrages) pour s’assurer qu’il est cohérent et fonctionnel.
 
-3. **Mise à l’échelle et résolution (Scaling)**  
-   L’application doit être entièrement redimensionnable.  
+3. **Mise à l’échelle et résolution (Scaling)**
+   L’application doit être entièrement redimensionnable.
    Les contrôles doivent utiliser des ancrages (`Anchor`) et des positionnements relatifs.
 
 ---

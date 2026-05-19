@@ -82,20 +82,33 @@ namespace GrokImagineApp
                 var errorString = await reader.ReadToEndAsync();
 
                 string safeErrorMessage = string.Empty;
-                try
+                if (!string.IsNullOrWhiteSpace(errorString))
                 {
-                    using (JsonDocument doc = JsonDocument.Parse(errorString))
+                    try
                     {
-                        if (doc.RootElement.TryGetProperty("error", out JsonElement errorElement) &&
-                            errorElement.TryGetProperty("message", out JsonElement messageElement))
+                        using (JsonDocument doc = JsonDocument.Parse(errorString))
                         {
-                            safeErrorMessage = messageElement.GetString() ?? string.Empty;
+                            if (doc.RootElement.ValueKind == JsonValueKind.Object &&
+                                doc.RootElement.TryGetProperty("error", out JsonElement errorElement))
+                            {
+                                if (errorElement.ValueKind == JsonValueKind.Object &&
+                                    errorElement.TryGetProperty("message", out JsonElement messageElement))
+                                {
+                                    safeErrorMessage = messageElement.ValueKind == JsonValueKind.String
+                                        ? messageElement.GetString() ?? string.Empty
+                                        : messageElement.GetRawText();
+                                }
+                                else if (errorElement.ValueKind == JsonValueKind.String)
+                                {
+                                    safeErrorMessage = errorElement.GetString() ?? string.Empty;
+                                }
+                            }
                         }
                     }
-                }
-                catch (JsonException)
-                {
-                    // Fallback to generic message if parsing fails
+                    catch (Exception)
+                    {
+                        // Fallback to generic message if parsing or property retrieval fails
+                    }
                 }
 
                 if (string.IsNullOrWhiteSpace(safeErrorMessage))
