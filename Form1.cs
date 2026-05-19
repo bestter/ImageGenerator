@@ -168,8 +168,19 @@ namespace GrokImagineApp
                         // This avoids excessive Large Object Heap (LOH) allocations and memory copying
                         // that drasticly impacts performance when dealing with large files (up to 20MB).
                         byte[] b64Bytes = await File.ReadAllBytesAsync(imgPath);
-                        var b64Data = Convert.ToBase64String(b64Bytes);
-                        return (object?)new { type = "image_url", url = $"data:image/{ext};base64,{b64Data}" };
+
+                        // ⚡ Bolt Optimization: Use string.Create to build the data URI directly into a pre-allocated string.
+                        // This eliminates the intermediate base64 string allocation (~26MB chars for a 20MB file),
+                        // significantly reducing Large Object Heap (LOH) fragmentation and memory pressure.
+                        string prefix = $"data:image/{ext};base64,";
+                        int b64Length = ((b64Bytes.Length + 2) / 3) * 4;
+                        string url = string.Create(prefix.Length + b64Length, (prefix, b64Bytes), (span, state) =>
+                        {
+                            state.prefix.AsSpan().CopyTo(span);
+                            Convert.TryToBase64Chars(state.b64Bytes, span.Slice(state.prefix.Length), out _);
+                        });
+
+                        return (object?)new { type = "image_url", url = url };
                     }).ToArray();
 
                     var results = await Task.WhenAll(tasks);
