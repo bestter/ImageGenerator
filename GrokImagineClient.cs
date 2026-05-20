@@ -121,18 +121,15 @@ namespace GrokImagineApp
 
             try
             {
-                using var result = await JsonDocument.ParseAsync(responseStream);
-                if (result.RootElement.TryGetProperty("data", out JsonElement dataElement) && dataElement.GetArrayLength() > 0)
+                // ⚡ Bolt Optimization: Use JsonSerializer.DeserializeAsync instead of JsonDocument.ParseAsync.
+                // This avoids building a large DOM in memory for potentially huge payloads (like 20MB base64 images),
+                // instead streaming directly to the required string property, significantly reducing Large Object Heap allocations.
+                var result = await JsonSerializer.DeserializeAsync<GrokImagineResponse>(responseStream);
+
+                var b64 = result?.Data?[0]?.B64Json;
+                if (!string.IsNullOrEmpty(b64))
                 {
-                    var firstItem = dataElement[0];
-                    if (firstItem.TryGetProperty("b64_json", out JsonElement b64Element))
-                    {
-                        var b64 = b64Element.GetString();
-                        if (!string.IsNullOrEmpty(b64))
-                        {
-                            return b64;
-                        }
-                    }
+                    return b64;
                 }
                 throw new GrokImagineException("La réponse de l'API ne contient pas d'image valide.");
             }

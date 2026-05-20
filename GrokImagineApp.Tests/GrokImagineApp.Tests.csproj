@@ -26,5 +26,6 @@
     <Compile Include="..\UserIdHelper.cs" />
     <Compile Include="..\GrokImagineRequest.cs" />
     <Compile Include="..\GrokImagineException.cs" />
+    <Compile Include="..\GrokImagineResponse.cs" />
   </ItemGroup>
 </Project>
