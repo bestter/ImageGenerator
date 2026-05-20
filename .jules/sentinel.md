@@ -32,3 +32,8 @@
 **Vulnerability:** The application was hashing `Environment.UserName` to create an opaque user ID for the xAI API. Since the username space is small and the salt is hardcoded, these hashes could be subjected to dictionary attacks to reveal the user's local operating system account name, leaking PII to external services.
 **Learning:** Using simple hashing on low-entropy OS-level personal data (like Windows usernames) is insufficient for anonymization when the data is sent to a third-party service, especially when the salt is public/hardcoded.
 **Prevention:** For long-term user tracking that requires anonymity, generate a high-entropy stable identifier (like a random GUID), store it securely on the client side (e.g., in `LocalApplicationData`), and send that instead.
+
+## 2024-05-14 - Prevent Information Leakage in Unhandled Exceptions
+**Vulnerability:** Unhandled WinForms application exceptions were not caught globally, allowing raw exception details (e.g., stack traces, file paths) to be leaked if the app crashed.
+**Learning:** In C# WinForms applications, global unhandled exception handlers (`Application.ThreadException` and `AppDomain.CurrentDomain.UnhandledException`) should be defined. By default, unhandled thread exceptions trigger a default dialog that can show stack traces to users.
+**Prevention:** Register `Application.ThreadException` and `AppDomain.CurrentDomain.UnhandledException` at app startup (`Program.Main()`) and call `Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException)` to catch exceptions on the UI thread and display sanitized, generic error messages.
