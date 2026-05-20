@@ -1,11 +1,5 @@
-Exhaustive list of packages removed on the Frontend.
-No frontend exists in this project, so no frontend packages were removed.
-
-Exhaustive list of packages removed on the Backend.
-- System.Text.Json (Version 10.0.6) - removed from GrokImagineApp.csproj since it's already included via the framework.
-
-Explicit confirmation that Frontend and Backend test suites were executed and are green.
-Confirmed. Backend tests were executed (`dotnet test`) and compiled/passed successfully. No frontend tests exist.
-
-Estimated saved weight or reduction in attack surface (if applicable).
-Removed an unused and potentially invalid external package reference, reducing the attack surface of external dependencies and improving build speeds.
+🚨 Severity: MEDIUM
+💡 Vulnerability: Unhandled exceptions in the WinForms application cause default Windows error dialogs to appear, which can leak internal stack traces, file paths, and application details to the end-user.
+🎯 Impact: This information disclosure could give malicious users insight into the application's internal structure and file system.
+🔧 Fix: Configured global exception handlers in `Program.cs` (`Application.ThreadException` and `AppDomain.CurrentDomain.UnhandledException`) using `Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException)`. These handlers now display generic, sanitized error messages instead of raw exception details.
+✅ Verification: `dotnet test` still passes. The application will now fail securely in the event of an unhandled crash.
