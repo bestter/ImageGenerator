@@ -52,17 +52,11 @@ namespace GrokImagineApp
             string salt = "GrokImagineApp_Salt_2023";
             string rawData = name + salt;
 
-            using (SHA256 sha256Hash = SHA256.Create())
-            {
-                byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(rawData));
-                StringBuilder builder = new StringBuilder();
-                for (int i = 0; i < bytes.Length; i++)
-                {
-                    builder.Append(bytes[i].ToString("x2"));
-                }
-
-                return builder.ToString();
-            }
+            // ⚡ Bolt Optimization: Use SHA256.HashData and Convert.ToHexStringLower.
+            // This avoids allocating a SHA256 instance, a StringBuilder, and 32 intermediate string
+            // allocations per hash calculation, significantly reducing Large Object Heap and GC pressure.
+            byte[] bytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawData));
+            return Convert.ToHexStringLower(bytes);
         }
     }
 }
