@@ -156,17 +156,21 @@ namespace GrokImagineApp
                         var ext = Path.GetExtension(imgPath).ToLower().TrimStart('.');
                         if (ext == "jpg") ext = "jpeg";
 
-                        if (new FileInfo(imgPath).Length > MaxFileSizeBytes)
+                        byte[] b64Bytes;
+                        using (var fs = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
                         {
-                            lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(imgPath)}";
-                            MessageBox.Show($"L'image '{Path.GetFileName(imgPath)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            return null;
-                        }
+                            // 🛡️ Sentinel: Prevent TOCTOU race condition by checking length on the opened handle
+                            if (fs.Length > MaxFileSizeBytes)
+                            {
+                                lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(imgPath)}";
+                                MessageBox.Show($"L'image '{Path.GetFileName(imgPath)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                return null;
+                            }
 
-                        // ⚡ Bolt Optimization: Use File.ReadAllBytesAsync instead of MemoryStream chunking.
-                        // This avoids excessive Large Object Heap (LOH) allocations and memory copying
-                        // that drasticly impacts performance when dealing with large files (up to 20MB).
-                        byte[] b64Bytes = await File.ReadAllBytesAsync(imgPath);
+                            // ⚡ Bolt Optimization: Pre-allocate and read directly to avoid MemoryStream chunking
+                            b64Bytes = new byte[(int)fs.Length];
+                            await fs.ReadExactlyAsync(b64Bytes, 0, b64Bytes.Length);
+                        }
 
                         // ⚡ Bolt Optimization: Use string.Create to build the data URI directly into a pre-allocated string.
                         // This eliminates the intermediate base64 string allocation (~26MB chars for a 20MB file),
@@ -288,9 +292,21 @@ namespace GrokImagineApp
                 {
                     foreach (var file in ofd.FileNames)
                     {
-                        if (new FileInfo(file).Length > MaxFileSizeBytes)
+                        try
                         {
-                            MessageBox.Show($"L'image sélectionnée dépasse la limite de 20 Mo et ne sera pas ajoutée.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            // 🛡️ Sentinel: Prevent TOCTOU race condition by keeping the file handle open during check
+                            using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            {
+                                if (fs.Length > MaxFileSizeBytes)
+                                {
+                                    MessageBox.Show($"L'image '{Path.GetFileName(file)}' dépasse la limite de 20 Mo et ne sera pas ajoutée.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                    continue;
+                                }
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            MessageBox.Show($"Impossible d'ouvrir l'image '{Path.GetFileName(file)}'.", "Erreur de lecture", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                             continue;
                         }
 
