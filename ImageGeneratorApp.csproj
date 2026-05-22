@@ -15,6 +15,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageLicenseFile>gpl-3.0.txt</PackageLicenseFile>
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+    <RepositoryUrl>https://github.com/bestter/ImageGenerator.git</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
