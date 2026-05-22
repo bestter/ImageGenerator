@@ -50,16 +50,22 @@ namespace ImageGeneratorApp
             this.WindowState = FormWindowState.Maximized;
 
             // API Key
-            lblKey = new Label { Text = "Clé API xAI :", Location = new Point(20, 20), AutoSize = true };
-            txtApiKey = new TextBox { Location = new Point(160, 17), Width = 610, PasswordChar = '•', Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
+            lblKey = new Label 
+            { 
+                Text = "Clé API xAI :", 
+                Location = new Point(20, 20), 
+                AutoSize = true, 
+                ForeColor = Color.FromArgb(220, 76, 30) 
+            };
+            txtApiKey = new TextBox { Location = new Point(190, 17), Width = 580, PasswordChar = '•', Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
 
             // Prompt
             var lblPrompt = new Label { Text = "Prompt :", Location = new Point(20, 60), AutoSize = true };
-            txtPrompt = new TextBox { Location = new Point(160, 57), Width = 610, Height = 100, Multiline = true, ScrollBars = ScrollBars.Vertical, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, MaxLength = 4000 };
+            txtPrompt = new TextBox { Location = new Point(190, 57), Width = 580, Height = 100, Multiline = true, ScrollBars = ScrollBars.Vertical, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, MaxLength = 4000 };
 
             // Modèle
             var lblModel = new Label { Text = "Modèle :", Location = new Point(20, 175), AutoSize = true };
-            cmbModel = new ComboBox { Location = new Point(160, 172), Width = 260, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            cmbModel = new ComboBox { Location = new Point(190, 172), Width = 230, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             cmbModel.Items.AddRange(new[] { "grok-imagine-image", "grok-imagine-image-pro", "nano-banana-pro" });
             cmbModel.SelectedIndex = 0;
             cmbModel.SelectedIndexChanged += CmbModel_SelectedIndexChanged;
@@ -76,7 +82,7 @@ namespace ImageGeneratorApp
 
             // Aspect Ratio
             var lblRatio = new Label { Text = "Aspect Ratio :", Location = new Point(20, 220), AutoSize = true };
-            cmbAspectRatio = new ComboBox { Location = new Point(160, 217), Width = 210, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            cmbAspectRatio = new ComboBox { Location = new Point(190, 217), Width = 210, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             cmbAspectRatio.Items.AddRange(new[] { "1:1 (Médias sociaux)", "16:9 (Widescreen)", "9:16 (Stories/Reels)", "4:3 (Standard)", "3:2 (Photographie)", "20:9 (Panoramique cellulaire)" });
             cmbAspectRatio.SelectedIndex = 1; // 16:9 par défaut
 
@@ -90,13 +96,13 @@ namespace ImageGeneratorApp
             };
 
             // Boutons
-            btnGenerate = new Button { Text = "Générer l'image", Location = new Point(160, 260), Width = 160, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnGenerate = new Button { Text = "Générer l'image", Location = new Point(190, 260), Width = 160, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnGenerate.Click += BtnGenerate_Click;
 
-            btnSave = new Button { Text = "📥 Enregistrer l'image (haute rés.)", Location = new Point(340, 260), Width = 250, Height = 40, Enabled = false, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnSave = new Button { Text = "📥 Enregistrer l'image (haute rés.)", Location = new Point(370, 260), Width = 250, Height = 40, Enabled = false, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnSave.Click += BtnSave_Click;
 
-            btnClear = new Button { Text = "Effacer", Location = new Point(610, 260), Width = 100, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnClear = new Button { Text = "Effacer", Location = new Point(640, 260), Width = 100, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnClear.Click += (s, e) => ClearForm();
 
             // Status
@@ -350,10 +356,12 @@ namespace ImageGeneratorApp
             if (cmbModel.SelectedItem?.ToString() == "nano-banana-pro")
             {
                 lblKey.Text = "Clé Google Cloud :";
+                lblKey.ForeColor = Color.FromArgb(26, 115, 232); // Google Blue
             }
             else
             {
                 lblKey.Text = "Clé API xAI :";
+                lblKey.ForeColor = Color.FromArgb(220, 76, 30); // xAI Orange-Red
             }
         }
 
