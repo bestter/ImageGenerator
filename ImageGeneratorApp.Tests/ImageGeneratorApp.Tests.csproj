@@ -22,11 +22,11 @@
 
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\GrokImagineClient.cs" />
-    <Compile Include="..\GrokImagineJsonContext.cs" />
+    <Compile Include="..\ImageGeneratorClient.cs" />
+    <Compile Include="..\ImageGeneratorJsonContext.cs" />
     <Compile Include="..\UserIdHelper.cs" />
-    <Compile Include="..\GrokImagineRequest.cs" />
-    <Compile Include="..\GrokImagineException.cs" />
-    <Compile Include="..\GrokImagineResponse.cs" />
+    <Compile Include="..\ImageGeneratorRequest.cs" />
+    <Compile Include="..\ImageGeneratorException.cs" />
+    <Compile Include="..\ImageGeneratorResponse.cs" />
   </ItemGroup>
 </Project>

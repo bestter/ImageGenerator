@@ -10,11 +10,12 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace GrokImagineApp
+namespace ImageGeneratorApp
 {
     public partial class Form1 : Form
     {
         private PictureBox pictureBox = null!;
+        private Label lblKey = null!;
         private TextBox txtApiKey = null!;
         private TextBox txtPrompt = null!;
         private ComboBox cmbModel = null!;
@@ -34,7 +35,7 @@ namespace GrokImagineApp
         // This avoids socket exhaustion (TIME_WAIT state) and eliminates TCP/TLS handshake latency on subsequent requests
         // 🛡️ Sentinel: Add timeout to prevent hanging indefinitely if external API is unresponsive
         private static readonly HttpClient _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
-        private readonly GrokImagineClient _grokClient = new GrokImagineClient(_httpClient);
+        private readonly ImageGeneratorClient _imageClient = new ImageGeneratorClient(_httpClient);
 
         public Form1()
         {
@@ -43,24 +44,31 @@ namespace GrokImagineApp
 
         private void InitializeControls()
         {
-            this.Text = "Grok Imagine - Générateur d'images xAI";
+            this.Text = "Générateur d'image Grok Imagine et Nano Banana Pro";
             this.ClientSize = new Size(900, 700);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.WindowState = FormWindowState.Maximized;
 
             // API Key
-            var lblKey = new Label { Text = "Clé API xAI :", Location = new Point(20, 20), AutoSize = true };
-            txtApiKey = new TextBox { Location = new Point(120, 17), Width = 650, PasswordChar = '•', Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
+            lblKey = new Label 
+            { 
+                Text = "Clé API xAI :", 
+                Location = new Point(20, 20), 
+                AutoSize = true, 
+                ForeColor = Color.FromArgb(220, 76, 30) 
+            };
+            txtApiKey = new TextBox { Location = new Point(190, 17), Width = 580, PasswordChar = '•', Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
 
             // Prompt
             var lblPrompt = new Label { Text = "Prompt :", Location = new Point(20, 60), AutoSize = true };
-            txtPrompt = new TextBox { Location = new Point(120, 57), Width = 650, Height = 100, Multiline = true, ScrollBars = ScrollBars.Vertical, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, MaxLength = 4000 };
+            txtPrompt = new TextBox { Location = new Point(190, 57), Width = 580, Height = 100, Multiline = true, ScrollBars = ScrollBars.Vertical, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, MaxLength = 4000 };
 
             // Modèle
             var lblModel = new Label { Text = "Modèle :", Location = new Point(20, 175), AutoSize = true };
-            cmbModel = new ComboBox { Location = new Point(120, 172), Width = 300, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
-            cmbModel.Items.AddRange(new[] { "grok-imagine-image", "grok-imagine-image-pro" });
+            cmbModel = new ComboBox { Location = new Point(190, 172), Width = 230, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            cmbModel.Items.AddRange(new[] { "grok-imagine-image", "grok-imagine-image-pro", "nano-banana-pro" });
             cmbModel.SelectedIndex = 0;
+            cmbModel.SelectedIndexChanged += CmbModel_SelectedIndexChanged;
 
             // Résolution (haute dispo)
             var lblRes = new Label { Text = "Résolution :", Location = new Point(440, 175), AutoSize = true };
@@ -74,7 +82,7 @@ namespace GrokImagineApp
 
             // Aspect Ratio
             var lblRatio = new Label { Text = "Aspect Ratio :", Location = new Point(20, 220), AutoSize = true };
-            cmbAspectRatio = new ComboBox { Location = new Point(120, 217), Width = 250, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            cmbAspectRatio = new ComboBox { Location = new Point(190, 217), Width = 210, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             cmbAspectRatio.Items.AddRange(new[] { "1:1 (Médias sociaux)", "16:9 (Widescreen)", "9:16 (Stories/Reels)", "4:3 (Standard)", "3:2 (Photographie)", "20:9 (Panoramique cellulaire)" });
             cmbAspectRatio.SelectedIndex = 1; // 16:9 par défaut
 
@@ -88,13 +96,13 @@ namespace GrokImagineApp
             };
 
             // Boutons
-            btnGenerate = new Button { Text = "Générer l'image", Location = new Point(120, 260), Width = 200, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnGenerate = new Button { Text = "Générer l'image", Location = new Point(190, 260), Width = 160, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnGenerate.Click += BtnGenerate_Click;
 
-            btnSave = new Button { Text = "📥 Enregistrer l'image (haute rés.)", Location = new Point(340, 260), Width = 250, Height = 40, Enabled = false, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnSave = new Button { Text = "📥 Enregistrer l'image (haute rés.)", Location = new Point(370, 260), Width = 250, Height = 40, Enabled = false, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnSave.Click += BtnSave_Click;
 
-            btnClear = new Button { Text = "Effacer", Location = new Point(610, 260), Width = 100, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnClear = new Button { Text = "Effacer", Location = new Point(640, 260), Width = 100, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnClear.Click += (s, e) => ClearForm();
 
             // Status
@@ -194,7 +202,7 @@ namespace GrokImagineApp
                     }
                 }
 
-                currentBase64Image = await _grokClient.GenerateImageAsync(
+                currentBase64Image = await _imageClient.GenerateImageAsync(
                     apiKey,
                     txtPrompt.Text.Trim(),
                     cmbModel.Text,
@@ -217,7 +225,7 @@ namespace GrokImagineApp
             {
                 MessageBox.Show(ex.Message, "Erreur de validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
-            catch (GrokImagineException ex)
+            catch (ImageGeneratorException ex)
             {
                 lblStatus.Text = $"❌ Erreur {ex.StatusCode}";
                 MessageBox.Show($"Erreur API :\n{ex.Message}", "Erreur API", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -251,8 +259,8 @@ namespace GrokImagineApp
             using var sfd = new SaveFileDialog
             {
                 Filter = "PNG Image|*.png",
-                Title = "Enregistrer l'image Grok Imagine",
-                FileName = $"grok-imagine-{DateTime.Now:yyyyMMdd-HHmmss}.png"
+                Title = "Enregistrer l'image",
+                FileName = $"image-{DateTime.Now:yyyyMMdd-HHmmss}.png"
             };
 
             if (sfd.ShowDialog() == DialogResult.OK)
@@ -341,6 +349,20 @@ namespace GrokImagineApp
         {
             // PictureBox size is automatically adjusted via Anchor
             // If additional custom adjustments are needed, add here
+        }
+
+        private void CmbModel_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            if (cmbModel.SelectedItem?.ToString() == "nano-banana-pro")
+            {
+                lblKey.Text = "Clé Google Cloud :";
+                lblKey.ForeColor = Color.FromArgb(26, 115, 232); // Google Blue
+            }
+            else
+            {
+                lblKey.Text = "Clé API xAI :";
+                lblKey.ForeColor = Color.FromArgb(220, 76, 30); // xAI Orange-Red
+            }
         }
 
         //[STAThread]

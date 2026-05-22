@@ -1,8 +1,8 @@
 using System.Text.Json.Serialization;
 
-namespace GrokImagineApp
+namespace ImageGeneratorApp
 {
-    public class GrokImagineRequest
+    public class ImageGeneratorRequest
     {
         [JsonPropertyName("model")]
         public string Model { get; set; } = string.Empty;

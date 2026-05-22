@@ -1,14 +1,14 @@
 using System.Text.Json.Serialization;
 
-namespace GrokImagineApp
+namespace ImageGeneratorApp
 {
-    public class GrokImagineResponse
+    public class ImageGeneratorResponse
     {
         [JsonPropertyName("data")]
-        public GrokImagineResponseData[]? Data { get; set; }
+        public ImageGeneratorResponseData[]? Data { get; set; }
     }
 
-    public class GrokImagineResponseData
+    public class ImageGeneratorResponseData
     {
         [JsonPropertyName("b64_json")]
         public string? B64Json { get; set; }

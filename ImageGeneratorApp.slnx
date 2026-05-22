@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="ImageGeneratorApp.csproj" />
+  <Project Path="ImageGeneratorApp.Tests/ImageGeneratorApp.Tests.csproj" />
+</Solution>

@@ -1,9 +1,9 @@
 using FluentAssertions;
-using GrokImagineApp;
+using ImageGeneratorApp;
 using System;
 using Xunit;
 
-namespace GrokImagineApp.Tests
+namespace ImageGeneratorApp.Tests
 {
     public class UserIdHelperTests
     {
