@@ -1,4 +1,21 @@
+// AI Image generator. A program to generate image from AI API.
+// Copyright (C) 2026  Martin Labelle
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 using System;
+
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -77,7 +94,7 @@ namespace ImageGeneratorApp
             cmbResolution.SelectedIndex = 1; // 2k par défaut (haute résolution)
 
             // Images
-            btnAddImages = new Button { Text = "Ajouter images (0/5)", Location = new Point(690, 171), Width = 150, Height = 25, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnAddImages = new Button { Text = "Ajouter images (0/3)", Location = new Point(690, 171), Width = 150, Height = 25, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnAddImages.Click += BtnAddImages_Click;
 
             // Aspect Ratio
@@ -299,7 +316,7 @@ namespace ImageGeneratorApp
                 {
                     Filter = "Images|*.jpg;*.jpeg;*.png;*.webp",
                     Multiselect = true,
-                    Title = "Sélectionner des images (max 5)"
+                    Title = "Sélectionner des images (max 3)"
                 };
 
                 if (ofd.ShowDialog() == DialogResult.OK)
@@ -324,7 +341,7 @@ namespace ImageGeneratorApp
                             continue;
                         }
 
-                        if (!selectedImages.Contains(file) && selectedImages.Count < 5)
+                        if (!selectedImages.Contains(file) && selectedImages.Count < 3)
                         {
                             selectedImages.Add(file);
                         }
@@ -341,7 +358,7 @@ namespace ImageGeneratorApp
         private void UpdateImageButtonText()
         {
             if (btnAddImages != null)
-                btnAddImages.Text = $"Ajouter images ({selectedImages.Count}/5)";
+                btnAddImages.Text = $"Ajouter images ({selectedImages.Count}/3)";
         }
 
 

@@ -11,10 +11,25 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <StartupObject>ImageGeneratorApp.Program</StartupObject>
     <AssemblyTitle>Générateur d'image</AssemblyTitle>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseFile>gpl-3.0.txt</PackageLicenseFile>
+    <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
   </PropertyGroup>
 
   <ItemGroup>
     <Folder Include="content\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="gpl-3.0.txt">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Update="README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>
