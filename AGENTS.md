@@ -31,7 +31,7 @@ Ce fichier fournit un contexte aux agents IA travaillant sur ce projet.
 
 Avant toute modification, suis toujours cet ordre :
 
-1. Lire intégralement `AGENTS.md` (et `ANTIGRAVITY.md` si présent).
+1. Lire intégralement `AGENTS.md`, `.editorconfig` (et `ANTIGRAVITY.md` si présent).
 2. Analyser le besoin et **imaginer le design** (surtout pour l’UI).
 3. Implémenter **uniquement** selon les règles définies dans ce document.
 4. Exécuter `dotnet test --verbosity normal` et obtenir **100 % de succès**.
@@ -55,6 +55,8 @@ Pour toute modification de l’interface utilisateur, l’agent doit impérative
    L’application doit être entièrement redimensionnable.
    Les contrôles doivent utiliser des ancrages (`Anchor`) et des positionnements relatifs.
 
+4. **Gestion de l'état visuel selon le modèle**
+   - L'interface doit être réactive au modèle sélectionné. Si un modèle ne supporte pas certaines fonctionnalités (ex: Nano Banana Pro ne supporte pas l'édition d'image), les contrôles associés (bouton d'ajout d'images, checkbox multi-turn) doivent être dynamiquement désactivés (Enabled = false) dans l'événement de changement de sélection du ComboBox de modèle.
 ---
 
 ## 📌 Vue d’ensemble du Projet
@@ -90,13 +92,29 @@ L'application suit une structure modulaire séparant l'UI de la logique réseau 
 
 ## ⚙️ Fonctionnalités Clés Implémentées
 1. **Génération d'images multi-provider** : Envoi de requêtes structurées (modèle, résolution, format) à l'API xAI (Grok Imagine) ou Google (Nano Banana Pro).
-2. **Support de l'édition d'images (Multi-turn)** : Possibilité de charger jusqu'à 5 images de base, ou de modifier l'image précédemment générée (via `image_url` en format base64). *Note : l'édition n'est supportée que par les modèles Grok Imagine.*
+**2. Support de l'édition d'images (Multi-références et Multi-turn)**
+
+L’édition d’images est disponible exclusivement via le endpoint `POST /v1/images/edits` et n’est supportée que par les modèles Grok Imagine (`grok-imagine-image` et `grok-imagine-image-pro`).
+
+- **Édition avec références multiples** : Une même requête peut accepter **jusqu’à 3 images de référence**. Cela permet de combiner des sujets, transférer des styles ou composer des scènes complexes à partir de plusieurs sources visuelles.
+- **Format d’entrée des images** : Les images de référence doivent être fournies soit via une **URL publique**, soit sous forme de **data URI base64** (ex. : `data:image/png;base64,...`). Selon le mode d’appel (SDK ou HTTP direct), cela se fait via le paramètre `image_url` ou via un objet `image` de type `image_url`.
+- **Édition multi-turn (itérative)** : L’API supporte un flux d’édition itératif. L’image générée par une requête d’édition peut être réutilisée directement comme image d’entrée pour une requête suivante. Ce mécanisme permet un raffinement progressif (ajout de détails, corrections, changements de style, ajustements compositionnels, etc.).
+- **Limitation importante** : L’édition d’images **n’est pas supportée** par le provider Google (Nano Banana Pro). Seuls les modèles Grok Imagine peuvent utiliser le endpoint `/v1/images/edits`.
+- 
 3. **Paramétrage de l'API** : L'utilisateur fournit sa propre clé API au runtime. Le label du champ s'adapte au provider sélectionné (« Clé API xAI » pour Grok, « Clé Google Cloud » pour Nano Banana).
 4. **Enregistrement des résultats** : L'image générée (reçue en base64) peut être téléchargée au format PNG sur la machine de l'utilisateur.
+
+
+## Directives ##
+- **Clé API** : Étant donné que les formats de clés API diffèrent entre xAI et Google, le champ txtApiKey doit être utilisé de manière agnostique dans l'UI, mais le client ImageGeneratorClient a l'entière responsabilité de formater le header HTTP correct selon le provider cible.
+- **Tests** : Tous les tests réseau doivent utiliser Moq et un HttpMessageHandler mocké pour intercepter les requêtes HTTP. Aucun test ne doit frapper les API réelles de xAI ou de Google Cloud.
 
 ## 🛠️ Directives de développement (Pour les agents)
 - **Architecture** : L'interface graphique est codée manuellement dans `InitializeControls()` (dans `Form1.cs`) plutôt que de s'appuyer exclusivement sur le Designer. Toute modification de l'UI doit idéalement se faire dans cette méthode. La logique réseau doit être maintenue séparée dans la couche client (`ImageGeneratorClient.cs` et associés).
 - **Multi-provider** : Le client `ImageGeneratorClient` gère le routage vers le bon endpoint selon le modèle sélectionné. Pour ajouter un nouveau provider, étendre la logique conditionnelle dans `GenerateImageAsync()`.
 - **Sécurité** : Les clés API sont stockées temporairement dans le champ de texte `txtApiKey` et passées via l'en-tête HTTP approprié (`Bearer` pour xAI, `x-goog-api-key` pour Google). Il n'y a pas de sauvegarde persistante implémentée pour l'instant.
 - **Dépendances** : Le projet utilise les bibliothèques standards `System.Net.Http` pour les appels d'API et `System.Text.Json` pour la manipulation des données JSON. Pas de dépendances externes complexes (comme RestSharp ou Newtonsoft.Json) repérées.
-- **Tests** : Le projet inclut des tests unitaires dans le dossier `ImageGeneratorApp.Tests` (ex: `ImageGeneratorClientTests.cs`). Tu dois t'assurer que tous les tests passent après chaque modification. Toute modification d'une méthode existante ou ajout de fonctionnalité doit être accompagnée de tests unitaires couvrant les cas d'utilisation concernés.
+- **Tests** : Le projet inclut des tests unitaires dans le dossier `ImageGeneratorApp.Tests` (ex: `ImageGeneratorClientTests.cs`). Toute modification d’une méthode publique existante ou ajout de fonctionnalité doit être accompagnée de tests unitaires couvrant les cas nominaux + erreurs (API key invalide, rate limit, JSON mal formé, etc.). Objectif : 100 % des tests verts en local avant tout commit.
+- **Design** : L'application doit être visuellement attrayante et moderne.
+- **Extensibilité** : Pour ajouter un nouveau provider, étendre uniquement ImageGeneratorClient.GenerateImageAsync() et ajouter les tests correspondants. Pas de nouvelle dépendance sans validation explicite.
+- **Qualité & Style** : Respect strict du .editorconfig. Tous les commentaires techniques en anglais. Pas de code mort, pas de warnings à la compilation.
