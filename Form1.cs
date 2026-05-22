@@ -32,7 +32,8 @@ namespace GrokImagineApp
 
         // ⚡ Bolt Optimization: Use a shared HttpClient instance for the lifetime of the application
         // This avoids socket exhaustion (TIME_WAIT state) and eliminates TCP/TLS handshake latency on subsequent requests
-        private static readonly HttpClient _httpClient = new HttpClient();
+        // 🛡️ Sentinel: Add timeout to prevent hanging indefinitely if external API is unresponsive
+        private static readonly HttpClient _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
         private readonly GrokImagineClient _grokClient = new GrokImagineClient(_httpClient);
 
         public Form1()
@@ -220,6 +221,11 @@ namespace GrokImagineApp
             {
                 lblStatus.Text = $"❌ Erreur {ex.StatusCode}";
                 MessageBox.Show($"Erreur API :\n{ex.Message}", "Erreur API", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (TaskCanceledException)
+            {
+                lblStatus.Text = "❌ Délai d'attente dépassé";
+                MessageBox.Show("La requête a mis trop de temps à répondre. Veuillez réessayer plus tard.", "Erreur de délai d'attente", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (Exception)
             {
