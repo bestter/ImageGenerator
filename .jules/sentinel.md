@@ -37,3 +37,7 @@
 **Vulnerability:** Unhandled WinForms application exceptions were not caught globally, allowing raw exception details (e.g., stack traces, file paths) to be leaked if the app crashed.
 **Learning:** In C# WinForms applications, global unhandled exception handlers (`Application.ThreadException` and `AppDomain.CurrentDomain.UnhandledException`) should be defined. By default, unhandled thread exceptions trigger a default dialog that can show stack traces to users.
 **Prevention:** Register `Application.ThreadException` and `AppDomain.CurrentDomain.UnhandledException` at app startup (`Program.Main()`) and call `Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException)` to catch exceptions on the UI thread and display sanitized, generic error messages.
+## 2026-05-22 - External API Timeout Missing
+**Vulnerability:** The application used a static HttpClient without an explicit timeout, which could cause the application to hang indefinitely if the external API became unresponsive.
+**Learning:** In C#, HttpClient uses a default timeout of 100 seconds. While present, setting an explicit timeout provides better, more predictable resilience when dealing with third-party APIs.
+**Prevention:** Always set an explicit `Timeout` on shared `HttpClient` instances and handle `TaskCanceledException` gracefully.
