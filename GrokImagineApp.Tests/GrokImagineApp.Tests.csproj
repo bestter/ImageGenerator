@@ -23,6 +23,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\GrokImagineClient.cs" />
+    <Compile Include="..\GrokImagineJsonContext.cs" />
     <Compile Include="..\UserIdHelper.cs" />
     <Compile Include="..\GrokImagineRequest.cs" />
     <Compile Include="..\GrokImagineException.cs" />

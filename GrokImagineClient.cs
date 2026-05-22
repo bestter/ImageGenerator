@@ -67,7 +67,8 @@ namespace GrokImagineApp
 
             // ⚡ Bolt: Using JsonContent.Create prevents large string allocations in memory by streaming the JSON
             // directly to the request stream, which is crucial since requestBody may contain large base64 strings.
-            using var content = JsonContent.Create(requestBody);
+            // ⚡ Bolt: Using JsonContent.Create with Source Generated Context prevents reflection overhead
+            using var content = JsonContent.Create(requestBody, GrokImagineJsonContext.Default.GrokImagineRequest);
 
             using var requestMessage = new HttpRequestMessage(HttpMethod.Post, apiUrl);
             requestMessage.Headers.Add("Authorization", $"Bearer {apiKey}");
@@ -124,7 +125,7 @@ namespace GrokImagineApp
                 // ⚡ Bolt Optimization: Use JsonSerializer.DeserializeAsync instead of JsonDocument.ParseAsync.
                 // This avoids building a large DOM in memory for potentially huge payloads (like 20MB base64 images),
                 // instead streaming directly to the required string property, significantly reducing Large Object Heap allocations.
-                var result = await JsonSerializer.DeserializeAsync<GrokImagineResponse>(responseStream);
+                var result = await JsonSerializer.DeserializeAsync(responseStream, GrokImagineJsonContext.Default.GrokImagineResponse);
 
                 var b64 = result?.Data?[0]?.B64Json;
                 if (!string.IsNullOrEmpty(b64))
