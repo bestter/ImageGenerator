@@ -1,17 +1,17 @@
 using System;
 
-namespace GrokImagineApp
+namespace ImageGeneratorApp
 {
-    public class GrokImagineException : Exception
+    public class ImageGeneratorException : Exception
     {
         public int StatusCode { get; }
 
-        public GrokImagineException(string message) : base(message)
+        public ImageGeneratorException(string message) : base(message)
         {
             StatusCode = 0;
         }
 
-        public GrokImagineException(string message, int statusCode) : base(message)
+        public ImageGeneratorException(string message, int statusCode) : base(message)
         {
             StatusCode = statusCode;
         }

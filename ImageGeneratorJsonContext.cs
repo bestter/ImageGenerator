@@ -1,10 +1,10 @@
 using System.Text.Json.Serialization;
 
-namespace GrokImagineApp
+namespace ImageGeneratorApp
 {
-    [JsonSerializable(typeof(GrokImagineRequest))]
-    [JsonSerializable(typeof(GrokImagineResponse))]
-    internal partial class GrokImagineJsonContext : JsonSerializerContext
+    [JsonSerializable(typeof(ImageGeneratorRequest))]
+    [JsonSerializable(typeof(ImageGeneratorResponse))]
+    internal partial class ImageGeneratorJsonContext : JsonSerializerContext
     {
     }
 }

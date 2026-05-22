@@ -1,4 +1,4 @@
-namespace GrokImagineApp;
+namespace ImageGeneratorApp;
 
 static class Program
 {

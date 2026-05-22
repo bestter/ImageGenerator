@@ -7,13 +7,13 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace GrokImagineApp
+namespace ImageGeneratorApp
 {
-    public class GrokImagineClient
+    public class ImageGeneratorClient
     {
         private readonly HttpClient _httpClient;
 
-        public GrokImagineClient(HttpClient httpClient)
+        public ImageGeneratorClient(HttpClient httpClient)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         }
@@ -37,44 +37,114 @@ namespace GrokImagineApp
                 throw new ArgumentException("Un prompt est requis.", nameof(prompt));
 
             string apiUrl;
-            GrokImagineRequest requestBody = new GrokImagineRequest
-            {
-                Model = model,
-                Prompt = prompt,
-                Resolution = resolution,
-                AspectRatio = aspectRatio,
-                User = opaqueUserId,
-                N = 1,
-                ResponseFormat = "b64_json"
-            };
+            HttpContent content;
+            string authHeaderName;
+            string authHeaderValue;
 
-            if (imagesList != null && imagesList.Count > 0)
+            if (model == "nano-banana-pro")
             {
-                apiUrl = "https://api.x.ai/v1/images/edits";
-                if (imagesList.Count == 1)
+                // nano-banana-pro does not support image editing/multi-turn
+                if (imagesList != null && imagesList.Count > 0)
                 {
-                    requestBody.Image = imagesList[0];
+                    throw new ArgumentException("Le modèle Nano Banana Pro ne supporte pas l'édition d'image.", nameof(imagesList));
                 }
-                else
+                apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent";
+                authHeaderName = "x-goog-api-key";
+                authHeaderValue = apiKey;
+
+                var geminiRequest = new
                 {
-                    requestBody.Images = imagesList.ToArray();
-                }
+                    contents = new[]
+                    {
+                        new
+                        {
+                            parts = new[]
+                            {
+                                new { text = prompt }
+                            }
+                        }
+                    },
+                    generationConfig = new
+                    {
+                        responseModalities = new[] { "IMAGE" },
+                        imageConfig = new
+                        {
+                            aspectRatio = aspectRatio,
+                            imageSize = resolution.ToUpperInvariant()
+                        }
+                    }
+                };
+
+                content = new StringContent(JsonSerializer.Serialize(geminiRequest), Encoding.UTF8, "application/json");
             }
             else
             {
-                apiUrl = "https://api.x.ai/v1/images/generations";
+                authHeaderName = "Authorization";
+                authHeaderValue = $"Bearer {apiKey}";
+
+                ImageGeneratorRequest requestBody = new ImageGeneratorRequest
+                {
+                    Model = model,
+                    Prompt = prompt,
+                    Resolution = resolution,
+                    AspectRatio = aspectRatio,
+                    User = opaqueUserId,
+                    N = 1,
+                    ResponseFormat = "b64_json"
+                };
+
+                if (imagesList != null && imagesList.Count > 0)
+                {
+                    apiUrl = "https://api.x.ai/v1/images/edits";
+                    if (imagesList.Count == 1)
+                    {
+                        requestBody.Image = imagesList[0];
+                    }
+                    else
+                    {
+                        requestBody.Images = imagesList.ToArray();
+                    }
+                }
+                else
+                {
+                    apiUrl = "https://api.x.ai/v1/images/generations";
+                }
+
+                // ⚡ Bolt: Using JsonContent.Create prevents large string allocations in memory by streaming the JSON
+                // directly to the request stream, which is crucial since requestBody may contain large base64 strings.
+                // ⚡ Bolt: Using JsonContent.Create with Source Generated Context prevents reflection overhead
+                content = JsonContent.Create(requestBody, ImageGeneratorJsonContext.Default.ImageGeneratorRequest);
             }
 
-            // ⚡ Bolt: Using JsonContent.Create prevents large string allocations in memory by streaming the JSON
-            // directly to the request stream, which is crucial since requestBody may contain large base64 strings.
-            // ⚡ Bolt: Using JsonContent.Create with Source Generated Context prevents reflection overhead
-            using var content = JsonContent.Create(requestBody, GrokImagineJsonContext.Default.GrokImagineRequest);
-
+            using var contentToDispose = content;
             using var requestMessage = new HttpRequestMessage(HttpMethod.Post, apiUrl);
-            requestMessage.Headers.Add("Authorization", $"Bearer {apiKey}");
-            requestMessage.Content = content;
+            requestMessage.Headers.Add(authHeaderName, authHeaderValue);
+            requestMessage.Content = contentToDispose;
 
-            var response = await _httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead);
+            HttpResponseMessage response;
+            try
+            {
+                response = await _httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                int statusCode = 0;
+                if (ex is HttpRequestException hex && hex.StatusCode.HasValue)
+                {
+                    statusCode = (int)hex.StatusCode.Value;
+                }
+
+                string message = ex.InnerException != null
+                    ? $"{ex.Message} ({ex.InnerException.Message})"
+                    : ex.Message;
+
+                throw new ImageGeneratorException($"Erreur de connexion réseau : {message}", statusCode);
+            }
+
             using var responseStream = await response.Content.ReadAsStreamAsync();
 
             if (!response.IsSuccessStatusCode)
@@ -89,19 +159,27 @@ namespace GrokImagineApp
                     {
                         using (JsonDocument doc = JsonDocument.Parse(errorString))
                         {
-                            if (doc.RootElement.ValueKind == JsonValueKind.Object &&
-                                doc.RootElement.TryGetProperty("error", out JsonElement errorElement))
+                            if (doc.RootElement.ValueKind == JsonValueKind.Object)
                             {
-                                if (errorElement.ValueKind == JsonValueKind.Object &&
-                                    errorElement.TryGetProperty("message", out JsonElement messageElement))
+                                if (doc.RootElement.TryGetProperty("msg", out JsonElement msgElement))
                                 {
-                                    safeErrorMessage = messageElement.ValueKind == JsonValueKind.String
-                                        ? messageElement.GetString() ?? string.Empty
-                                        : messageElement.GetRawText();
+                                    safeErrorMessage = msgElement.ValueKind == JsonValueKind.String
+                                        ? msgElement.GetString() ?? string.Empty
+                                        : msgElement.GetRawText();
                                 }
-                                else if (errorElement.ValueKind == JsonValueKind.String)
+                                else if (doc.RootElement.TryGetProperty("error", out JsonElement errorElement))
                                 {
-                                    safeErrorMessage = errorElement.GetString() ?? string.Empty;
+                                    if (errorElement.ValueKind == JsonValueKind.Object &&
+                                        errorElement.TryGetProperty("message", out JsonElement messageElement))
+                                    {
+                                        safeErrorMessage = messageElement.ValueKind == JsonValueKind.String
+                                            ? messageElement.GetString() ?? string.Empty
+                                            : messageElement.GetRawText();
+                                    }
+                                    else if (errorElement.ValueKind == JsonValueKind.String)
+                                    {
+                                        safeErrorMessage = errorElement.GetString() ?? string.Empty;
+                                    }
                                 }
                             }
                         }
@@ -117,26 +195,57 @@ namespace GrokImagineApp
                     safeErrorMessage = "Une erreur est survenue lors de la communication avec l'API.";
                 }
 
-                throw new GrokImagineException(safeErrorMessage, (int)response.StatusCode);
+                throw new ImageGeneratorException(safeErrorMessage, (int)response.StatusCode);
             }
 
             try
             {
-                // ⚡ Bolt Optimization: Use JsonSerializer.DeserializeAsync instead of JsonDocument.ParseAsync.
-                // This avoids building a large DOM in memory for potentially huge payloads (like 20MB base64 images),
-                // instead streaming directly to the required string property, significantly reducing Large Object Heap allocations.
-                var result = await JsonSerializer.DeserializeAsync(responseStream, GrokImagineJsonContext.Default.GrokImagineResponse);
-
-                var b64 = result?.Data?[0]?.B64Json;
-                if (!string.IsNullOrEmpty(b64))
+                if (model == "nano-banana-pro")
                 {
-                    return b64;
+                    using var doc = await JsonDocument.ParseAsync(responseStream);
+                    var root = doc.RootElement;
+                    if (root.TryGetProperty("candidates", out var candidates) &&
+                        candidates.ValueKind == JsonValueKind.Array &&
+                        candidates.GetArrayLength() > 0)
+                    {
+                        var firstCandidate = candidates[0];
+                        if (firstCandidate.TryGetProperty("content", out var contentElement) &&
+                            contentElement.TryGetProperty("parts", out var parts) &&
+                            parts.ValueKind == JsonValueKind.Array &&
+                            parts.GetArrayLength() > 0)
+                        {
+                            var firstPart = parts[0];
+                            if (firstPart.TryGetProperty("inlineData", out var inlineData) &&
+                                inlineData.TryGetProperty("data", out var dataProp))
+                            {
+                                var base64Data = dataProp.GetString();
+                                if (!string.IsNullOrEmpty(base64Data))
+                                {
+                                    return base64Data;
+                                }
+                            }
+                        }
+                    }
+                    throw new ImageGeneratorException("La réponse de l'API ne contient pas d'image valide.");
                 }
-                throw new GrokImagineException("La réponse de l'API ne contient pas d'image valide.");
+                else
+                {
+                    // ⚡ Bolt Optimization: Use JsonSerializer.DeserializeAsync instead of JsonDocument.ParseAsync.
+                    // This avoids building a large DOM in memory for potentially huge payloads (like 20MB base64 images),
+                    // instead streaming directly to the required string property, significantly reducing Large Object Heap allocations.
+                    var result = await JsonSerializer.DeserializeAsync(responseStream, ImageGeneratorJsonContext.Default.ImageGeneratorResponse);
+
+                    var b64 = result?.Data?[0]?.B64Json;
+                    if (!string.IsNullOrEmpty(b64))
+                    {
+                        return b64;
+                    }
+                    throw new ImageGeneratorException("La réponse de l'API ne contient pas d'image valide.");
+                }
             }
             catch (JsonException)
             {
-                throw new GrokImagineException("La réponse de l'API est malformée.");
+                throw new ImageGeneratorException("La réponse de l'API est malformée.");
             }
         }
     }

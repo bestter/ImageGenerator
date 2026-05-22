@@ -1,4 +1,4 @@
-# Instructions pour l'Agent IA (Antigravity) - Grok Imagine App
+# Instructions pour l'Agent IA (Antigravity) - Image Generator App
 
 Ce fichier complète `AGENTS.md` et contient les directives spécifiques à la réflexion, au comportement et à la méthodologie de l'agent IA (Antigravity) travaillant sur ce projet. Il s'agit des règles de vol pour l'agent.
 

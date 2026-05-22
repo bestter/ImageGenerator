@@ -1,4 +1,4 @@
-﻿namespace GrokImagineApp;
+namespace ImageGeneratorApp;
 
 partial class Form1
 {
