@@ -69,30 +69,30 @@ namespace ImageGeneratorApp
                 authHeaderName = "x-goog-api-key";
                 authHeaderValue = apiKey;
 
-                var geminiRequest = new
+                GeminiRequest geminiRequest = new GeminiRequest
                 {
-                    contents = new[]
+                    Contents = new[]
                     {
-                        new
+                        new GeminiContent
                         {
-                            parts = new[]
+                            Parts = new[]
                             {
-                                new { text = prompt }
+                                new GeminiPart { Text = prompt }
                             }
                         }
                     },
-                    generationConfig = new
+                    GenerationConfig = new GeminiGenerationConfig
                     {
-                        responseModalities = new[] { "IMAGE" },
-                        imageConfig = new
+                        ResponseModalities = new[] { "IMAGE" },
+                        ImageConfig = new GeminiImageConfig
                         {
-                            aspectRatio = aspectRatio,
-                            imageSize = resolution.ToUpperInvariant()
+                            AspectRatio = aspectRatio,
+                            ImageSize = resolution.ToUpperInvariant()
                         }
                     }
                 };
 
-                content = new StringContent(JsonSerializer.Serialize(geminiRequest), Encoding.UTF8, "application/json");
+                content = JsonContent.Create(geminiRequest, ImageGeneratorJsonContext.Default.GeminiRequest);
             }
             else
             {
@@ -219,27 +219,21 @@ namespace ImageGeneratorApp
             {
                 if (model == "nano-banana-pro")
                 {
-                    using var doc = await JsonDocument.ParseAsync(responseStream);
-                    var root = doc.RootElement;
-                    if (root.TryGetProperty("candidates", out var candidates) &&
-                        candidates.ValueKind == JsonValueKind.Array &&
-                        candidates.GetArrayLength() > 0)
+                    // ⚡ Bolt Optimization: Use JsonSerializer.DeserializeAsync instead of JsonDocument.ParseAsync.
+                    // This avoids building a large DOM in memory for potentially huge payloads (like 20MB base64 images),
+                    // instead streaming directly to the required string property, significantly reducing Large Object Heap allocations.
+                    var result = await JsonSerializer.DeserializeAsync(responseStream, ImageGeneratorJsonContext.Default.GeminiResponse);
+
+                    if (result?.Candidates != null && result.Candidates.Length > 0)
                     {
-                        var firstCandidate = candidates[0];
-                        if (firstCandidate.TryGetProperty("content", out var contentElement) &&
-                            contentElement.TryGetProperty("parts", out var parts) &&
-                            parts.ValueKind == JsonValueKind.Array &&
-                            parts.GetArrayLength() > 0)
+                        var firstCandidate = result.Candidates[0];
+                        if (firstCandidate?.Content?.Parts != null && firstCandidate.Content.Parts.Length > 0)
                         {
-                            var firstPart = parts[0];
-                            if (firstPart.TryGetProperty("inlineData", out var inlineData) &&
-                                inlineData.TryGetProperty("data", out var dataProp))
+                            var firstPart = firstCandidate.Content.Parts[0];
+                            var b64Data = firstPart?.InlineData?.Data;
+                            if (!string.IsNullOrEmpty(b64Data))
                             {
-                                var base64Data = dataProp.GetString();
-                                if (!string.IsNullOrEmpty(base64Data))
-                                {
-                                    return base64Data;
-                                }
+                                return b64Data;
                             }
                         }
                     }
