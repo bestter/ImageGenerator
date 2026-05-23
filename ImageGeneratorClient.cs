@@ -155,11 +155,7 @@ namespace ImageGeneratorApp
                     statusCode = (int)hex.StatusCode.Value;
                 }
 
-                string message = ex.InnerException != null
-                    ? $"{ex.Message} ({ex.InnerException.Message})"
-                    : ex.Message;
-
-                throw new ImageGeneratorException($"Erreur de connexion réseau : {message}", statusCode);
+                throw new ImageGeneratorException("Une erreur de connexion réseau est survenue. Impossible de joindre l'API.", statusCode);
             }
 
             using var responseStream = await response.Content.ReadAsStreamAsync();
