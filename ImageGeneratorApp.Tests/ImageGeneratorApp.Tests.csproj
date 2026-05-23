@@ -28,5 +28,6 @@
     <Compile Include="..\ImageGeneratorRequest.cs" />
     <Compile Include="..\ImageGeneratorException.cs" />
     <Compile Include="..\ImageGeneratorResponse.cs" />
+    <Compile Include="..\GeminiModels.cs" />
   </ItemGroup>
 </Project>
