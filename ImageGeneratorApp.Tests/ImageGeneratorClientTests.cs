@@ -487,7 +487,7 @@ namespace ImageGeneratorApp.Tests
 
             // Assert
             var exception = await act.Should().ThrowAsync<ImageGeneratorException>()
-                .WithMessage("Erreur de connexion réseau : Connection refused");
+                .WithMessage("Une erreur de connexion réseau est survenue. Impossible de joindre l'API.");
             exception.Which.StatusCode.Should().Be(503);
         }
 
@@ -516,7 +516,7 @@ namespace ImageGeneratorApp.Tests
 
             // Assert
             var exception = await act.Should().ThrowAsync<ImageGeneratorException>()
-                .WithMessage("Erreur de connexion réseau : Unable to write data (Connection refused by peer)");
+                .WithMessage("Une erreur de connexion réseau est survenue. Impossible de joindre l'API.");
             exception.Which.StatusCode.Should().Be(0);
         }
     }
