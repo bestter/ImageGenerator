@@ -74,7 +74,7 @@ namespace ImageGeneratorApp
                 AutoSize = true, 
                 ForeColor = Color.FromArgb(220, 76, 30) 
             };
-            txtApiKey = new TextBox { Location = new Point(190, 17), Width = 580, PasswordChar = '•', Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
+            txtApiKey = new TextBox { Location = new Point(190, 17), Width = 580, PasswordChar = '•', Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, MaxLength = 1024 };
 
             // Prompt
             var lblPrompt = new Label { Text = "Prompt :", Location = new Point(20, 60), AutoSize = true };
