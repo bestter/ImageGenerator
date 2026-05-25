@@ -44,10 +44,10 @@ namespace ImageGeneratorApp
 
         [JsonPropertyName("image")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public object? Image { get; set; }
+        public ImageUrlObject? Image { get; set; }
 
         [JsonPropertyName("images")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public object[]? Images { get; set; }
+        public ImageUrlObject[]? Images { get; set; }
     }
 }
