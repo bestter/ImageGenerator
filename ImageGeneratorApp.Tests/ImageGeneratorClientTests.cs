@@ -519,5 +519,41 @@ namespace ImageGeneratorApp.Tests
                 .WithMessage("Une erreur de connexion réseau est survenue. Impossible de joindre l'API.");
             exception.Which.StatusCode.Should().Be(0);
         }
+
+        [Fact]
+        public async Task GenerateImageAsync_OversizedGeneratedImage_ThrowsImageGeneratorException_WithSafeMessage()
+        {
+            // Arrange: craft a response whose b64 length estimate exceeds MaxGeneratedImageBytes (central guard)
+            // Using a long ASCII string keeps the test deterministic and exercises the (length * 3/4) check.
+            // Real 2k images are far smaller; this simulates a pathological or malicious oversized payload.
+            var hugeB64 = new string('A', 80_000_000); // ~60 MB decoded estimate
+            var oversizedResponse = new { data = new[] { new { b64_json = hugeB64 } } };
+
+            var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+            handlerMock
+               .Protected()
+               .Setup<Task<HttpResponseMessage>>(
+                  "SendAsync",
+                  ItExpr.IsAny<HttpRequestMessage>(),
+                  ItExpr.IsAny<CancellationToken>()
+               )
+               .ReturnsAsync(new HttpResponseMessage()
+               {
+                   StatusCode = HttpStatusCode.OK,
+                   Content = new StringContent(JsonSerializer.Serialize(oversizedResponse)),
+               });
+
+            var httpClient = new HttpClient(handlerMock.Object);
+            var client = new ImageGeneratorClient(httpClient);
+
+            // Act
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "grok-imagine-image", "2k", "16:9", "user", new List<object>());
+
+            // Assert
+            var exception = await act.Should().ThrowAsync<ImageGeneratorException>()
+                .WithMessage("L'image générée dépasse la taille maximale autorisée.");
+            // Status code 200 in this path (we surface before real HTTP error semantics for oversized)
+            exception.Which.StatusCode.Should().Be(200);
+        }
     }
 }

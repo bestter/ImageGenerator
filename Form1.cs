@@ -48,6 +48,10 @@ namespace ImageGeneratorApp
         private Button btnAddImages = null!;
         private const long MaxFileSizeBytes = 20 * 1024 * 1024; // 20 MB
 
+        // 🛡️ Sentinel: Output image size cap (decoded bytes). Complements the client-side guard.
+        // Prevents excessive memory allocation from large generated images in the UI layer.
+        private const long MaxGeneratedImageBytes = 50 * 1024 * 1024; // 50 MB
+
         // ⚡ Bolt Optimization: Use a shared HttpClient instance for the lifetime of the application
         // This avoids socket exhaustion (TIME_WAIT state) and eliminates TCP/TLS handshake latency on subsequent requests
         // 🛡️ Sentinel: Add timeout to prevent hanging indefinitely if external API is unresponsive
@@ -140,6 +144,9 @@ namespace ImageGeneratorApp
             this.Controls.AddRange(new Control[] { lblKey, txtApiKey, lblPrompt, txtPrompt, lblModel, cmbModel, lblRes, cmbResolution, btnAddImages, lblRatio, cmbAspectRatio, chkMultiTurnEditing,
                 btnGenerate, btnSave, btnClear, lblStatus, pictureBox });
 
+            // Apply initial model-dependent state now that all controls are created
+            UpdateModelDependentControls();
+
             this.Resize += Form1_Resize;
         }
 
@@ -160,7 +167,7 @@ namespace ImageGeneratorApp
             btnGenerate.Enabled = false;
             btnSave.Enabled = false;
             lblStatus.Text = "⏳ Génération en cours...";
-            pictureBox.Image = null;
+            DisposeCurrentImage();
             currentBase64Image = null;
 
             try
@@ -231,10 +238,18 @@ namespace ImageGeneratorApp
 
                 var b64 = currentBase64Image;
 
-                // Affichage de l'image
+                // Affichage de l'image (with output size guard + explicit prior image disposal)
                 var imageBytes = Convert.FromBase64String(b64);
-                var ms = new MemoryStream(imageBytes);
-                pictureBox.Image = Image.FromStream(ms);
+                if (imageBytes.Length > MaxGeneratedImageBytes)
+                {
+                    throw new ImageGeneratorException("L'image générée dépasse la taille maximale autorisée.");
+                }
+
+                DisposeCurrentImage();
+                using (var ms = new MemoryStream(imageBytes))
+                {
+                    pictureBox.Image = Image.FromStream(ms);
+                }
 
                 lblStatus.Text = $"✅ Image générée avec {cmbModel.Text} ({cmbResolution.Text})";
                 btnSave.Enabled = true;
@@ -264,7 +279,8 @@ namespace ImageGeneratorApp
                 if (currentBase64Image == null && previousBase64Image != null)
                 {
                     currentBase64Image = previousBase64Image;
-                    pictureBox.Image = previousImage;
+                    DisposeCurrentImage();
+                    pictureBox.Image = previousImage; // previousImage lifetime managed by prior assignment site
                     btnSave.Enabled = true;
                 }
             }
@@ -301,7 +317,7 @@ namespace ImageGeneratorApp
         private void ClearForm()
         {
             txtPrompt.Clear();
-            pictureBox.Image = null;
+            DisposeCurrentImage();
             currentBase64Image = null;
             btnSave.Enabled = false;
             lblStatus.Text = "";
@@ -362,6 +378,15 @@ namespace ImageGeneratorApp
                 btnAddImages.Text = $"Ajouter images ({selectedImages.Count}/3)";
         }
 
+        // 🛡️ Sentinel: Centralized disposal of previous System.Drawing.Image + GDI resources.
+        // PictureBox assignment does not auto-dispose the prior image; repeated generations without
+        // explicit cleanup can leak handles and memory over a long session.
+        private void DisposeCurrentImage()
+        {
+            var oldImage = pictureBox.Image;
+            pictureBox.Image = null;
+            oldImage?.Dispose();
+        }
 
         private void Form1_Resize(object? sender, EventArgs e)
         {
@@ -369,8 +394,39 @@ namespace ImageGeneratorApp
             // If additional custom adjustments are needed, add here
         }
 
+        // 🛡️ Sentinel: Enforce model-specific UI state per AGENTS.md requirement.
+        // Nano Banana Pro does not support image editing/multi-turn; disable related controls
+        // and clear any pending edit state to prevent invalid combinations reaching the client.
+        private void UpdateModelDependentControls()
+        {
+            bool isNano = cmbModel.SelectedItem?.ToString() == "nano-banana-pro";
+            if (btnAddImages != null)
+            {
+                btnAddImages.Enabled = !isNano;
+            }
+            if (chkMultiTurnEditing != null)
+            {
+                chkMultiTurnEditing.Enabled = !isNano;
+            }
+
+            if (isNano)
+            {
+                if (selectedImages.Count > 0)
+                {
+                    selectedImages.Clear();
+                    UpdateImageButtonText();
+                }
+                if (chkMultiTurnEditing != null)
+                {
+                    chkMultiTurnEditing.Checked = false;
+                }
+            }
+        }
+
         private void CmbModel_SelectedIndexChanged(object? sender, EventArgs e)
         {
+            UpdateModelDependentControls();
+
             if (cmbModel.SelectedItem?.ToString() == "nano-banana-pro")
             {
                 lblKey.Text = "Clé Google Cloud :";

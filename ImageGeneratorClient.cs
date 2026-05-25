@@ -30,6 +30,11 @@ namespace ImageGeneratorApp
     {
         private readonly HttpClient _httpClient;
 
+        // 🛡️ Sentinel: Hard limit on generated images (decoded bytes) to mitigate memory exhaustion / OOM
+        // from oversized or malicious API responses. Input files are already capped at 20 MB in the UI layer.
+        // 50 MB provides generous headroom for high-resolution outputs while preventing abuse.
+        private const long MaxGeneratedImageBytes = 50 * 1024 * 1024;
+
         public ImageGeneratorClient(HttpClient httpClient)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
@@ -229,6 +234,11 @@ namespace ImageGeneratorApp
                             var b64Data = firstPart?.InlineData?.Data;
                             if (!string.IsNullOrEmpty(b64Data))
                             {
+                                // 🛡️ Sentinel: Enforce output size limit before returning (central boundary for all callers)
+                                if ((b64Data.Length * 3L / 4L) > MaxGeneratedImageBytes)
+                                {
+                                    throw new ImageGeneratorException("L'image générée dépasse la taille maximale autorisée.", 200);
+                                }
                                 return b64Data;
                             }
                         }
@@ -245,6 +255,11 @@ namespace ImageGeneratorApp
                     var b64 = result?.Data?[0]?.B64Json;
                     if (!string.IsNullOrEmpty(b64))
                     {
+                        // 🛡️ Sentinel: Enforce output size limit before returning (central boundary for all callers)
+                        if ((b64.Length * 3L / 4L) > MaxGeneratedImageBytes)
+                        {
+                            throw new ImageGeneratorException("L'image générée dépasse la taille maximale autorisée.", 200);
+                        }
                         return b64;
                     }
                     throw new ImageGeneratorException("La réponse de l'API ne contient pas d'image valide.");
