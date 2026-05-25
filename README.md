@@ -6,13 +6,13 @@ Application de bureau Windows Forms (.NET 10) pour la génération d'images par 
 
 | Provider | Modèle(s) | API | Édition multi-tour |
 |---|---|---|---|
-| **Grok Imagine (xAI)** | `grok-imagine-image`, `grok-imagine-image-pro` | `https://api.x.ai/v1/images/` | ✅ Oui (jusqu'à 5 images) |
+| **Grok Imagine (xAI)** | `grok-imagine-image`, `grok-imagine-image-pro` | `https://api.x.ai/v1/images/` | ✅ Oui (jusqu'à 3 images) |
 | **Nano Banana Pro (Google)** | `nano-banana-pro` | `https://generativelanguage.googleapis.com/v1beta/` | ❌ Non |
 
 ## Fonctionnalités
 
 - **Génération d'images multi-provider** : Sélectionnez le modèle souhaité et fournissez un prompt textuel pour générer une image.
-- **Édition d'images (Multi-turn)** : Chargez jusqu'à 5 images de base ou modifiez l'image précédemment générée *(Grok Imagine uniquement)*.
+- **Édition d'images (Multi-turn)** : Chargez jusqu'à 3 images de base ou modifiez l'image précédemment générée *(Grok Imagine uniquement)*.
 - **Résolutions multiples** : Support 1k et 2k.
 - **Ratios d'aspect variés** : 1:1, 16:9, 9:16, 4:3, 3:2, 20:9.
 - **Sauvegarde locale** : Enregistrez l'image générée en PNG.
@@ -44,11 +44,14 @@ dotnet test ImageGeneratorApp.Tests/ImageGeneratorApp.Tests.csproj --verbosity n
 ├── ImageGeneratorResponse.cs     # Modèle de réponse (xAI)
 ├── ImageGeneratorException.cs    # Exception personnalisée (tous providers)
 ├── ImageGeneratorJsonContext.cs  # Sérialisation JSON source-generated
+├── GeminiModels.cs               # Modèles Gemini (requête/réponse)
+├── ImageUrlObject.cs             # Objet de référence image (type + URL)
 ├── UserIdHelper.cs               # Gestion des identifiants (PII)
 ├── Program.cs                    # Point d'entrée
 ├── ImageGeneratorApp.csproj      # Fichier de projet
 ├── ImageGeneratorApp.slnx        # Fichier de solution
 ├── ImageGeneratorApp.Tests/      # Tests unitaires (xUnit + Moq + FluentAssertions)
+│   ├── GlobalUsings.cs
 │   ├── ImageGeneratorClientTests.cs
 │   └── UserIdHelperTests.cs
 └── content/
