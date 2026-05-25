@@ -13,3 +13,7 @@
 ## 2024-05-23 - Streaming JSON deserialization and Source Generation for Gemini API
 **Learning:** Parsing the API response containing a ~20MB base64 string using `JsonDocument.ParseAsync` builds an enormous in-memory DOM, fragmenting the Large Object Heap (LOH). Additionally, serializing anonymous objects via `JsonSerializer.Serialize` incurs significant reflection overhead.
 **Action:** Use strongly-typed models, register them in `JsonSerializerContext`, and use `JsonSerializer.DeserializeAsync` and `JsonContent.Create()` to leverage streaming and source generation, vastly reducing memory pressure and processing latency.
+
+## 2024-05-24 - Enforce MaxLength on TextBox
+**Learning:** Unbounded text inputs (like an API Key TextBox) in desktop apps can lead to severe memory exhaustion and UI thread freezing if a user accidentally pastes an enormous string (e.g., a massive log file or base64 data). This acts as a potential Denial of Service (DoS) and drastically affects application responsiveness.
+**Action:** Always enforce a reasonable `MaxLength` property on `TextBox` controls in C# WinForms to prevent pasting of excessively large payloads.
