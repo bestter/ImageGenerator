@@ -15,7 +15,8 @@ Application de bureau Windows Forms (.NET 10) pour la génération d'images par 
 - **Édition d'images (Multi-turn)** : Chargez jusqu'à 3 images de base ou modifiez l'image précédemment générée *(Grok Imagine uniquement)*.
 - **Résolutions multiples** : Support 1k et 2k.
 - **Ratios d'aspect variés** : 1:1, 16:9, 9:16, 4:3, 3:2, 20:9.
-- **Sauvegarde locale** : Enregistrez l'image générée en PNG.
+- **Sauvegarde locale** : Enregistrez l'image générée en PNG ou JPEG.
+- **Intégration automatique de métadonnées AI** : Lors de l'export, les informations de génération (prompt original, modèle utilisé, date/heure, résolution, etc.) sont automatiquement intégrées dans les métadonnées de l'image (EXIF, XMP et chunks PNG tEXt/iTXt).
 
 ## Prérequis
 
@@ -46,6 +47,7 @@ dotnet test ImageGeneratorApp.Tests/ImageGeneratorApp.Tests.csproj --verbosity n
 ├── ImageGeneratorJsonContext.cs  # Sérialisation JSON source-generated
 ├── GeminiModels.cs               # Modèles Gemini (requête/réponse)
 ├── ImageUrlObject.cs             # Objet de référence image (type + URL)
+├── ImageMetadataEmbedder.cs      # Service d'intégration de métadonnées AI (EXIF/XMP/PNG)
 ├── UserIdHelper.cs               # Gestion des identifiants (PII)
 ├── Program.cs                    # Point d'entrée
 ├── ImageGeneratorApp.csproj      # Fichier de projet
@@ -54,6 +56,7 @@ dotnet test ImageGeneratorApp.Tests/ImageGeneratorApp.Tests.csproj --verbosity n
 │   ├── GlobalUsings.cs
 │   ├── ImageGeneratorClientTests.cs
 │   └── UserIdHelperTests.cs
+│   (inclut les tests pour ImageMetadataEmbedder)
 └── content/
     └── Grok_Logomark_Dark.png    # Logo Grok
 ```
