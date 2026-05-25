@@ -26,13 +26,8 @@ namespace ImageGeneratorApp
     {
         private static string? _cachedDefaultUserId;
 
-        public static string GetOpaqueUserId(string? identityName = null)
+        public static string GetOpaqueUserId()
         {
-            if (identityName != null)
-            {
-                return ComputeHash(identityName);
-            }
-
             if (_cachedDefaultUserId != null)
             {
                 return _cachedDefaultUserId;
@@ -62,18 +57,6 @@ namespace ImageGeneratorApp
             }
 
             return _cachedDefaultUserId;
-        }
-
-        private static string ComputeHash(string name)
-        {
-            string salt = "GrokImagineApp_Salt_2023";
-            string rawData = name + salt;
-
-            // ⚡ Bolt Optimization: Use SHA256.HashData and Convert.ToHexStringLower.
-            // This avoids allocating a SHA256 instance, a StringBuilder, and 32 intermediate string
-            // allocations per hash calculation, significantly reducing Large Object Heap and GC pressure.
-            byte[] bytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawData));
-            return Convert.ToHexStringLower(bytes);
         }
     }
 }

@@ -49,3 +49,7 @@
 **Vulnerability:** Input fields (like the API key text box) lacked maximum length constraints, creating a potential vector for Denial of Service (DoS) attacks via memory exhaustion if an attacker pastes excessively large strings into the UI thread.
 **Learning:** In desktop applications, unbounded text input can lead to high memory usage, UI thread freezing, and subsequent application crashes (OutOfMemoryException) when massive strings are processed or bound to HTTP headers.
 **Prevention:** Always enforce reasonable `MaxLength` properties on UI text inputs (e.g., `TextBox`) to prevent memory exhaustion and buffer-related issues.
+## 2026-05-25 - Prevent PII Leakage via Leftover Dead Code
+**Vulnerability:** The `UserIdHelper.cs` file contained a `ComputeHash` method and accepted an `identityName` argument to generate opaque user IDs by hashing a local user's name with a hardcoded salt. Even though the application logic evolved to not use it directly, the legacy code and its tests were still present.
+**Learning:** Leaving unused, insecure fallback code (like predictable hash generation with hardcoded salts) in the codebase is dangerous as it might be mistakenly re-introduced or used by other callers.
+**Prevention:** Completely remove vulnerable legacy methods and parameters when transitioning to a more secure mechanism (e.g., GUID generation) and ensure unit tests reflect only the secure pathways.
