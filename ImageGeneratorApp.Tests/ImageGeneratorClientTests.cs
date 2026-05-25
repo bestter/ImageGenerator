@@ -556,4 +556,75 @@ namespace ImageGeneratorApp.Tests
             exception.Which.StatusCode.Should().Be(200);
         }
     }
+
+    /// <summary>
+    /// Tests for the metadata embedder (EXIF + XMP + PNG text chunks).
+    /// Uses in-memory ImageSharp images for deterministic, dependency-free roundtrips.
+    /// </summary>
+    public class ImageMetadataEmbedderTests
+    {
+        private static byte[] CreateTinyTestPngBytes()
+        {
+            // 4x4 red pixel PNG (lossless, small, valid for metadata tests)
+            using var image = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(4, 4, SixLabors.ImageSharp.Color.Red);
+            using var ms = new System.IO.MemoryStream();
+            image.Save(ms, new SixLabors.ImageSharp.Formats.Png.PngEncoder());
+            return ms.ToArray();
+        }
+
+        [Fact]
+        public void Embed_NominalPng_ProducesLoadableImageWithExifAndXmpProfiles()
+        {
+            // Arrange
+            var original = CreateTinyTestPngBytes();
+            var meta = new ImageGenerationMetadata(
+                "Grok Imagine",
+                "A majestic mountain at sunset, highly detailed",
+                "grok-imagine-image",
+                new DateTime(2026, 5, 25, 12, 0, 0, DateTimeKind.Utc),
+                "2k",
+                "16:9",
+                "GrokImagineApp 1.1.0");
+
+            // Act
+            var embedded = ImageMetadataEmbedder.Embed(original, meta, ".png");
+
+            // Assert - basic roundtrip: loadable + profiles present (full EXIF/XMP content exercised in embedder implementation)
+            embedded.Length.Should().BeGreaterThan(original.Length); // metadata adds size
+            using var reloaded = SixLabors.ImageSharp.Image.Load(embedded);
+            reloaded.Metadata.ExifProfile.Should().NotBeNull();
+            reloaded.Metadata.XmpProfile.Should().NotBeNull();
+
+            // PNG text chunks also attached
+            var pngMeta = reloaded.Metadata.GetFormatMetadata(SixLabors.ImageSharp.Formats.Png.PngFormat.Instance);
+            pngMeta.Should().NotBeNull();
+            pngMeta!.TextData.Should().NotBeEmpty();
+        }
+
+        [Fact]
+        public void GetFriendlyGeneratorName_MapsKnownModelsAndFallsBackForUnknown()
+        {
+            ImageMetadataEmbedder.GetFriendlyGeneratorName("grok-imagine-image").Should().Be("Grok Imagine");
+            ImageMetadataEmbedder.GetFriendlyGeneratorName("grok-imagine-image-pro").Should().Be("Grok Imagine Pro");
+            ImageMetadataEmbedder.GetFriendlyGeneratorName("nano-banana-pro").Should().Be("Nano Banana Pro");
+            ImageMetadataEmbedder.GetFriendlyGeneratorName("future-dall-e-4").Should().Be("future-dall-e-4");
+            ImageMetadataEmbedder.GetFriendlyGeneratorName("").Should().Be("Unknown");
+        }
+
+        [Fact]
+        public void Embed_NullBytes_ThrowsArgumentException()
+        {
+            var meta = new ImageGenerationMetadata("Grok Imagine", "p", "m", DateTime.UtcNow, null, null, "v1");
+            Action act = () => ImageMetadataEmbedder.Embed(null!, meta, ".png");
+            act.Should().Throw<ArgumentException>();
+        }
+
+        [Fact]
+        public void Embed_NullMetadata_ThrowsArgumentNullException()
+        {
+            var bytes = CreateTinyTestPngBytes();
+            Action act = () => ImageMetadataEmbedder.Embed(bytes, null!, ".png");
+            act.Should().Throw<ArgumentNullException>();
+        }
+    }
 }

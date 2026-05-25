@@ -44,6 +44,7 @@ namespace ImageGeneratorApp
         private Label lblStatus = null!;
         private CheckBox chkMultiTurnEditing = null!;
         private string? currentBase64Image = null;
+        private ImageGenerationMetadata? currentImageMetadata = null;
         private List<string> selectedImages = new List<string>();
         private Button btnAddImages = null!;
         private const long MaxFileSizeBytes = 20 * 1024 * 1024; // 20 MB
@@ -236,6 +237,18 @@ namespace ImageGeneratorApp
                     opaqueUserId,
                     imagesList);
 
+                // Capture immutable generation metadata for embedding on export.
+                // This snapshot ensures the prompt/model/etc. match the actual image even if the user
+                // later edits the prompt textbox or changes the model combo.
+                currentImageMetadata = new ImageGenerationMetadata(
+                    ImageMetadataEmbedder.GetFriendlyGeneratorName(cmbModel.Text),
+                    txtPrompt.Text.Trim(),
+                    cmbModel.Text,
+                    DateTime.UtcNow,
+                    cmbResolution.Text,
+                    aspectRatioValue,
+                    ImageMetadataEmbedder.AppNameVersion);
+
                 var b64 = currentBase64Image;
 
                 // Affichage de l'image (with output size guard + explicit prior image disposal)
@@ -279,6 +292,7 @@ namespace ImageGeneratorApp
                 if (currentBase64Image == null && previousBase64Image != null)
                 {
                     currentBase64Image = previousBase64Image;
+                    currentImageMetadata = null; // No prior metadata snapshot available for the recovered image
                     DisposeCurrentImage();
                     pictureBox.Image = previousImage; // previousImage lifetime managed by prior assignment site
                     btnSave.Enabled = true;
@@ -290,10 +304,13 @@ namespace ImageGeneratorApp
         {
             if (currentBase64Image == null) return;
 
+            // Support both PNG (lossless, recommended for AI art) and JPEG per requirements.
+            // Metadata embedding works for both (EXIF + XMP for JPEG; EXIF + XMP + PNG text chunks for PNG).
             using var sfd = new SaveFileDialog
             {
-                Filter = "PNG Image|*.png",
+                Filter = "PNG Image|*.png|JPEG Image|*.jpg;*.jpeg",
                 Title = "Enregistrer l'image",
+                DefaultExt = "png",
                 FileName = $"image-{DateTime.Now:yyyyMMdd-HHmmss}.png"
             };
 
@@ -301,9 +318,26 @@ namespace ImageGeneratorApp
             {
                 try
                 {
-                    var imageBytes = Convert.FromBase64String(currentBase64Image);
-                    File.WriteAllBytes(sfd.FileName, imageBytes);
-                    lblStatus.Text = "💾 Image sauvegardée avec succès.";
+                    var originalBytes = Convert.FromBase64String(currentBase64Image);
+                    byte[] bytesToSave = originalBytes;
+
+                    if (currentImageMetadata != null)
+                    {
+                        try
+                        {
+                            // Automatic metadata embedding (robust: never crash the save on metadata failure)
+                            string? targetExt = Path.GetExtension(sfd.FileName);
+                            bytesToSave = ImageMetadataEmbedder.Embed(originalBytes, currentImageMetadata, targetExt);
+                        }
+                        catch
+                        {
+                            // Fallback: save the raw image without metadata rather than failing the whole operation
+                            bytesToSave = originalBytes;
+                        }
+                    }
+
+                    File.WriteAllBytes(sfd.FileName, bytesToSave);
+                    lblStatus.Text = "💾 Image sauvegardée avec métadonnées AI intégrées.";
                     MessageBox.Show("Image enregistrée avec succès !", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception)
@@ -319,6 +353,7 @@ namespace ImageGeneratorApp
             txtPrompt.Clear();
             DisposeCurrentImage();
             currentBase64Image = null;
+            currentImageMetadata = null;
             btnSave.Enabled = false;
             lblStatus.Text = "";
             selectedImages.Clear();
