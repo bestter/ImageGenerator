@@ -60,7 +60,7 @@ namespace ImageGeneratorApp.Tests
             var client = new ImageGeneratorClient(httpClient);
 
             // Act
-            var result = await client.GenerateImageAsync("dummy_key", "A cute cat", "grok-imagine-image", "1k", "16:9", "dummy_user", new List<object>());
+            var result = await client.GenerateImageAsync("dummy_key", "A cute cat", "grok-imagine-image", "1k", "16:9", "dummy_user", new List<ImageUrlObject>());
 
             // Assert
             result.Should().Be(expectedBase64);
@@ -93,7 +93,7 @@ namespace ImageGeneratorApp.Tests
 
             var httpClient = new HttpClient(handlerMock.Object);
             var client = new ImageGeneratorClient(httpClient);
-            var images = new List<object> { new { type = "image_url", url = "data:image/png;base64,dummy" } };
+            var images = new List<ImageUrlObject> { new ImageUrlObject { Type = "image_url", Url = "data:image/png;base64,dummy" } };
 
             // Act
             var result = await client.GenerateImageAsync("dummy_key", "A cute cat", "grok-imagine-image", "1k", "16:9", "dummy_user", images);
@@ -113,7 +113,7 @@ namespace ImageGeneratorApp.Tests
             var client = new ImageGeneratorClient(new HttpClient());
 
             // Act
-            Func<Task> act = async () => await client.GenerateImageAsync(invalidKey!, "prompt", "model", "1k", "16:9", "user", new List<object>());
+            Func<Task> act = async () => await client.GenerateImageAsync(invalidKey!, "prompt", "model", "1k", "16:9", "user", new List<ImageUrlObject>());
 
             // Assert
             await act.Should().ThrowAsync<ArgumentException>().WithMessage("*La clé API est requise.*");
@@ -126,7 +126,7 @@ namespace ImageGeneratorApp.Tests
             var client = new ImageGeneratorClient(new HttpClient());
 
             // Act
-            Func<Task> act = async () => await client.GenerateImageAsync("key\nwithnewline", "prompt", "model", "1k", "16:9", "user", new List<object>());
+            Func<Task> act = async () => await client.GenerateImageAsync("key\nwithnewline", "prompt", "model", "1k", "16:9", "user", new List<ImageUrlObject>());
 
             // Assert
             await act.Should().ThrowAsync<ArgumentException>().WithMessage("*La clé API ne doit pas contenir de retours à la ligne.*");
@@ -142,7 +142,7 @@ namespace ImageGeneratorApp.Tests
             var client = new ImageGeneratorClient(new HttpClient());
 
             // Act
-            Func<Task> act = async () => await client.GenerateImageAsync("valid_key", invalidPrompt!, "model", "1k", "16:9", "user", new List<object>());
+            Func<Task> act = async () => await client.GenerateImageAsync("valid_key", invalidPrompt!, "model", "1k", "16:9", "user", new List<ImageUrlObject>());
 
             // Assert
             await act.Should().ThrowAsync<ArgumentException>().WithMessage("*Un prompt est requis.*");
@@ -172,7 +172,7 @@ namespace ImageGeneratorApp.Tests
             var client = new ImageGeneratorClient(httpClient);
 
             // Act
-            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "model", "1k", "16:9", "user", new List<object>());
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "model", "1k", "16:9", "user", new List<ImageUrlObject>());
 
             // Assert
             var exception = await act.Should().ThrowAsync<ImageGeneratorException>().WithMessage("Une erreur est survenue lors de la communication avec l'API.");
@@ -203,7 +203,7 @@ namespace ImageGeneratorApp.Tests
             var client = new ImageGeneratorClient(httpClient);
 
             // Act
-            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "model", "1k", "16:9", "user", new List<object>());
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "model", "1k", "16:9", "user", new List<ImageUrlObject>());
 
             // Assert
             var exception = await act.Should().ThrowAsync<ImageGeneratorException>().WithMessage("Rate limit exceeded");
@@ -232,7 +232,7 @@ namespace ImageGeneratorApp.Tests
             var client = new ImageGeneratorClient(httpClient);
 
             // Act
-            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "model", "1k", "16:9", "user", new List<object>());
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "model", "1k", "16:9", "user", new List<ImageUrlObject>());
 
             // Assert
             await act.Should().ThrowAsync<ImageGeneratorException>().WithMessage("La réponse de l'API est malformée.");
@@ -262,7 +262,7 @@ namespace ImageGeneratorApp.Tests
             var client = new ImageGeneratorClient(httpClient);
 
             // Act
-            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "model", "1k", "16:9", "user", new List<object>());
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "model", "1k", "16:9", "user", new List<ImageUrlObject>());
 
             // Assert
             await act.Should().ThrowAsync<ImageGeneratorException>().WithMessage("La réponse de l'API ne contient pas d'image valide.");
@@ -292,7 +292,7 @@ namespace ImageGeneratorApp.Tests
             var client = new ImageGeneratorClient(httpClient);
 
             // Act
-            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "model", "1k", "16:9", "user", new List<object>());
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "model", "1k", "16:9", "user", new List<ImageUrlObject>());
 
             // Assert
             var exception = await act.Should().ThrowAsync<ImageGeneratorException>().WithMessage("Unauthorized access token");
@@ -323,7 +323,7 @@ namespace ImageGeneratorApp.Tests
             var client = new ImageGeneratorClient(httpClient);
 
             // Act
-            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "model", "1k", "16:9", "user", new List<object>());
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "model", "1k", "16:9", "user", new List<ImageUrlObject>());
 
             // Assert
             var exception = await act.Should().ThrowAsync<ImageGeneratorException>().WithMessage("500");
@@ -352,7 +352,7 @@ namespace ImageGeneratorApp.Tests
             var client = new ImageGeneratorClient(httpClient);
 
             // Act
-            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "model", "1k", "16:9", "user", new List<object>());
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "model", "1k", "16:9", "user", new List<ImageUrlObject>());
 
             // Assert
             var exception = await act.Should().ThrowAsync<ImageGeneratorException>().WithMessage("Une erreur est survenue lors de la communication avec l'API.");
@@ -412,7 +412,7 @@ namespace ImageGeneratorApp.Tests
             var client = new ImageGeneratorClient(httpClient);
 
             // Act
-            var result = await client.GenerateImageAsync("dummy_key", "A cute cat", "nano-banana-pro", "1k", "16:9", "dummy_user", new List<object>());
+            var result = await client.GenerateImageAsync("dummy_key", "A cute cat", "nano-banana-pro", "1k", "16:9", "dummy_user", new List<ImageUrlObject>());
 
             // Assert
             result.Should().Be(expectedBase64);
@@ -424,7 +424,7 @@ namespace ImageGeneratorApp.Tests
         {
             // Arrange
             var client = new ImageGeneratorClient(new HttpClient());
-            var images = new List<object> { new { type = "image_url", url = "data:image/png;base64,dummy" } };
+            var images = new List<ImageUrlObject> { new ImageUrlObject { Type = "image_url", Url = "data:image/png;base64,dummy" } };
 
             // Act
             Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "A cute cat", "nano-banana-pro", "1k", "16:9", "dummy_user", images);
@@ -458,7 +458,7 @@ namespace ImageGeneratorApp.Tests
             var client = new ImageGeneratorClient(httpClient);
 
             // Act
-            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "nano-banana-pro", "1k", "16:9", "user", new List<object>());
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "nano-banana-pro", "1k", "16:9", "user", new List<ImageUrlObject>());
 
             // Assert
             var exception = await act.Should().ThrowAsync<ImageGeneratorException>().WithMessage("Parameter error: invalid model specified");
@@ -483,7 +483,7 @@ namespace ImageGeneratorApp.Tests
             var client = new ImageGeneratorClient(httpClient);
 
             // Act
-            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "nano-banana-pro", "1k", "16:9", "user", new List<object>());
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "nano-banana-pro", "1k", "16:9", "user", new List<ImageUrlObject>());
 
             // Assert
             var exception = await act.Should().ThrowAsync<ImageGeneratorException>()
@@ -512,7 +512,7 @@ namespace ImageGeneratorApp.Tests
             var client = new ImageGeneratorClient(httpClient);
 
             // Act
-            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "nano-banana-pro", "1k", "16:9", "user", new List<object>());
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "nano-banana-pro", "1k", "16:9", "user", new List<ImageUrlObject>());
 
             // Assert
             var exception = await act.Should().ThrowAsync<ImageGeneratorException>()
@@ -547,7 +547,7 @@ namespace ImageGeneratorApp.Tests
             var client = new ImageGeneratorClient(httpClient);
 
             // Act
-            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "grok-imagine-image", "2k", "16:9", "user", new List<object>());
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "grok-imagine-image", "2k", "16:9", "user", new List<ImageUrlObject>());
 
             // Assert
             var exception = await act.Should().ThrowAsync<ImageGeneratorException>()

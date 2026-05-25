@@ -23,6 +23,8 @@ namespace ImageGeneratorApp
     [JsonSerializable(typeof(ImageGeneratorResponse))]
     [JsonSerializable(typeof(GeminiRequest))]
     [JsonSerializable(typeof(GeminiResponse))]
+    [JsonSerializable(typeof(ImageUrlObject))]
+    [JsonSerializable(typeof(ImageUrlObject[]))]
     internal partial class ImageGeneratorJsonContext : JsonSerializerContext
     {
     }

@@ -17,3 +17,7 @@
 ## 2024-05-24 - Enforce MaxLength on TextBox
 **Learning:** Unbounded text inputs (like an API Key TextBox) in desktop apps can lead to severe memory exhaustion and UI thread freezing if a user accidentally pastes an enormous string (e.g., a massive log file or base64 data). This acts as a potential Denial of Service (DoS) and drastically affects application responsiveness.
 **Action:** Always enforce a reasonable `MaxLength` property on `TextBox` controls in C# WinForms to prevent pasting of excessively large payloads.
+
+## 2024-08-01 - Avoid reflection by removing anonymous types in JSON Source Generation
+**Learning:** Even when using `JsonContent.Create` with a `JsonSerializerContext`, if properties like `Image` or `Images` are typed as `object` and passed anonymous types (`new { type = "image_url", ... }`), .NET's JSON Source Generator cannot generate serialization code for them. It falls back to slow reflection or fails entirely, causing performance degradation and memory pressure.
+**Action:** Always create explicitly defined, strongly-typed classes (e.g., `ImageUrlObject`) for nested data structures and register them in the `JsonSerializerContext` to fully eliminate reflection overhead during JSON serialization.

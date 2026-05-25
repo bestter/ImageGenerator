@@ -47,7 +47,7 @@ namespace ImageGeneratorApp
             string resolution,
             string aspectRatio,
             string opaqueUserId,
-            List<object> imagesList)
+            List<ImageUrlObject> imagesList)
         {
             if (string.IsNullOrWhiteSpace(apiKey))
                 throw new ArgumentException("La clé API est requise.", nameof(apiKey));

@@ -176,13 +176,13 @@ namespace ImageGeneratorApp
                 string aspectRatioValue = selectedRatioText.Split(' ')[0];
                 string opaqueUserId = UserIdHelper.GetOpaqueUserId();
 
-                var imagesList = new List<object>();
+                var imagesList = new List<ImageUrlObject>();
 
                 if (selectedImages.Count > 0 || !string.IsNullOrEmpty(imageToEditBase64))
                 {
                     if (!string.IsNullOrEmpty(imageToEditBase64))
                     {
-                        imagesList.Add(new { type = "image_url", url = $"data:image/png;base64,{imageToEditBase64}" });
+                        imagesList.Add(new ImageUrlObject { Type = "image_url", Url = $"data:image/png;base64,{imageToEditBase64}" });
                     }
 
                     var tasks = selectedImages.Select(async imgPath =>
@@ -217,7 +217,7 @@ namespace ImageGeneratorApp
                             Convert.TryToBase64Chars(state.b64Bytes, span.Slice(state.prefix.Length), out _);
                         });
 
-                        return (object?)new { type = "image_url", url = url };
+                        return new ImageUrlObject { Type = "image_url", Url = url };
                     }).ToArray();
 
                     var results = await Task.WhenAll(tasks);
