@@ -2,7 +2,7 @@
 
 Ce fichier fournit un contexte aux agents IA travaillant sur ce projet.
 
-**Version** : 1.4
+**Version** : 1.5
 **Dernière mise à jour** : 25 mai 2026
 **Propriétaire** : Martin Labelle (@bestter)
 
@@ -88,6 +88,7 @@ L'application suit une structure modulaire séparant l'UI de la logique réseau 
 - **`ImageGeneratorJsonContext.cs`** : Contexte de sérialisation JSON source-generated pour la performance.
 - **`GeminiModels.cs`** : Modèles de requête/réponse spécifiques au provider Google Gemini (`GeminiRequest`, `GeminiResponse`, `GeminiContent`, `GeminiPart`, `GeminiInlineData`, `GeminiGenerationConfig`, `GeminiImageConfig`, `GeminiCandidate`).
 - **`ImageUrlObject.cs`** : Modèle d'objet image de référence utilisé pour les éditions d'images (contient type et URL).
+- **`ImageMetadataEmbedder.cs`** : Service responsable de l'intégration automatique des métadonnées de génération (EXIF, XMP, chunks PNG) lors de l'export des images.
 - **`UserIdHelper.cs`** : Utilitaire pour la gestion des identifiants (notamment pour la protection PII).
 - **`Form1.Designer.cs` & `Form1.resx`** : Fichiers générés automatiquement gérant la disposition des éléments d'interface (bien que `Form1.cs` contienne une méthode personnalisée `InitializeControls()` créant l'interface par le code).
 - **`Program.cs`** : Point d'entrée de l'application (contient la méthode `Main`).
@@ -107,7 +108,8 @@ L’édition d’images est disponible exclusivement via le endpoint `POST /v1/i
 - **Limitation importante** : L’édition d’images **n’est pas supportée** par le provider Google (Nano Banana Pro). Seuls les modèles Grok Imagine peuvent utiliser le endpoint `/v1/images/edits`.
 
 1. **Paramétrage de l'API** : L'utilisateur fournit sa propre clé API au runtime. Le label du champ s'adapte au provider sélectionné (« Clé API xAI » pour Grok, « Clé Google Cloud » pour Nano Banana).
-2. **Enregistrement des résultats** : L'image générée (reçue en base64) peut être téléchargée au format PNG sur la machine de l'utilisateur.
+2. **Enregistrement des résultats** : L'image générée (reçue en base64) peut être téléchargée au format PNG ou JPEG sur la machine de l'utilisateur.
+3. **Intégration automatique de métadonnées AI** : Lors de l'export, les métadonnées de génération (prompt, modèle, date/heure, etc.) sont automatiquement intégrées dans l'image via EXIF, XMP et chunks PNG. Cette fonctionnalité est implémentée dans `ImageMetadataEmbedder.cs` et utilise la dépendance validée SixLabors.ImageSharp.
 
 ## Directives ##
 
@@ -119,7 +121,7 @@ L’édition d’images est disponible exclusivement via le endpoint `POST /v1/i
 - **Architecture** : L'interface graphique est codée manuellement dans `InitializeControls()` (dans `Form1.cs`) plutôt que de s'appuyer exclusivement sur le Designer. Toute modification de l'UI doit idéalement se faire dans cette méthode. La logique réseau doit être maintenue séparée dans la couche client (`ImageGeneratorClient.cs` et associés).
 - **Multi-provider** : Le client `ImageGeneratorClient` gère le routage vers le bon endpoint selon le modèle sélectionné. Pour ajouter un nouveau provider, étendre la logique conditionnelle dans `GenerateImageAsync()`.
 - **Sécurité** : Les clés API sont stockées temporairement dans le champ de texte `txtApiKey` et passées via l'en-tête HTTP approprié (`Bearer` pour xAI, `x-goog-api-key` pour Google). Il n'y a pas de sauvegarde persistante implémentée pour l'instant.
-- **Dépendances** : Le projet utilise les bibliothèques standards `System.Net.Http` pour les appels d'API et `System.Text.Json` pour la manipulation des données JSON. Pas de dépendances externes complexes (comme RestSharp ou Newtonsoft.Json) repérées.
+- **Dépendances** : Le projet utilise les bibliothèques standards `System.Net.Http` pour les appels d'API et `System.Text.Json` pour la manipulation des données JSON. Une dépendance externe validée a été ajoutée : `SixLabors.ImageSharp` (version 3.1.12) pour la gestion robuste des métadonnées EXIF/XMP/PNG. Toute nouvelle dépendance doit faire l'objet d'une validation explicite.
 - **Tests** : Le projet inclut des tests unitaires dans le dossier `ImageGeneratorApp.Tests` (ex: `ImageGeneratorClientTests.cs`). Toute modification d’une méthode publique existante ou ajout de fonctionnalité doit être accompagnée de tests unitaires couvrant les cas nominaux + erreurs (API key invalide, rate limit, JSON mal formé, etc.). Objectif : 100 % des tests verts en local avant tout commit.
 - **Design** : L'application doit être visuellement attrayante et moderne.
 - **Extensibilité** : Pour ajouter un nouveau provider, étendre uniquement ImageGeneratorClient.GenerateImageAsync() et ajouter les tests correspondants. Pas de nouvelle dépendance sans validation explicite.
