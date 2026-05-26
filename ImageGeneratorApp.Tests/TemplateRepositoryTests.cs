@@ -145,17 +145,20 @@ namespace ImageGeneratorApp.Tests
             await Task.Delay(15);
 
             // Act
+            template.Key = "renamed";
             template.Value = "updated val";
             template.Category = "New Category";
             bool success = await _repository.UpdateAsync(template);
-            var retrieved = await _repository.GetByKeyAsync("original");
+            var retrievedOld = await _repository.GetByKeyAsync("original");
+            var retrievedNew = await _repository.GetByKeyAsync("renamed");
 
             // Assert
             success.Should().BeTrue();
-            retrieved.Should().NotBeNull();
-            retrieved!.Value.Should().Be("updated val");
-            retrieved.Category.Should().Be("New Category");
-            retrieved.UpdatedAt.Should().BeAfter(originalUpdatedAt);
+            retrievedOld.Should().BeNull();
+            retrievedNew.Should().NotBeNull();
+            retrievedNew!.Value.Should().Be("updated val");
+            retrievedNew.Category.Should().Be("New Category");
+            retrievedNew.UpdatedAt.Should().BeAfter(originalUpdatedAt);
         }
 
         [Fact]

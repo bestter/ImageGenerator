@@ -77,7 +77,7 @@ namespace ImageGeneratorApp
         }
 
         /// <summary>
-        /// Updates an existing template's value, category, tags, and usage statistics by its primary key ID.
+        /// Updates an existing template's key, value, category, tags, and usage statistics by its primary key ID.
         /// Automatically updates the <see cref="TemplateModel.UpdatedAt"/> timestamp to the current UTC time.
         /// </summary>
         /// <param name="template">The template model containing updated values.</param>
@@ -94,7 +94,8 @@ namespace ImageGeneratorApp
 
             const string sql = @"
                 UPDATE templates
-                SET value = @Value,
+                SET key = @Key,
+                    value = @Value,
                     category = @Category,
                     tags = @Tags,
                     usage_count = @UsageCount,
