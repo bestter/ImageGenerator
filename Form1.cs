@@ -44,6 +44,7 @@ namespace ImageGeneratorApp
         private Label lblStatus = null!;
         private CheckBox chkMultiTurnEditing = null!;
         private string? currentBase64Image = null;
+        private byte[]? currentImageBytes = null;
         private ImageGenerationMetadata? currentImageMetadata = null;
         private List<string> selectedImages = new List<string>();
         private Button btnAddImages = null!;
@@ -164,12 +165,14 @@ namespace ImageGeneratorApp
 
             Image? previousImage = pictureBox.Image;
             string? previousBase64Image = currentBase64Image;
+            byte[]? previousImageBytes = currentImageBytes;
 
             btnGenerate.Enabled = false;
             btnSave.Enabled = false;
             lblStatus.Text = "⏳ Génération en cours...";
             DisposeCurrentImage();
             currentBase64Image = null;
+            currentImageBytes = null;
 
             try
             {
@@ -251,12 +254,14 @@ namespace ImageGeneratorApp
 
                 var b64 = currentBase64Image;
 
-                // Affichage de l'image (with output size guard + explicit prior image disposal)
+                // ⚡ Bolt Optimization: Cache the decoded image bytes to avoid repeated Base64 decoding
+                // (which incurs large LOH allocations and CPU overhead) when saving the image later.
                 var imageBytes = Convert.FromBase64String(b64);
                 if (imageBytes.Length > MaxGeneratedImageBytes)
                 {
                     throw new ImageGeneratorException("L'image générée dépasse la taille maximale autorisée.");
                 }
+                currentImageBytes = imageBytes;
 
                 DisposeCurrentImage();
                 using (var ms = new MemoryStream(imageBytes))
@@ -292,6 +297,7 @@ namespace ImageGeneratorApp
                 if (currentBase64Image == null && previousBase64Image != null)
                 {
                     currentBase64Image = previousBase64Image;
+                    currentImageBytes = previousImageBytes;
                     currentImageMetadata = null; // No prior metadata snapshot available for the recovered image
                     DisposeCurrentImage();
                     pictureBox.Image = previousImage; // previousImage lifetime managed by prior assignment site
@@ -318,7 +324,8 @@ namespace ImageGeneratorApp
             {
                 try
                 {
-                    var originalBytes = Convert.FromBase64String(currentBase64Image);
+                    // ⚡ Bolt Optimization: Use the cached decoded bytes instead of converting from Base64 again
+                    var originalBytes = currentImageBytes ?? Convert.FromBase64String(currentBase64Image);
                     byte[] bytesToSave = originalBytes;
 
                     if (currentImageMetadata != null)
@@ -353,6 +360,7 @@ namespace ImageGeneratorApp
             txtPrompt.Clear();
             DisposeCurrentImage();
             currentBase64Image = null;
+            currentImageBytes = null;
             currentImageMetadata = null;
             btnSave.Enabled = false;
             lblStatus.Text = "";

@@ -21,3 +21,6 @@
 ## 2024-08-01 - Avoid reflection by removing anonymous types in JSON Source Generation
 **Learning:** Even when using `JsonContent.Create` with a `JsonSerializerContext`, if properties like `Image` or `Images` are typed as `object` and passed anonymous types (`new { type = "image_url", ... }`), .NET's JSON Source Generator cannot generate serialization code for them. It falls back to slow reflection or fails entirely, causing performance degradation and memory pressure.
 **Action:** Always create explicitly defined, strongly-typed classes (e.g., `ImageUrlObject`) for nested data structures and register them in the `JsonSerializerContext` to fully eliminate reflection overhead during JSON serialization.
+## 2024-05-30 - Avoid duplicate base64 string decoding
+**Learning:** Decoding large base64 strings (like ~20MB AI image results) multiple times using `Convert.FromBase64String` incurs heavy CPU usage and enormous allocations on the Large Object Heap (LOH), leading to noticeable UI stutter when saving or redisplaying an image.
+**Action:** When a base64 string must be decoded, cache the resulting `byte[]` at the application level alongside the base64 string, so subsequent operations (like saving to disk) can reuse the raw bytes instantly.
