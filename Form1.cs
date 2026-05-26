@@ -460,7 +460,7 @@ namespace ImageGeneratorApp
             }
         }
 
-        private void BtnSave_Click(object? sender, EventArgs e)
+        private async void BtnSave_Click(object? sender, EventArgs e)
         {
             if (currentBase64Image == null) return;
 
@@ -478,26 +478,28 @@ namespace ImageGeneratorApp
             {
                 try
                 {
-                    // ⚡ Bolt Optimization: Use the cached decoded bytes instead of converting from Base64 again
-                    var originalBytes = currentImageBytes ?? Convert.FromBase64String(currentBase64Image);
-                    byte[] bytesToSave = originalBytes;
-
-                    if (currentImageMetadata != null)
+                    // Offload CPU-bound base64 decoding and metadata embedding to a background thread to prevent UI freezing
+                    byte[] bytesToSave = await Task.Run(() =>
                     {
-                        try
+                        var originalBytes = currentImageBytes ?? Convert.FromBase64String(currentBase64Image);
+                        if (currentImageMetadata != null)
                         {
-                            // Automatic metadata embedding (robust: never crash the save on metadata failure)
-                            string? targetExt = Path.GetExtension(sfd.FileName);
-                            bytesToSave = ImageMetadataEmbedder.Embed(originalBytes, currentImageMetadata, targetExt);
+                            try
+                            {
+                                // Automatic metadata embedding (robust: never crash the save on metadata failure)
+                                string? targetExt = Path.GetExtension(sfd.FileName);
+                                return ImageMetadataEmbedder.Embed(originalBytes, currentImageMetadata, targetExt);
+                            }
+                            catch
+                            {
+                                // Fallback: save the raw image without metadata rather than failing the whole operation
+                                return originalBytes;
+                            }
                         }
-                        catch
-                        {
-                            // Fallback: save the raw image without metadata rather than failing the whole operation
-                            bytesToSave = originalBytes;
-                        }
-                    }
+                        return originalBytes;
+                    });
 
-                    File.WriteAllBytes(sfd.FileName, bytesToSave);
+                    await File.WriteAllBytesAsync(sfd.FileName, bytesToSave);
                     lblStatus.Text = "💾 Image sauvegardée avec métadonnées AI intégrées.";
                     MessageBox.Show("Image enregistrée avec succès !", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
