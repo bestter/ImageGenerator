@@ -2,8 +2,8 @@
 
 Ce fichier fournit un contexte aux agents IA travaillant sur ce projet.
 
-**Version** : 1.5
-**Dernière mise à jour** : 25 mai 2026
+**Version** : 1.6
+**Dernière mise à jour** : 26 mai 2026
 **Propriétaire** : Martin Labelle (@bestter)
 
 ---
@@ -77,11 +77,16 @@ L'application suit une structure modulaire séparant l'UI de la logique réseau 
 
 - **`Form1.cs`** : Fichier gérant exclusivement la couche UI (Interface Utilisateur).
   - Gère les contrôles de l'interface (clés API, prompt, sélection de modèle, résolution, aspect ratio).
-  - Gère l'affichage, la mise en cache (Base64) et la sauvegarde locale des images.
+  - Gère l'affichage, la mise en cache (Base64) et la sauvegarde locale asynchrone non bloquante des images.
+  - Gère le moteur de validation visuelle (bordure rouge de 2px autour du prompt sur perte de focus ou survol du bouton de génération, réinitialisation instantanée lors de la saisie).
+  - Gère le bouton de génération (activation/désactivation dynamique selon l'API key, le prompt, la validité des gabarits ou l'état de génération).
+  - Intègre une autocomplétion mid-string flottante au caret (`lstAutocomplete`) et un aperçu au survol via info-bulle (`toolTipGenerate`).
+  - Structuré de manière modulaire : le gestionnaire de clic `BtnGenerate_Click` est subdivisé en méthodes spécialisées (`PrepareReferenceImagesAsync`, `UpdateUIWithGeneratedImage`, `HandleGenerationException`).
   - Délègue la logique métier et les appels réseau à la couche client.
 - **`ImageGeneratorClient.cs`** : Implémente la communication HTTP (via `HttpClient`) avec les endpoints des différents providers et gère le parsing JSON.
   - **xAI (Grok Imagine)** : `https://api.x.ai/v1/images/generations` (génération) et `https://api.x.ai/v1/images/edits` (édition multi-tour).
   - **Google (Nano Banana Pro)** : `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent`.
+  - **Refactorisation propre** : La méthode principale `GenerateImageAsync` fait moins de 40 lignes et délègue les tâches à des helpers dédiés (`PrepareRequest`, `ParseErrorResponseAsync`, `ParseSuccessResponseAsync`) assurant modularité et performance.
 - **`ImageGeneratorRequest.cs`** : Modèle de requête pour l'API xAI (le modèle Nano Banana utilise un format de requête distinct construit directement dans le client).
 - **`ImageGeneratorResponse.cs`** : Modèle de réponse pour l'API xAI.
 - **`ImageGeneratorException.cs`** : Exception personnalisée pour les erreurs API (tous providers).
@@ -89,7 +94,13 @@ L'application suit une structure modulaire séparant l'UI de la logique réseau 
 - **`GeminiModels.cs`** : Modèles de requête/réponse spécifiques au provider Google Gemini (`GeminiRequest`, `GeminiResponse`, `GeminiContent`, `GeminiPart`, `GeminiInlineData`, `GeminiGenerationConfig`, `GeminiImageConfig`, `GeminiCandidate`).
 - **`ImageUrlObject.cs`** : Modèle d'objet image de référence utilisé pour les éditions d'images (contient type et URL).
 - **`ImageMetadataEmbedder.cs`** : Service responsable de l'intégration automatique des métadonnées de génération (EXIF, XMP, chunks PNG) lors de l'export des images.
-- **`UserIdHelper.cs`** : Utilitaire pour la gestion des identifiants (notamment pour la protection PII).
+- **`UserIdHelper.cs`** : Utilitaire asynchrone pour la gestion des identifiants (notamment pour la protection PII) avec lectures/écritures non bloquantes de fichiers (`GetOpaqueUserIdAsync`).
+- **`DatabaseHelper.cs`** : Gère la création et l'initialisation de la base SQLite `templates.db` et configure Dapper avec un mapping global snake_case vers PascalCase.
+- **`TemplateModel.cs`** : Modèle entité représentant un gabarit de prompt stocké en base de données.
+- **`TemplateRepository.cs`** : Gère l'accès aux données (Dapper) avec des opérations CRUD asynchrones et le suivi des statistiques d'usage.
+- **`TemplateParser.cs`** : Moteur d'analyse récursif et sécurisé pour étendre les balises de templates (`{key}` ou `{key:param1}`) avec limite de 20 itérations. Lève des exceptions précises lors d'erreurs de syntaxe (`FormatException`), de récursion infinie (`InvalidOperationException`) ou de clé manquante (`KeyNotFoundException`).
+- **`TemplatesManagerForm.cs`** : Vue WinForms (codée programmatiquement) de gestion de la liste des gabarits avec recherche/filtre en temps réel.
+- **`TemplateEditorForm.cs`** : Dialogue WinForms (codé programmatiquement) d'ajout/édition sécurisé avec détection de collisions de clés.
 - **`Form1.Designer.cs` & `Form1.resx`** : Fichiers générés automatiquement gérant la disposition des éléments d'interface (bien que `Form1.cs` contienne une méthode personnalisée `InitializeControls()` créant l'interface par le code).
 - **`Program.cs`** : Point d'entrée de l'application (contient la méthode `Main`).
 - **`ImageGeneratorApp.csproj`** : Le fichier de définition du projet C# détaillant les dépendances et la configuration de compilation.
@@ -110,8 +121,19 @@ L’édition d’images est disponible exclusivement via le endpoint `POST /v1/i
 1. **Paramétrage de l'API** : L'utilisateur fournit sa propre clé API au runtime. Le label du champ s'adapte au provider sélectionné (« Clé API xAI » pour Grok, « Clé Google Cloud » pour Nano Banana).
 2. **Enregistrement des résultats** : L'image générée (reçue en base64) peut être téléchargée au format PNG ou JPEG sur la machine de l'utilisateur.
 3. **Intégration automatique de métadonnées AI** : Lors de l'export, les métadonnées de génération (prompt, modèle, date/heure, etc.) sont automatiquement intégrées dans l'image via EXIF, XMP et chunks PNG. Cette fonctionnalité est implémentée dans `ImageMetadataEmbedder.cs` et utilise la dépendance validée SixLabors.ImageSharp.
+   - **Exportation asynchrone non bloquante** : La sauvegarde et l'exportation des images s'effectuent de façon asynchrone (`BtnSave_Click` utilise `File.WriteAllBytesAsync`). De plus, le décodage Base64, l'encodage d'image ImageSharp et l'injection de métadonnées sont entièrement déportés dans un thread d'arrière-plan (`Task.Run`), garantissant une interface fluide à 100%, sans aucun gel de l'affichage.
+4. **Système de Gabarits (Templates) & Autocomplétion UX** :
+   - **Stockage SQLite & Dapper** : Base de données locale `templates.db` gérant l'intégrité, l'indexation et la rapidité des gabarits.
+   - **Analyse Récursive Paramétrée** : Parser mid-string supportant les balises récursives `{key}` ou `{key:param1:param2}` pour injecter des variables, avec une limite de sécurité à 20 boucles.
+   - **Moteur de validation syntaxique & exceptions structurées** : Le parser effectue un contrôle syntaxique rigoureux (accolades mal appairées, imbriquées ou manquantes) levant des `FormatException`. Il interdit les boucles de récursions infinies en limitant la profondeur à 20 itérations (`InvalidOperationException`) et lève des `KeyNotFoundException` en cas de clés absentes de la base SQLite.
+   - **Validation visuelle dynamique UX** : Le champ de saisie du prompt `txtPrompt` est encadré d'une bordure rouge de 2 pixels en cas d'erreur de validation (détectée à la perte de focus/blur ou au survol du bouton de génération). La bordure rouge s'efface instantanément au changement de texte (`TextChanged`) pour préserver le confort de frappe de l'utilisateur.
+   - **Contrôle d'activation du bouton de génération** : Le bouton de génération `btnGenerate` est automatiquement désactivé si la clé API ou le prompt est vide, si le prompt contient des erreurs de syntaxe, des clés inconnues, ou des récursions infinies. Il est également verrouillé pendant toute la durée de l'appel d'API asynchrone.
+   - **Mise en cache asynchrone de l'autocomplétion** : Les clés de templates utilisées pour l'autocomplétion contextuelle au caret sont stockées en cache local et rafraîchies de façon asynchrone (`RefreshTemplateKeysCacheAsync`) dès la fermeture du gestionnaire de modèles, évitant tout appel de base de données à chaque touche pressée.
+   - **UI responsive sans Designer** : Dialogues de gestion et d'édition entièrement programmés en C#, avec validation stricte de formulaires.
+   - **Autocomplétion Contextuelle (UX)** : Apparition au caret d'un `ListBox` d'autocomplétion mid-string lors de la saisie de `{` avec navigation au clavier et insertion avec accolades auto-fermées.
+   - **Aperçu Info-bulle (Hover)** : Info-bulle dynamique sur le bouton de génération pour prévisualiser le prompt entièrement résolu avant envoi.
 
-## Directives ##
+## Directives
 
 - **Clé API** : Étant donné que les formats de clés API diffèrent entre xAI et Google, le champ txtApiKey doit être utilisé de manière agnostique dans l'UI, mais le client ImageGeneratorClient a l'entière responsabilité de formater le header HTTP correct selon le provider cible.
 - **Tests** : Tous les tests réseau doivent utiliser Moq et un HttpMessageHandler mocké pour intercepter les requêtes HTTP. Aucun test ne doit frapper les API réelles de xAI ou de Google Cloud.

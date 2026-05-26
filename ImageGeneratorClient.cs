@@ -49,6 +49,53 @@ namespace ImageGeneratorApp
             string opaqueUserId,
             List<ImageUrlObject> imagesList)
         {
+            var (apiUrl, content, authHeaderName, authHeaderValue) = PrepareRequest(
+                apiKey, prompt, model, resolution, aspectRatio, opaqueUserId, imagesList);
+
+            using var contentToDispose = content;
+            using var requestMessage = new HttpRequestMessage(HttpMethod.Post, apiUrl);
+            requestMessage.Headers.Add(authHeaderName, authHeaderValue);
+            requestMessage.Content = contentToDispose;
+
+            HttpResponseMessage response;
+            try
+            {
+                response = await _httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                int statusCode = 0;
+                if (ex is HttpRequestException hex && hex.StatusCode.HasValue)
+                {
+                    statusCode = (int)hex.StatusCode.Value;
+                }
+
+                throw new ImageGeneratorException("Une erreur de connexion réseau est survenue. Impossible de joindre l'API.", statusCode);
+            }
+
+            using var responseStream = await response.Content.ReadAsStreamAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw await ParseErrorResponseAsync(response, responseStream);
+            }
+
+            return await ParseSuccessResponseAsync(model, responseStream);
+        }
+
+        private (string apiUrl, HttpContent content, string authHeaderName, string authHeaderValue) PrepareRequest(
+            string apiKey,
+            string prompt,
+            string model,
+            string resolution,
+            string aspectRatio,
+            string opaqueUserId,
+            List<ImageUrlObject> imagesList)
+        {
             if (string.IsNullOrWhiteSpace(apiKey))
                 throw new ArgumentException("La clé API est requise.", nameof(apiKey));
 
@@ -138,88 +185,66 @@ namespace ImageGeneratorApp
                 content = JsonContent.Create(requestBody, ImageGeneratorJsonContext.Default.ImageGeneratorRequest);
             }
 
-            using var contentToDispose = content;
-            using var requestMessage = new HttpRequestMessage(HttpMethod.Post, apiUrl);
-            requestMessage.Headers.Add(authHeaderName, authHeaderValue);
-            requestMessage.Content = contentToDispose;
+            return (apiUrl, content, authHeaderName, authHeaderValue);
+        }
 
-            HttpResponseMessage response;
-            try
+        private async Task<ImageGeneratorException> ParseErrorResponseAsync(HttpResponseMessage response, Stream responseStream)
+        {
+            using var reader = new StreamReader(responseStream);
+
+            // 🛡️ Sentinel: Prevent memory exhaustion (DoS) from unbounded error responses.
+            char[] buffer = new char[8192];
+            int charsRead = await reader.ReadBlockAsync(buffer, 0, buffer.Length);
+            var errorString = new string(buffer, 0, charsRead);
+
+            string safeErrorMessage = string.Empty;
+            if (!string.IsNullOrWhiteSpace(errorString))
             {
-                response = await _httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead);
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                int statusCode = 0;
-                if (ex is HttpRequestException hex && hex.StatusCode.HasValue)
+                try
                 {
-                    statusCode = (int)hex.StatusCode.Value;
-                }
-
-                throw new ImageGeneratorException("Une erreur de connexion réseau est survenue. Impossible de joindre l'API.", statusCode);
-            }
-
-            using var responseStream = await response.Content.ReadAsStreamAsync();
-
-            if (!response.IsSuccessStatusCode)
-            {
-                using var reader = new StreamReader(responseStream);
-
-                // 🛡️ Sentinel: Prevent memory exhaustion (DoS) from unbounded error responses.
-                char[] buffer = new char[8192];
-                int charsRead = await reader.ReadBlockAsync(buffer, 0, buffer.Length);
-                var errorString = new string(buffer, 0, charsRead);
-
-                string safeErrorMessage = string.Empty;
-                if (!string.IsNullOrWhiteSpace(errorString))
-                {
-                    try
+                    using (JsonDocument doc = JsonDocument.Parse(errorString))
                     {
-                        using (JsonDocument doc = JsonDocument.Parse(errorString))
+                        if (doc.RootElement.ValueKind == JsonValueKind.Object)
                         {
-                            if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                            if (doc.RootElement.TryGetProperty("msg", out JsonElement msgElement))
                             {
-                                if (doc.RootElement.TryGetProperty("msg", out JsonElement msgElement))
+                                safeErrorMessage = msgElement.ValueKind == JsonValueKind.String
+                                    ? msgElement.GetString() ?? string.Empty
+                                    : msgElement.GetRawText();
+                            }
+                            else if (doc.RootElement.TryGetProperty("error", out JsonElement errorElement))
+                            {
+                                if (errorElement.ValueKind == JsonValueKind.Object &&
+                                    errorElement.TryGetProperty("message", out JsonElement messageElement))
                                 {
-                                    safeErrorMessage = msgElement.ValueKind == JsonValueKind.String
-                                        ? msgElement.GetString() ?? string.Empty
-                                        : msgElement.GetRawText();
+                                    safeErrorMessage = messageElement.ValueKind == JsonValueKind.String
+                                        ? messageElement.GetString() ?? string.Empty
+                                        : messageElement.GetRawText();
                                 }
-                                else if (doc.RootElement.TryGetProperty("error", out JsonElement errorElement))
+                                else if (errorElement.ValueKind == JsonValueKind.String)
                                 {
-                                    if (errorElement.ValueKind == JsonValueKind.Object &&
-                                        errorElement.TryGetProperty("message", out JsonElement messageElement))
-                                    {
-                                        safeErrorMessage = messageElement.ValueKind == JsonValueKind.String
-                                            ? messageElement.GetString() ?? string.Empty
-                                            : messageElement.GetRawText();
-                                    }
-                                    else if (errorElement.ValueKind == JsonValueKind.String)
-                                    {
-                                        safeErrorMessage = errorElement.GetString() ?? string.Empty;
-                                    }
+                                    safeErrorMessage = errorElement.GetString() ?? string.Empty;
                                 }
                             }
                         }
                     }
-                    catch (Exception)
-                    {
-                        // Fallback to generic message if parsing or property retrieval fails
-                    }
                 }
-
-                if (string.IsNullOrWhiteSpace(safeErrorMessage))
+                catch (Exception)
                 {
-                    safeErrorMessage = "Une erreur est survenue lors de la communication avec l'API.";
+                    // Fallback to generic message if parsing or property retrieval fails
                 }
-
-                throw new ImageGeneratorException(safeErrorMessage, (int)response.StatusCode);
             }
 
+            if (string.IsNullOrWhiteSpace(safeErrorMessage))
+            {
+                safeErrorMessage = "Une erreur est survenue lors de la communication avec l'API.";
+            }
+
+            return new ImageGeneratorException(safeErrorMessage, (int)response.StatusCode);
+        }
+
+        private async Task<string> ParseSuccessResponseAsync(string model, Stream responseStream)
+        {
             try
             {
                 if (model == "nano-banana-pro")

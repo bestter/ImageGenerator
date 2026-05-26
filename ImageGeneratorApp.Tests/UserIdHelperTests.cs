@@ -15,9 +15,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using FluentAssertions;
-
 using ImageGeneratorApp;
 using System;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace ImageGeneratorApp.Tests
@@ -25,11 +25,11 @@ namespace ImageGeneratorApp.Tests
     public class UserIdHelperTests
     {
         [Fact]
-        public void GetOpaqueUserId_ReturnsStableIdentifier()
+        public async Task GetOpaqueUserIdAsync_ReturnsStableIdentifier()
         {
             // Act
-            string hash1 = UserIdHelper.GetOpaqueUserId();
-            string hash2 = UserIdHelper.GetOpaqueUserId();
+            string hash1 = await UserIdHelper.GetOpaqueUserIdAsync();
+            string hash2 = await UserIdHelper.GetOpaqueUserIdAsync();
 
             // Assert
             hash1.Should().NotBeNullOrWhiteSpace();

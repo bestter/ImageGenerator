@@ -15,8 +15,13 @@ Application de bureau Windows Forms (.NET 10) pour la génération d'images par 
 - **Édition d'images (Multi-turn)** : Chargez jusqu'à 3 images de base ou modifiez l'image précédemment générée *(Grok Imagine uniquement)*.
 - **Résolutions multiples** : Support 1k et 2k.
 - **Ratios d'aspect variés** : 1:1, 16:9, 9:16, 4:3, 3:2, 20:9.
-- **Sauvegarde locale** : Enregistrez l'image générée en PNG ou JPEG.
+- **Sauvegarde locale asynchrone** : Enregistrez l'image générée en PNG ou JPEG sans bloquer l'interface. Le décodage Base64, l'encodage ImageSharp et l'intégration de métadonnées sont exécutés de façon asynchrone via un thread d'arrière-plan (`Task.Run` + `File.WriteAllBytesAsync`) garantissant une réactivité maximale de l'interface graphique.
 - **Intégration automatique de métadonnées AI** : Lors de l'export, les informations de génération (prompt original, modèle utilisé, date/heure, résolution, etc.) sont automatiquement intégrées dans les métadonnées de l'image (EXIF, XMP et chunks PNG tEXt/iTXt).
+- **Système de Gabarits (Templates) SQLite** : Utilisez des balises `{key}` ou `{key:param1:param2}` pour factoriser vos styles, avec résolution récursive sécurisée (limite de 20 boucles) et moteur de validation syntaxique levant des exceptions dédiées (`FormatException`, `InvalidOperationException`, `KeyNotFoundException`).
+- **Validation visuelle en temps réel (Bordure rouge UX)** : Une bordure rouge de 2 pixels apparaît instantanément autour du champ prompt en cas de syntaxe invalide ou de gabarit non reconnu (évaluée à la perte de focus ou au survol du bouton de génération). La bordure rouge disparaît immédiatement dès la reprise de la saisie.
+- **Activation dynamique intelligente (Generating button locking)** : Le bouton de génération se désactive et se verrouille automatiquement en cas de champ vide, d'erreur syntaxique, de clé de template absente de la base, ou lorsqu'une génération asynchrone d'image est en cours.
+- **Autocomplétion Mid-String au Caret** : Une liste flottante contextuelle d'autocomplétion apparaît lors de la saisie de l'accolade `{` pour insérer rapidement vos gabarits, alimentée par un cache asynchrone pour éviter tout ralentissement de la saisie.
+- **Aperçu dynamique du Prompt** : Survolez le bouton de génération pour prévisualiser le prompt entièrement résolu et expansé dans une info-bulle avant de l'envoyer à l'API.
 
 ## Prérequis
 
@@ -38,8 +43,14 @@ dotnet test ImageGeneratorApp.Tests/ImageGeneratorApp.Tests.csproj --verbosity n
 
 ## Structure du projet
 
-```
+```text
 ├── Form1.cs                      # Interface utilisateur (WinForms code-first)
+├── DatabaseHelper.cs             # Initialisation de la base SQLite et type-mapping Dapper
+├── TemplateModel.cs              # Représentation entité d'un gabarit de prompt
+├── TemplateRepository.cs         # Opérations CRUD asynchrones alimentées par Dapper
+├── TemplateParser.cs             # Moteur de résolution récursif avec Regex compilées
+├── TemplatesManagerForm.cs       # Dialogue de gestion programmé en C#
+├── TemplateEditorForm.cs         # Dialogue d'ajout/édition programmé en C#
 ├── ImageGeneratorClient.cs       # Client HTTP multi-provider
 ├── ImageGeneratorRequest.cs      # Modèle de requête (xAI)
 ├── ImageGeneratorResponse.cs     # Modèle de réponse (xAI)
@@ -55,7 +66,9 @@ dotnet test ImageGeneratorApp.Tests/ImageGeneratorApp.Tests.csproj --verbosity n
 ├── ImageGeneratorApp.Tests/      # Tests unitaires (xUnit + Moq + FluentAssertions)
 │   ├── GlobalUsings.cs
 │   ├── ImageGeneratorClientTests.cs
-│   └── UserIdHelperTests.cs
+│   ├── UserIdHelperTests.cs
+│   ├── TemplateRepositoryTests.cs# Tests de persistance et CRUD SQLite
+│   └── TemplateParserTests.cs    # Tests du moteur d'analyse et de récursion
 │   (inclut les tests pour ImageMetadataEmbedder)
 └── content/
     └── Grok_Logomark_Dark.png    # Logo Grok
