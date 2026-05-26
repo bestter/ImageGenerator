@@ -50,8 +50,34 @@ namespace ImageGeneratorApp
                 return string.Empty;
             }
 
+            // Validate braces matching (fast-scan) to prevent syntax errors
+            int braceCount = 0;
+            for (int i = 0; i < inputPrompt.Length; i++)
+            {
+                char c = inputPrompt[i];
+                if (c == '{')
+                {
+                    braceCount++;
+                    if (braceCount > 1)
+                    {
+                        throw new FormatException("Accolades imbriquées non supportées dans le prompt.");
+                    }
+                }
+                else if (c == '}')
+                {
+                    braceCount--;
+                    if (braceCount < 0)
+                    {
+                        throw new FormatException("Accolade fermante '}' inattendue ou non ouverte.");
+                    }
+                }
+            }
+            if (braceCount != 0)
+            {
+                throw new FormatException("Accolade ouvrante '{' non fermée.");
+            }
+
             var currentPrompt = inputPrompt;
-            var missingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             int iterations = 0;
             const int maxIterations = 20;
@@ -65,6 +91,11 @@ namespace ImageGeneratorApp
                 if (matches.Count == 0)
                 {
                     break;
+                }
+
+                if (iterations >= maxIterations)
+                {
+                    throw new InvalidOperationException("Une récursion infinie a été détectée dans les modèles (limite de 20 itérations atteinte).");
                 }
 
                 // Process unique tags in the current iteration to optimize database queries and string replacements
@@ -83,17 +114,10 @@ namespace ImageGeneratorApp
                     var parts = innerContent.Split(':');
                     var key = parts[0].Trim();
 
-                    // Skip database roundtrip if this key was already checked and not found in this request
-                    if (missingKeys.Contains(key))
-                    {
-                        continue;
-                    }
-
                     var template = await _repository.GetByKeyAsync(key);
                     if (template == null)
                     {
-                        missingKeys.Add(key);
-                        continue;
+                        throw new KeyNotFoundException($"Le modèle '{key}' n'est pas reconnu.");
                     }
 
                     var templateValue = template.Value;
@@ -121,7 +145,7 @@ namespace ImageGeneratorApp
 
                 iterations++;
 
-            } while (replacedAny && iterations < maxIterations);
+            } while (replacedAny);
 
             // Clean up double/multiple spaces and trim the final result
             currentPrompt = MultipleSpacesRegex().Replace(currentPrompt, " ").Trim();

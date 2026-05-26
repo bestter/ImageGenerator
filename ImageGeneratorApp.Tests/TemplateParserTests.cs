@@ -115,22 +115,23 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
-        public async Task ProcessPromptAsync_ShouldHandleUnresolvableTemplatesGracefully()
+        public async Task ProcessPromptAsync_ShouldThrowKeyNotFoundException_OnUnresolvableTemplates()
         {
             // Arrange
             await _repository.InsertAsync(new TemplateModel { Key = "existing", Value = "resolved value" });
 
-            string prompt = "A {existing} and a {non_existent_key} should remain.";
+            string prompt = "A {existing} and a {non_existent_key} should fail.";
 
             // Act
-            string result = await _parser.ProcessPromptAsync(prompt);
+            Func<Task> act = async () => await _parser.ProcessPromptAsync(prompt);
 
             // Assert
-            result.Should().Be("A resolved value and a {non_existent_key} should remain.");
+            await act.Should().ThrowAsync<KeyNotFoundException>()
+                .WithMessage("*'non_existent_key' n'est pas reconnu*");
         }
 
         [Fact]
-        public async Task ProcessPromptAsync_ShouldPreventInfiniteRecursion_With20IterationLimit()
+        public async Task ProcessPromptAsync_ShouldThrowInvalidOperationException_OnInfiniteRecursion()
         {
             // Arrange
             // Set up a loop: {loop} resolves to "nested {loop}"
@@ -139,18 +140,25 @@ namespace ImageGeneratorApp.Tests
             string prompt = "Start {loop} End";
 
             // Act
-            // Since it resolves {loop} to nested {loop}, it will loop up to 20 times.
-            // It should stop at 20 without freezing/crashing.
             Func<Task> act = async () => await _parser.ProcessPromptAsync(prompt);
 
             // Assert
-            await act.Should().NotThrowAsync();
-            var result = await _parser.ProcessPromptAsync(prompt);
-            
-            // It should have replaced {loop} 20 times. Let's verify that the output starts and ends as expected
-            result.Should().StartWith("Start");
-            result.Should().EndWith("{loop} End");
-            result.Should().Contain("nested");
+            await act.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage("*récursion infinie*");
+        }
+
+        [Theory]
+        [InlineData("Some text {unclosed", "Accolade ouvrante '{' non fermée.")]
+        [InlineData("Some text } premature", "Accolade fermante '}' inattendue ou non ouverte.")]
+        [InlineData("Nested braces {outer {inner}} not supported", "Accolades imbriquées non supportées dans le prompt.")]
+        public async Task ProcessPromptAsync_ShouldThrowFormatException_OnBraceSyntaxErrors(string invalidPrompt, string expectedError)
+        {
+            // Act
+            Func<Task> act = async () => await _parser.ProcessPromptAsync(invalidPrompt);
+
+            // Assert
+            await act.Should().ThrowAsync<FormatException>()
+                .WithMessage(expectedError);
         }
 
         [Fact]

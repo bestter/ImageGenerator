@@ -70,6 +70,8 @@ namespace ImageGeneratorApp
         private Button btnManageTemplates = null!;
         private ListBox lstAutocomplete = null!;
         private List<string> _templateKeysCache = new List<string>();
+        private bool _hasPromptError = false;
+        private bool _isGenerating = false;
 
         public Form1()
         {
@@ -95,6 +97,7 @@ namespace ImageGeneratorApp
             };
             // ⚡ Bolt Optimization: Enforce MaxLength to prevent UI thread freezing and memory exhaustion from pasting massive strings
             txtApiKey = new TextBox { Location = new Point(190, 17), Width = 580, PasswordChar = '•', Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, MaxLength = 1024 };
+            txtApiKey.TextChanged += TxtApiKey_TextChanged;
 
             // Prompt
             var lblPrompt = new Label { Text = "Prompt :", Location = new Point(20, 60), AutoSize = true };
@@ -193,6 +196,7 @@ namespace ImageGeneratorApp
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
                 AutoSize = true
             };
+            chkEnableTemplates.CheckedChanged += (s, ev) => _ = UpdateGenerateButtonStateAsync();
 
             // Lightweight custom floating ListBox for autocomplete mid-string
             lstAutocomplete = new ListBox
@@ -215,7 +219,10 @@ namespace ImageGeneratorApp
             // Apply initial model-dependent state now that all controls are created
             UpdateModelDependentControls();
 
+            this.Paint += Form1_Paint;
             this.Resize += Form1_Resize;
+
+            _ = UpdateGenerateButtonStateAsync();
         }
 
         private async void BtnManageTemplates_Click(object? sender, EventArgs e)
@@ -243,15 +250,33 @@ namespace ImageGeneratorApp
                     // Asynchronously expand and process the prompt (without updating usage count stats!)
                     string resolved = await _templateParser.ProcessPromptAsync(rawPrompt, incrementUsageStats: false);
                     toolTipGenerate.SetToolTip(btnGenerate, $"Prompt résolu :\n{resolved}");
+
+                    if (_hasPromptError)
+                    {
+                        _hasPromptError = false;
+                        this.Invalidate();
+                    }
                 }
                 catch (Exception ex)
                 {
                     toolTipGenerate.SetToolTip(btnGenerate, $"Erreur de résolution :\n{ex.Message}");
+
+                    if (!_hasPromptError)
+                    {
+                        _hasPromptError = true;
+                        this.Invalidate();
+                    }
                 }
             }
             else
             {
                 toolTipGenerate.SetToolTip(btnGenerate, $"Prompt brut :\n{rawPrompt}");
+
+                if (_hasPromptError)
+                {
+                    _hasPromptError = false;
+                    this.Invalidate();
+                }
             }
         }
 
@@ -270,7 +295,8 @@ namespace ImageGeneratorApp
             string? previousBase64Image = currentBase64Image;
             byte[]? previousImageBytes = currentImageBytes;
 
-            btnGenerate.Enabled = false;
+            _isGenerating = true;
+            _ = UpdateGenerateButtonStateAsync();
             btnSave.Enabled = false;
             lblStatus.Text = "⏳ Génération en cours...";
             DisposeCurrentImage();
@@ -381,6 +407,24 @@ namespace ImageGeneratorApp
                 lblStatus.Text = $"✅ Image générée avec {cmbModel.Text} ({cmbResolution.Text})";
                 btnSave.Enabled = true;
             }
+            catch (KeyNotFoundException ex)
+            {
+                _hasPromptError = true;
+                this.Invalidate();
+                MessageBox.Show(ex.Message, "Modèle non reconnu", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (FormatException ex)
+            {
+                _hasPromptError = true;
+                this.Invalidate();
+                MessageBox.Show($"Erreur de syntaxe des modèles :\n{ex.Message}", "Erreur de modèles", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("récursion"))
+            {
+                _hasPromptError = true;
+                this.Invalidate();
+                MessageBox.Show(ex.Message, "Erreur de récursion", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
             catch (ArgumentException ex)
             {
                 MessageBox.Show(ex.Message, "Erreur de validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -402,7 +446,8 @@ namespace ImageGeneratorApp
             }
             finally
             {
-                btnGenerate.Enabled = true;
+                _isGenerating = false;
+                _ = UpdateGenerateButtonStateAsync();
                 if (currentBase64Image == null && previousBase64Image != null)
                 {
                     currentBase64Image = previousBase64Image;
@@ -544,6 +589,7 @@ namespace ImageGeneratorApp
         {
             // PictureBox size is automatically adjusted via Anchor
             // If additional custom adjustments are needed, add here
+            this.Invalidate();
         }
 
         // 🛡️ Sentinel: Enforce model-specific UI state per AGENTS.md requirement.
@@ -735,6 +781,14 @@ namespace ImageGeneratorApp
 
         private void TxtPrompt_TextChanged(object? sender, EventArgs e)
         {
+            if (_hasPromptError)
+            {
+                _hasPromptError = false;
+                this.Invalidate();
+            }
+
+            _ = UpdateGenerateButtonStateAsync();
+
             if (!chkEnableTemplates.Checked)
             {
                 lstAutocomplete.Visible = false;
@@ -776,6 +830,8 @@ namespace ImageGeneratorApp
 
         private void TxtPrompt_LostFocus(object? sender, EventArgs e)
         {
+            _ = ValidatePromptAsync();
+
             // Give double-click actions some time to resolve before closing the window
             var timer = new System.Windows.Forms.Timer { Interval = 200 };
             timer.Tick += (s, ev) =>
@@ -788,6 +844,118 @@ namespace ImageGeneratorApp
                 }
             };
             timer.Start();
+        }
+
+        private void Form1_Paint(object? sender, PaintEventArgs e)
+        {
+            if (_hasPromptError && txtPrompt != null)
+            {
+                using (var pen = new Pen(Color.Red, 2))
+                {
+                    var rect = txtPrompt.Bounds;
+                    rect.Inflate(2, 2);
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+            }
+        }
+
+        private void TxtApiKey_TextChanged(object? sender, EventArgs e)
+        {
+            _ = UpdateGenerateButtonStateAsync();
+        }
+
+        private async Task ValidatePromptAsync()
+        {
+            if (txtPrompt == null || _templateParser == null || chkEnableTemplates == null) return;
+
+            bool hasError = false;
+            if (chkEnableTemplates.Checked)
+            {
+                string rawPrompt = txtPrompt.Text.Trim();
+                if (!string.IsNullOrEmpty(rawPrompt))
+                {
+                    try
+                    {
+                        // Dry-run process without usage count increments
+                        await _templateParser.ProcessPromptAsync(rawPrompt, incrementUsageStats: false);
+                    }
+                    catch
+                    {
+                        hasError = true;
+                    }
+                }
+            }
+
+            if (_hasPromptError != hasError)
+            {
+                _hasPromptError = hasError;
+                this.Invalidate();
+            }
+        }
+
+        private async Task UpdateGenerateButtonStateAsync()
+        {
+            if (txtApiKey == null || txtPrompt == null || btnGenerate == null || _templateParser == null) return;
+
+            if (_isGenerating)
+            {
+                btnGenerate.Enabled = false;
+                return;
+            }
+
+            string key = txtApiKey.Text.Trim();
+            string prompt = txtPrompt.Text.Trim();
+
+            if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(prompt))
+            {
+                btnGenerate.Enabled = false;
+                return;
+            }
+
+            // Fast-scan syntax check (sync) to avoid async database queries for basic syntax issues
+            if (chkEnableTemplates != null && chkEnableTemplates.Checked)
+            {
+                try
+                {
+                    int braceCount = 0;
+                    for (int i = 0; i < prompt.Length; i++)
+                    {
+                        char c = prompt[i];
+                        if (c == '{')
+                        {
+                            braceCount++;
+                            if (braceCount > 1) throw new FormatException();
+                        }
+                        else if (c == '}')
+                        {
+                            braceCount--;
+                            if (braceCount < 0) throw new FormatException();
+                        }
+                    }
+                    if (braceCount != 0) throw new FormatException();
+                }
+                catch
+                {
+                    btnGenerate.Enabled = false;
+                    return;
+                }
+            }
+
+            // Database key resolution check (async)
+            bool isValid = true;
+            if (chkEnableTemplates != null && chkEnableTemplates.Checked)
+            {
+                try
+                {
+                    await _templateParser.ProcessPromptAsync(prompt, incrementUsageStats: false);
+                }
+                catch
+                {
+                    isValid = false;
+                }
+            }
+
+            btnGenerate.Enabled = isValid;
         }
     }
 }
