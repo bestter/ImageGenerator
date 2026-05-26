@@ -39,6 +39,7 @@ namespace ImageGeneratorApp
         private ComboBox cmbResolution = null!;
         private ComboBox cmbAspectRatio = null!;
         private Button btnGenerate = null!;
+        private ToolTip toolTipGenerate = null!;
         private Button btnSave = null!;
         private Button btnClear = null!;
         private Label lblStatus = null!;
@@ -60,8 +61,20 @@ namespace ImageGeneratorApp
         private static readonly HttpClient _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
         private readonly ImageGeneratorClient _imageClient = new ImageGeneratorClient(_httpClient);
 
+        // Prompt Template System Fields
+        private readonly DatabaseHelper _dbHelper = new DatabaseHelper();
+        private readonly TemplateRepository _templateRepo;
+        private readonly TemplateParser _templateParser;
+
+        private CheckBox chkEnableTemplates = null!;
+        private Button btnManageTemplates = null!;
+        private ListBox lstAutocomplete = null!;
+        private List<string> _templateKeysCache = new List<string>();
+
         public Form1()
         {
+            _templateRepo = new TemplateRepository(_dbHelper);
+            _templateParser = new TemplateParser(_templateRepo);
             InitializeControls();
         }
 
@@ -86,6 +99,9 @@ namespace ImageGeneratorApp
             // Prompt
             var lblPrompt = new Label { Text = "Prompt :", Location = new Point(20, 60), AutoSize = true };
             txtPrompt = new TextBox { Location = new Point(190, 57), Width = 580, Height = 100, Multiline = true, ScrollBars = ScrollBars.Vertical, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, MaxLength = 4000 };
+            txtPrompt.KeyDown += TxtPrompt_KeyDown;
+            txtPrompt.TextChanged += TxtPrompt_TextChanged;
+            txtPrompt.LostFocus += TxtPrompt_LostFocus;
 
             // Modèle
             var lblModel = new Label { Text = "Modèle :", Location = new Point(20, 175), AutoSize = true };
@@ -122,6 +138,18 @@ namespace ImageGeneratorApp
             // Boutons
             btnGenerate = new Button { Text = "Générer l'image", Location = new Point(190, 260), Width = 160, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnGenerate.Click += BtnGenerate_Click;
+            btnGenerate.MouseEnter += BtnGenerate_MouseEnter;
+
+            toolTipGenerate = new ToolTip
+            {
+                ToolTipTitle = "Aperçu du prompt résolu",
+                UseFading = true,
+                UseAnimation = true,
+                AutomaticDelay = 500,
+                AutoPopDelay = 20000, // 20s visibility to allow reading long prompts
+                InitialDelay = 500,
+                ReshowDelay = 100
+            };
 
             btnSave = new Button { Text = "📥 Enregistrer l'image (haute rés.)", Location = new Point(370, 260), Width = 250, Height = 40, Enabled = false, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnSave.Click += BtnSave_Click;
@@ -143,13 +171,88 @@ namespace ImageGeneratorApp
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
             };
 
+            // Prompt Template System UI controls
+            btnManageTemplates = new Button
+            {
+                Text = "Modèles",
+                Location = new Point(780, 57),
+                Width = 100,
+                Height = 60,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                UseVisualStyleBackColor = true
+            };
+            btnManageTemplates.Click += BtnManageTemplates_Click;
+
+            chkEnableTemplates = new CheckBox
+            {
+                Text = "Activer modèles",
+                Location = new Point(780, 125),
+                Width = 110,
+                Height = 30,
+                Checked = true,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                AutoSize = true
+            };
+
+            // Lightweight custom floating ListBox for autocomplete mid-string
+            lstAutocomplete = new ListBox
+            {
+                Visible = false,
+                Width = 200,
+                Height = 120,
+                BorderStyle = BorderStyle.FixedSingle,
+                BackColor = Color.White,
+                ForeColor = Color.Black,
+                Font = new Font("Segoe UI", 9F, FontStyle.Regular)
+            };
+            lstAutocomplete.DoubleClick += (s, ev) => InsertSelectedTemplate();
+
             this.Controls.AddRange(new Control[] { lblKey, txtApiKey, lblPrompt, txtPrompt, lblModel, cmbModel, lblRes, cmbResolution, btnAddImages, lblRatio, cmbAspectRatio, chkMultiTurnEditing,
-                btnGenerate, btnSave, btnClear, lblStatus, pictureBox });
+                btnGenerate, btnSave, btnClear, lblStatus, pictureBox, btnManageTemplates, chkEnableTemplates, lstAutocomplete });
+
+            lstAutocomplete.BringToFront();
 
             // Apply initial model-dependent state now that all controls are created
             UpdateModelDependentControls();
 
             this.Resize += Form1_Resize;
+        }
+
+        private async void BtnManageTemplates_Click(object? sender, EventArgs e)
+        {
+            using var managerForm = new TemplatesManagerForm(_templateRepo);
+            managerForm.ShowDialog(this);
+            await RefreshTemplateKeysCacheAsync();
+        }
+
+        private async void BtnGenerate_MouseEnter(object? sender, EventArgs e)
+        {
+            if (txtPrompt == null || _templateParser == null || chkEnableTemplates == null) return;
+
+            string rawPrompt = txtPrompt.Text.Trim();
+            if (string.IsNullOrEmpty(rawPrompt))
+            {
+                toolTipGenerate.SetToolTip(btnGenerate, "Saisissez un prompt pour générer une image.");
+                return;
+            }
+
+            if (chkEnableTemplates.Checked)
+            {
+                try
+                {
+                    // Asynchronously expand and process the prompt (without updating usage count stats!)
+                    string resolved = await _templateParser.ProcessPromptAsync(rawPrompt, incrementUsageStats: false);
+                    toolTipGenerate.SetToolTip(btnGenerate, $"Prompt résolu :\n{resolved}");
+                }
+                catch (Exception ex)
+                {
+                    toolTipGenerate.SetToolTip(btnGenerate, $"Erreur de résolution :\n{ex.Message}");
+                }
+            }
+            else
+            {
+                toolTipGenerate.SetToolTip(btnGenerate, $"Prompt brut :\n{rawPrompt}");
+            }
         }
 
         private async void BtnGenerate_Click(object? sender, EventArgs e)
@@ -231,9 +334,15 @@ namespace ImageGeneratorApp
                     }
                 }
 
+                string processedPrompt = txtPrompt.Text.Trim();
+                if (chkEnableTemplates.Checked)
+                {
+                    processedPrompt = await _templateParser.ProcessPromptAsync(processedPrompt, incrementUsageStats: true);
+                }
+
                 currentBase64Image = await _imageClient.GenerateImageAsync(
                     apiKey,
-                    txtPrompt.Text.Trim(),
+                    processedPrompt,
                     cmbModel.Text,
                     cmbResolution.Text,
                     aspectRatioValue,
@@ -245,7 +354,7 @@ namespace ImageGeneratorApp
                 // later edits the prompt textbox or changes the model combo.
                 currentImageMetadata = new ImageGenerationMetadata(
                     ImageMetadataEmbedder.GetFriendlyGeneratorName(cmbModel.Text),
-                    txtPrompt.Text.Trim(),
+                    processedPrompt,
                     cmbModel.Text,
                     DateTime.UtcNow,
                     cmbResolution.Text,
@@ -489,5 +598,196 @@ namespace ImageGeneratorApp
         //    Application.SetCompatibleTextRenderingDefault(false);
         //    Application.Run(new Form1());
         //}
+
+        // --- Prompt Template System Autocomplete Operations ---
+
+        protected override async void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+            await RefreshTemplateKeysCacheAsync();
+        }
+
+        private async Task RefreshTemplateKeysCacheAsync()
+        {
+            try
+            {
+                var templates = await _templateRepo.GetAllAsync();
+                _templateKeysCache = templates.Select(t => t.Key).OrderBy(k => k).ToList();
+            }
+            catch
+            {
+                // Silence cache load failures during initialization
+            }
+        }
+
+        private (int triggerIndex, string query, bool active) GetActiveTrigger()
+        {
+            int caretIndex = txtPrompt.SelectionStart;
+            if (caretIndex == 0) return (-1, string.Empty, false);
+
+            string text = txtPrompt.Text;
+            int lastBrace = text.LastIndexOf('{', caretIndex - 1);
+            if (lastBrace == -1) return (-1, string.Empty, false);
+
+            // Verify no closing brace in between the trigger and current caret index
+            int lastClosing = text.LastIndexOf('}', caretIndex - 1);
+            if (lastClosing > lastBrace)
+            {
+                return (-1, string.Empty, false);
+            }
+
+            string query = text.Substring(lastBrace + 1, caretIndex - (lastBrace + 1));
+
+            // Prevent matching if trigger query contains characters that are invalid key syntax (newline, colon)
+            if (query.Contains('\r') || query.Contains('\n') || query.Contains(':'))
+            {
+                return (-1, string.Empty, false);
+            }
+
+            return (lastBrace, query, true);
+        }
+
+        private void PositionAutocomplete(int triggerIndex)
+        {
+            // Retrieve position of the '{' trigger relative to prompt textbox
+            Point charPos = txtPrompt.GetPositionFromCharIndex(triggerIndex);
+
+            // Convert character index position to Form coordinate space
+            Point formPos = txtPrompt.PointToScreen(charPos);
+            Point localPos = this.PointToClient(formPos);
+
+            int x = localPos.X;
+            int y = localPos.Y + 20; // offset slightly below the caret line
+
+            // Boundary guard: ensure it fits within the horizontal form client space
+            if (x + lstAutocomplete.Width > this.ClientSize.Width)
+            {
+                x = this.ClientSize.Width - lstAutocomplete.Width - 10;
+            }
+
+            // Boundary guard: ensure it fits within vertical space (draw above caret if it clips form bottom)
+            if (y + lstAutocomplete.Height > this.ClientSize.Height)
+            {
+                y = localPos.Y - lstAutocomplete.Height - 5;
+            }
+
+            lstAutocomplete.Location = new Point(Math.Max(10, x), Math.Max(10, y));
+        }
+
+        private void InsertSelectedTemplate()
+        {
+            if (lstAutocomplete.SelectedItem is not string selectedKey) return;
+
+            var (triggerIndex, query, active) = GetActiveTrigger();
+            if (!active) return;
+
+            int caretIndex = txtPrompt.SelectionStart;
+            string text = txtPrompt.Text;
+
+            // Replace the template tag segment with fully enclosed brace tag
+            string before = text.Substring(0, triggerIndex);
+            string after = text.Substring(caretIndex);
+
+            txtPrompt.Text = before + "{" + selectedKey + "}" + after;
+            txtPrompt.SelectionStart = triggerIndex + selectedKey.Length + 2; // place caret after '}'
+
+            lstAutocomplete.Visible = false;
+            txtPrompt.Focus();
+        }
+
+        private void TxtPrompt_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (!lstAutocomplete.Visible) return;
+
+            if (e.KeyCode == Keys.Down)
+            {
+                int next = lstAutocomplete.SelectedIndex + 1;
+                if (next < lstAutocomplete.Items.Count)
+                {
+                    lstAutocomplete.SelectedIndex = next;
+                }
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
+            else if (e.KeyCode == Keys.Up)
+            {
+                int prev = lstAutocomplete.SelectedIndex - 1;
+                if (prev >= 0)
+                {
+                    lstAutocomplete.SelectedIndex = prev;
+                }
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
+            else if (e.KeyCode == Keys.Enter || e.KeyCode == Keys.Tab)
+            {
+                InsertSelectedTemplate();
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
+            else if (e.KeyCode == Keys.Escape)
+            {
+                lstAutocomplete.Visible = false;
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
+        }
+
+        private void TxtPrompt_TextChanged(object? sender, EventArgs e)
+        {
+            if (!chkEnableTemplates.Checked)
+            {
+                lstAutocomplete.Visible = false;
+                return;
+            }
+
+            var (triggerIndex, query, active) = GetActiveTrigger();
+            if (active)
+            {
+                var matched = _templateKeysCache
+                    .Where(k => k.Contains(query, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                if (matched.Count > 0)
+                {
+                    lstAutocomplete.BeginUpdate();
+                    lstAutocomplete.Items.Clear();
+                    foreach (var key in matched)
+                    {
+                        lstAutocomplete.Items.Add(key);
+                    }
+                    lstAutocomplete.SelectedIndex = 0;
+                    lstAutocomplete.EndUpdate();
+
+                    PositionAutocomplete(triggerIndex);
+                    lstAutocomplete.Visible = true;
+                    lstAutocomplete.BringToFront();
+                }
+                else
+                {
+                    lstAutocomplete.Visible = false;
+                }
+            }
+            else
+            {
+                lstAutocomplete.Visible = false;
+            }
+        }
+
+        private void TxtPrompt_LostFocus(object? sender, EventArgs e)
+        {
+            // Give double-click actions some time to resolve before closing the window
+            var timer = new System.Windows.Forms.Timer { Interval = 200 };
+            timer.Tick += (s, ev) =>
+            {
+                timer.Stop();
+                timer.Dispose();
+                if (!lstAutocomplete.Focused && !txtPrompt.Focused)
+                {
+                    lstAutocomplete.Visible = false;
+                }
+            };
+            timer.Start();
+        }
     }
 }

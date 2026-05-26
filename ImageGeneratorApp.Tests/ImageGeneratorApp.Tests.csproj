@@ -17,6 +17,8 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="*" />
     <PackageReference Include="Moq" Version="*" />
     <PackageReference Include="FluentAssertions" Version="*" />
+    <PackageReference Include="Dapper" Version="2.1.35" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -32,5 +34,9 @@
     <Compile Include="..\GeminiModels.cs" />
     <Compile Include="..\ImageUrlObject.cs" />
     <Compile Include="..\ImageMetadataEmbedder.cs" />
+    <Compile Include="..\DatabaseHelper.cs" />
+    <Compile Include="..\TemplateModel.cs" />
+    <Compile Include="..\TemplateRepository.cs" />
+    <Compile Include="..\TemplateParser.cs" />
   </ItemGroup>
 </Project>
