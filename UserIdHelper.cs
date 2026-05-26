@@ -15,10 +15,10 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.IO;
-
 using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace ImageGeneratorApp
 {
@@ -26,7 +26,7 @@ namespace ImageGeneratorApp
     {
         private static string? _cachedDefaultUserId;
 
-        public static string GetOpaqueUserId()
+        public static async Task<string> GetOpaqueUserIdAsync()
         {
             if (_cachedDefaultUserId != null)
             {
@@ -42,12 +42,12 @@ namespace ImageGeneratorApp
 
                 if (File.Exists(filePath))
                 {
-                    _cachedDefaultUserId = File.ReadAllText(filePath).Trim();
+                    _cachedDefaultUserId = (await File.ReadAllTextAsync(filePath)).Trim();
                 }
                 else
                 {
                     _cachedDefaultUserId = Guid.NewGuid().ToString("N");
-                    File.WriteAllText(filePath, _cachedDefaultUserId);
+                    await File.WriteAllTextAsync(filePath, _cachedDefaultUserId);
                 }
             }
             catch

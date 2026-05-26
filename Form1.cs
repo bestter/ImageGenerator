@@ -307,7 +307,7 @@ namespace ImageGeneratorApp
             {
                 string selectedRatioText = cmbAspectRatio.SelectedItem?.ToString() ?? "16:9";
                 string aspectRatioValue = selectedRatioText.Split(' ')[0];
-                string opaqueUserId = UserIdHelper.GetOpaqueUserId();
+                string opaqueUserId = await UserIdHelper.GetOpaqueUserIdAsync();
 
                 var imagesList = new List<ImageUrlObject>();
 
