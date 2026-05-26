@@ -2,8 +2,8 @@
 
 Ce fichier fournit un contexte aux agents IA travaillant sur ce projet.
 
-**Version** : 1.5
-**Dernière mise à jour** : 25 mai 2026
+**Version** : 1.6
+**Dernière mise à jour** : 26 mai 2026
 **Propriétaire** : Martin Labelle (@bestter)
 
 ---
@@ -90,6 +90,12 @@ L'application suit une structure modulaire séparant l'UI de la logique réseau 
 - **`ImageUrlObject.cs`** : Modèle d'objet image de référence utilisé pour les éditions d'images (contient type et URL).
 - **`ImageMetadataEmbedder.cs`** : Service responsable de l'intégration automatique des métadonnées de génération (EXIF, XMP, chunks PNG) lors de l'export des images.
 - **`UserIdHelper.cs`** : Utilitaire pour la gestion des identifiants (notamment pour la protection PII).
+- **`DatabaseHelper.cs`** : Gère la création et l'initialisation de la base SQLite `templates.db` et configure Dapper avec un mapping global snake_case vers PascalCase.
+- **`TemplateModel.cs`** : Modèle entité représentant un gabarit de prompt stocké en base de données.
+- **`TemplateRepository.cs`** : Gère l'accès aux données (Dapper) avec des opérations CRUD asynchrones et le suivi des statistiques d'usage.
+- **`TemplateParser.cs`** : Moteur d'analyse récursif et sécurisé pour étendre les balises de templates (`{key}` ou `{key:param1}`) avec limite de 20 itérations.
+- **`TemplatesManagerForm.cs`** : Vue WinForms (codée programmatiquement) de gestion de la liste des gabarits avec recherche/filtre en temps réel.
+- **`TemplateEditorForm.cs`** : Dialogue WinForms (codé programmatiquement) d'ajout/édition sécurisé avec détection de collisions de clés.
 - **`Form1.Designer.cs` & `Form1.resx`** : Fichiers générés automatiquement gérant la disposition des éléments d'interface (bien que `Form1.cs` contienne une méthode personnalisée `InitializeControls()` créant l'interface par le code).
 - **`Program.cs`** : Point d'entrée de l'application (contient la méthode `Main`).
 - **`ImageGeneratorApp.csproj`** : Le fichier de définition du projet C# détaillant les dépendances et la configuration de compilation.
@@ -110,8 +116,14 @@ L’édition d’images est disponible exclusivement via le endpoint `POST /v1/i
 1. **Paramétrage de l'API** : L'utilisateur fournit sa propre clé API au runtime. Le label du champ s'adapte au provider sélectionné (« Clé API xAI » pour Grok, « Clé Google Cloud » pour Nano Banana).
 2. **Enregistrement des résultats** : L'image générée (reçue en base64) peut être téléchargée au format PNG ou JPEG sur la machine de l'utilisateur.
 3. **Intégration automatique de métadonnées AI** : Lors de l'export, les métadonnées de génération (prompt, modèle, date/heure, etc.) sont automatiquement intégrées dans l'image via EXIF, XMP et chunks PNG. Cette fonctionnalité est implémentée dans `ImageMetadataEmbedder.cs` et utilise la dépendance validée SixLabors.ImageSharp.
+4. **Système de Gabarits (Templates) & Autocomplétion UX** :
+   - **Stockage SQLite & Dapper** : Base de données locale `templates.db` gérant l'intégrité, l'indexation et la rapidité des gabarits.
+   - **Analyse Récursive Paramétrée** : Parser mid-string supportant les balises récursives `{key}` ou `{key:param1:param2}` pour injecter des variables, avec une limite de sécurité à 20 boucles.
+   - **UI responsive sans Designer** : Dialogues de gestion et d'édition entièrement programmés en C#, avec validation stricte de formulaires.
+   - **Autocomplétion Contextuelle (UX)** : Apparition au caret d'un `ListBox` d'autocomplétion mid-string lors de la saisie de `{` avec navigation au clavier et insertion avec accolades auto-fermées.
+   - **Aperçu Info-bulle (Hover)** : Info-bulle dynamique sur le bouton de génération pour prévisualiser le prompt entièrement résolu avant envoi.
 
-## Directives ##
+## Directives
 
 - **Clé API** : Étant donné que les formats de clés API diffèrent entre xAI et Google, le champ txtApiKey doit être utilisé de manière agnostique dans l'UI, mais le client ImageGeneratorClient a l'entière responsabilité de formater le header HTTP correct selon le provider cible.
 - **Tests** : Tous les tests réseau doivent utiliser Moq et un HttpMessageHandler mocké pour intercepter les requêtes HTTP. Aucun test ne doit frapper les API réelles de xAI ou de Google Cloud.

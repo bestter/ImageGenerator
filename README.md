@@ -17,6 +17,9 @@ Application de bureau Windows Forms (.NET 10) pour la génération d'images par 
 - **Ratios d'aspect variés** : 1:1, 16:9, 9:16, 4:3, 3:2, 20:9.
 - **Sauvegarde locale** : Enregistrez l'image générée en PNG ou JPEG.
 - **Intégration automatique de métadonnées AI** : Lors de l'export, les informations de génération (prompt original, modèle utilisé, date/heure, résolution, etc.) sont automatiquement intégrées dans les métadonnées de l'image (EXIF, XMP et chunks PNG tEXt/iTXt).
+- **Système de Gabarits (Templates) SQLite** : Utilisez des balises `{key}` ou `{key:param1:param2}` pour factoriser vos styles, avec résolution récursive sécurisée.
+- **Autocomplétion Mid-String au Caret** : Une liste flottante contextuelle d'autocomplétion apparaît lors de la saisie de l'accolade `{` pour insérer rapidement vos gabarits.
+- **Aperçu dynamique du Prompt** : Survolez le bouton de génération pour prévisualiser le prompt entièrement résolu et expansé avant de l'envoyer à l'API.
 
 ## Prérequis
 
@@ -38,8 +41,14 @@ dotnet test ImageGeneratorApp.Tests/ImageGeneratorApp.Tests.csproj --verbosity n
 
 ## Structure du projet
 
-```
+```text
 ├── Form1.cs                      # Interface utilisateur (WinForms code-first)
+├── DatabaseHelper.cs             # Initialisation de la base SQLite et type-mapping Dapper
+├── TemplateModel.cs              # Représentation entité d'un gabarit de prompt
+├── TemplateRepository.cs         # Opérations CRUD asynchrones alimentées par Dapper
+├── TemplateParser.cs             # Moteur de résolution récursif avec Regex compilées
+├── TemplatesManagerForm.cs       # Dialogue de gestion programmé en C#
+├── TemplateEditorForm.cs         # Dialogue d'ajout/édition programmé en C#
 ├── ImageGeneratorClient.cs       # Client HTTP multi-provider
 ├── ImageGeneratorRequest.cs      # Modèle de requête (xAI)
 ├── ImageGeneratorResponse.cs     # Modèle de réponse (xAI)
@@ -55,7 +64,9 @@ dotnet test ImageGeneratorApp.Tests/ImageGeneratorApp.Tests.csproj --verbosity n
 ├── ImageGeneratorApp.Tests/      # Tests unitaires (xUnit + Moq + FluentAssertions)
 │   ├── GlobalUsings.cs
 │   ├── ImageGeneratorClientTests.cs
-│   └── UserIdHelperTests.cs
+│   ├── UserIdHelperTests.cs
+│   ├── TemplateRepositoryTests.cs# Tests de persistance et CRUD SQLite
+│   └── TemplateParserTests.cs    # Tests du moteur d'analyse et de récursion
 │   (inclut les tests pour ImageMetadataEmbedder)
 └── content/
     └── Grok_Logomark_Dark.png    # Logo Grok
