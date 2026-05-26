@@ -168,7 +168,11 @@ namespace ImageGeneratorApp
             if (!response.IsSuccessStatusCode)
             {
                 using var reader = new StreamReader(responseStream);
-                var errorString = await reader.ReadToEndAsync();
+
+                // 🛡️ Sentinel: Prevent memory exhaustion (DoS) from unbounded error responses.
+                char[] buffer = new char[8192];
+                int charsRead = await reader.ReadBlockAsync(buffer, 0, buffer.Length);
+                var errorString = new string(buffer, 0, charsRead);
 
                 string safeErrorMessage = string.Empty;
                 if (!string.IsNullOrWhiteSpace(errorString))
