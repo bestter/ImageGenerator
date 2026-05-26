@@ -284,7 +284,6 @@ namespace ImageGeneratorApp
         {
             string apiKey = txtApiKey.Text?.Trim() ?? string.Empty;
 
-
             string? imageToEditBase64 = null;
             if (chkMultiTurnEditing.Checked && !string.IsNullOrEmpty(currentBase64Image))
             {
@@ -309,56 +308,7 @@ namespace ImageGeneratorApp
                 string aspectRatioValue = selectedRatioText.Split(' ')[0];
                 string opaqueUserId = await UserIdHelper.GetOpaqueUserIdAsync();
 
-                var imagesList = new List<ImageUrlObject>();
-
-                if (selectedImages.Count > 0 || !string.IsNullOrEmpty(imageToEditBase64))
-                {
-                    if (!string.IsNullOrEmpty(imageToEditBase64))
-                    {
-                        imagesList.Add(new ImageUrlObject { Type = "image_url", Url = $"data:image/png;base64,{imageToEditBase64}" });
-                    }
-
-                    var tasks = selectedImages.Select(async imgPath =>
-                    {
-                        var ext = Path.GetExtension(imgPath).ToLower().TrimStart('.');
-                        if (ext == "jpg") ext = "jpeg";
-
-                        byte[] b64Bytes;
-                        using (var fs = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
-                        {
-                            // 🛡️ Sentinel: Prevent TOCTOU race condition by checking length on the opened handle
-                            if (fs.Length > MaxFileSizeBytes)
-                            {
-                                lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(imgPath)}";
-                                MessageBox.Show($"L'image '{Path.GetFileName(imgPath)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                return null;
-                            }
-
-                            // ⚡ Bolt Optimization: Pre-allocate and read directly to avoid MemoryStream chunking
-                            b64Bytes = new byte[(int)fs.Length];
-                            await fs.ReadExactlyAsync(b64Bytes, 0, b64Bytes.Length);
-                        }
-
-                        // ⚡ Bolt Optimization: Use string.Create to build the data URI directly into a pre-allocated string.
-                        // This eliminates the intermediate base64 string allocation (~26MB chars for a 20MB file),
-                        // significantly reducing Large Object Heap (LOH) fragmentation and memory pressure.
-                        string prefix = $"data:image/{ext};base64,";
-                        int b64Length = ((b64Bytes.Length + 2) / 3) * 4;
-                        string url = string.Create(prefix.Length + b64Length, (prefix, b64Bytes), (span, state) =>
-                        {
-                            state.prefix.AsSpan().CopyTo(span);
-                            Convert.TryToBase64Chars(state.b64Bytes, span.Slice(state.prefix.Length), out _);
-                        });
-
-                        return new ImageUrlObject { Type = "image_url", Url = url };
-                    }).ToArray();
-
-                    var results = await Task.WhenAll(tasks);
-                    foreach (var res in results)
-                    {
-                        if (res != null) imagesList.Add(res);
-                    }
-                }
+                List<ImageUrlObject> imagesList = await PrepareReferenceImagesAsync(imageToEditBase64);
 
                 string processedPrompt = txtPrompt.Text.Trim();
                 if (chkEnableTemplates.Checked)
@@ -366,7 +316,7 @@ namespace ImageGeneratorApp
                     processedPrompt = await _templateParser.ProcessPromptAsync(processedPrompt, incrementUsageStats: true);
                 }
 
-                currentBase64Image = await _imageClient.GenerateImageAsync(
+                string base64Image = await _imageClient.GenerateImageAsync(
                     apiKey,
                     processedPrompt,
                     cmbModel.Text,
@@ -375,74 +325,11 @@ namespace ImageGeneratorApp
                     opaqueUserId,
                     imagesList);
 
-                // Capture immutable generation metadata for embedding on export.
-                // This snapshot ensures the prompt/model/etc. match the actual image even if the user
-                // later edits the prompt textbox or changes the model combo.
-                currentImageMetadata = new ImageGenerationMetadata(
-                    ImageMetadataEmbedder.GetFriendlyGeneratorName(cmbModel.Text),
-                    processedPrompt,
-                    cmbModel.Text,
-                    DateTime.UtcNow,
-                    cmbResolution.Text,
-                    aspectRatioValue,
-                    ImageMetadataEmbedder.AppNameVersion);
-
-                var b64 = currentBase64Image;
-
-                // ⚡ Bolt Optimization: Cache the decoded image bytes to avoid repeated Base64 decoding
-                // (which incurs large LOH allocations and CPU overhead) when saving the image later.
-                var imageBytes = Convert.FromBase64String(b64);
-                if (imageBytes.Length > MaxGeneratedImageBytes)
-                {
-                    throw new ImageGeneratorException("L'image générée dépasse la taille maximale autorisée.");
-                }
-                currentImageBytes = imageBytes;
-
-                DisposeCurrentImage();
-                using (var ms = new MemoryStream(imageBytes))
-                {
-                    pictureBox.Image = Image.FromStream(ms);
-                }
-
-                lblStatus.Text = $"✅ Image générée avec {cmbModel.Text} ({cmbResolution.Text})";
-                btnSave.Enabled = true;
+                UpdateUIWithGeneratedImage(base64Image, processedPrompt, cmbModel.Text, cmbResolution.Text, aspectRatioValue);
             }
-            catch (KeyNotFoundException ex)
+            catch (Exception ex)
             {
-                _hasPromptError = true;
-                this.Invalidate();
-                MessageBox.Show(ex.Message, "Modèle non reconnu", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            catch (FormatException ex)
-            {
-                _hasPromptError = true;
-                this.Invalidate();
-                MessageBox.Show($"Erreur de syntaxe des modèles :\n{ex.Message}", "Erreur de modèles", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("récursion"))
-            {
-                _hasPromptError = true;
-                this.Invalidate();
-                MessageBox.Show(ex.Message, "Erreur de récursion", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            catch (ArgumentException ex)
-            {
-                MessageBox.Show(ex.Message, "Erreur de validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
-            catch (ImageGeneratorException ex)
-            {
-                lblStatus.Text = $"❌ Erreur {ex.StatusCode}";
-                MessageBox.Show($"Erreur API :\n{ex.Message}", "Erreur API", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            catch (TaskCanceledException)
-            {
-                lblStatus.Text = "❌ Délai d'attente dépassé";
-                MessageBox.Show("La requête a mis trop de temps à répondre. Veuillez réessayer plus tard.", "Erreur de délai d'attente", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            catch (Exception)
-            {
-                lblStatus.Text = "❌ Erreur inattendue";
-                MessageBox.Show("Une erreur inattendue est survenue lors de la génération.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                HandleGenerationException(ex);
             }
             finally
             {
@@ -457,6 +344,141 @@ namespace ImageGeneratorApp
                     pictureBox.Image = previousImage; // previousImage lifetime managed by prior assignment site
                     btnSave.Enabled = true;
                 }
+            }
+        }
+
+        private async Task<List<ImageUrlObject>> PrepareReferenceImagesAsync(string? imageToEditBase64)
+        {
+            var imagesList = new List<ImageUrlObject>();
+
+            if (selectedImages.Count > 0 || !string.IsNullOrEmpty(imageToEditBase64))
+            {
+                if (!string.IsNullOrEmpty(imageToEditBase64))
+                {
+                    imagesList.Add(new ImageUrlObject { Type = "image_url", Url = $"data:image/png;base64,{imageToEditBase64}" });
+                }
+
+                var tasks = selectedImages.Select(async imgPath =>
+                {
+                    var ext = Path.GetExtension(imgPath).ToLower().TrimStart('.');
+                    if (ext == "jpg") ext = "jpeg";
+
+                    byte[] b64Bytes;
+                    using (var fs = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
+                    {
+                        // 🛡️ Sentinel: Prevent TOCTOU race condition by checking length on the opened handle
+                        if (fs.Length > MaxFileSizeBytes)
+                        {
+                            this.Invoke(() =>
+                            {
+                                lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(imgPath)}";
+                                MessageBox.Show($"L'image '{Path.GetFileName(imgPath)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            });
+                            return null;
+                        }
+
+                        // ⚡ Bolt Optimization: Pre-allocate and read directly to avoid MemoryStream chunking
+                        b64Bytes = new byte[(int)fs.Length];
+                        await fs.ReadExactlyAsync(b64Bytes, 0, b64Bytes.Length);
+                    }
+
+                    // ⚡ Bolt Optimization: Use string.Create to build the data URI directly into a pre-allocated string.
+                    // This eliminates the intermediate base64 string allocation (~26MB chars for a 20MB file),
+                    // significantly reducing Large Object Heap (LOH) fragmentation and memory pressure.
+                    string prefix = $"data:image/{ext};base64,";
+                    int b64Length = ((b64Bytes.Length + 2) / 3) * 4;
+                    string url = string.Create(prefix.Length + b64Length, (prefix, b64Bytes), (span, state) =>
+                    {
+                        state.prefix.AsSpan().CopyTo(span);
+                        Convert.TryToBase64Chars(state.b64Bytes, span.Slice(state.prefix.Length), out _);
+                    });
+
+                    return new ImageUrlObject { Type = "image_url", Url = url };
+                }).ToArray();
+
+                var results = await Task.WhenAll(tasks);
+                foreach (var res in results)
+                {
+                    if (res != null) imagesList.Add(res);
+                }
+            }
+
+            return imagesList;
+        }
+
+        private void UpdateUIWithGeneratedImage(string base64Image, string processedPrompt, string model, string resolution, string aspectRatio)
+        {
+            currentBase64Image = base64Image;
+
+            // Capture immutable generation metadata for embedding on export.
+            // This snapshot ensures the prompt/model/etc. match the actual image even if the user
+            // later edits the prompt textbox or changes the model combo.
+            currentImageMetadata = new ImageGenerationMetadata(
+                ImageMetadataEmbedder.GetFriendlyGeneratorName(model),
+                processedPrompt,
+                model,
+                DateTime.UtcNow,
+                resolution,
+                aspectRatio,
+                ImageMetadataEmbedder.AppNameVersion);
+
+            // ⚡ Bolt Optimization: Cache the decoded image bytes to avoid repeated Base64 decoding
+            // (which incurs large LOH allocations and CPU overhead) when saving the image later.
+            var imageBytes = Convert.FromBase64String(base64Image);
+            if (imageBytes.Length > MaxGeneratedImageBytes)
+            {
+                throw new ImageGeneratorException("L'image générée dépasse la taille maximale autorisée.");
+            }
+            currentImageBytes = imageBytes;
+
+            DisposeCurrentImage();
+            using (var ms = new MemoryStream(imageBytes))
+            {
+                pictureBox.Image = Image.FromStream(ms);
+            }
+
+            lblStatus.Text = $"✅ Image générée avec {model} ({resolution})";
+            btnSave.Enabled = true;
+        }
+
+        private void HandleGenerationException(Exception ex)
+        {
+            if (ex is KeyNotFoundException)
+            {
+                _hasPromptError = true;
+                this.Invalidate();
+                MessageBox.Show(ex.Message, "Modèle non reconnu", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            else if (ex is FormatException)
+            {
+                _hasPromptError = true;
+                this.Invalidate();
+                MessageBox.Show($"Erreur de syntaxe des modèles :\n{ex.Message}", "Erreur de modèles", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            else if (ex is InvalidOperationException && ex.Message.Contains("récursion"))
+            {
+                _hasPromptError = true;
+                this.Invalidate();
+                MessageBox.Show(ex.Message, "Erreur de récursion", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            else if (ex is ArgumentException)
+            {
+                MessageBox.Show(ex.Message, "Erreur de validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            else if (ex is ImageGeneratorException generatorEx)
+            {
+                lblStatus.Text = $"❌ Erreur {generatorEx.StatusCode}";
+                MessageBox.Show($"Erreur API :\n{generatorEx.Message}", "Erreur API", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            else if (ex is TaskCanceledException)
+            {
+                lblStatus.Text = "❌ Délai d'attente dépassé";
+                MessageBox.Show("La requête a mis trop de temps à répondre. Veuillez réessayer plus tard.", "Erreur de délai d'attente", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            else
+            {
+                lblStatus.Text = "❌ Erreur inattendue";
+                MessageBox.Show("Une erreur inattendue est survenue lors de la génération.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
