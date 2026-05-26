@@ -68,7 +68,7 @@ namespace ImageGeneratorApp
         /// </summary>
         private void InitializeControls()
         {
-            this.Text = "Prompt Template Manager";
+            this.Text = "Gestionnaire de gabarits de prompt";
             this.Size = new Size(900, 550);
             this.StartPosition = FormStartPosition.CenterParent;
             this.MinimumSize = new Size(700, 400);
@@ -84,7 +84,7 @@ namespace ImageGeneratorApp
 
             var lblSearch = new Label
             {
-                Text = "Search (Key/Tag):",
+                Text = "Rechercher (Nom/Tag) :",
                 Location = new Point(15, 20),
                 AutoSize = true,
                 Font = new Font(this.Font, FontStyle.Bold)
@@ -100,7 +100,7 @@ namespace ImageGeneratorApp
 
             var lblCategory = new Label
             {
-                Text = "Category:",
+                Text = "Catégorie :",
                 Location = new Point(365, 20),
                 AutoSize = true,
                 Font = new Font(this.Font, FontStyle.Bold)
@@ -128,7 +128,7 @@ namespace ImageGeneratorApp
 
             btnAdd = new Button
             {
-                Text = "Add Template",
+                Text = "Ajouter",
                 Location = new Point(10, 15),
                 Width = 125,
                 Height = 35,
@@ -139,7 +139,7 @@ namespace ImageGeneratorApp
 
             btnEdit = new Button
             {
-                Text = "Edit Template",
+                Text = "Modifier",
                 Location = new Point(10, 60),
                 Width = 125,
                 Height = 35,
@@ -150,7 +150,7 @@ namespace ImageGeneratorApp
 
             btnDuplicate = new Button
             {
-                Text = "Duplicate",
+                Text = "Dupliquer",
                 Location = new Point(10, 105),
                 Width = 125,
                 Height = 35,
@@ -161,7 +161,7 @@ namespace ImageGeneratorApp
 
             btnDelete = new Button
             {
-                Text = "Delete",
+                Text = "Supprimer",
                 Location = new Point(10, 150),
                 Width = 125,
                 Height = 35,
@@ -217,7 +217,7 @@ namespace ImageGeneratorApp
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading templates from the database:\n{ex.Message}", "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Erreur lors du chargement des gabarits depuis la base de données :\n{ex.Message}", "Erreur de base de données", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
@@ -234,7 +234,7 @@ namespace ImageGeneratorApp
 
             string? previousSelection = cmbCategory.SelectedItem?.ToString();
             cmbCategory.Items.Clear();
-            cmbCategory.Items.Add("All Categories");
+            cmbCategory.Items.Add("Toutes les catégories");
 
             var categories = _allTemplates
                 .Select(t => t.Category)
@@ -272,19 +272,19 @@ namespace ImageGeneratorApp
             // Style headers and adjust widths
             if (dataGridViewTemplates.Columns["Key"] is { } colKey)
             {
-                colKey.HeaderText = "Name Key";
+                colKey.HeaderText = "Nom de clé";
                 colKey.Width = 160;
             }
 
             if (dataGridViewTemplates.Columns["Value"] is { } colValue)
             {
-                colValue.HeaderText = "Template Prompt";
+                colValue.HeaderText = "Gabarit de prompt";
                 colValue.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
             }
 
             if (dataGridViewTemplates.Columns["Category"] is { } colCategory)
             {
-                colCategory.HeaderText = "Category";
+                colCategory.HeaderText = "Catégorie";
                 colCategory.Width = 120;
             }
 
@@ -296,14 +296,14 @@ namespace ImageGeneratorApp
 
             if (dataGridViewTemplates.Columns["UsageCount"] is { } colUsageCount)
             {
-                colUsageCount.HeaderText = "Used";
+                colUsageCount.HeaderText = "Utilisé";
                 colUsageCount.Width = 65;
                 colUsageCount.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
             }
 
             if (dataGridViewTemplates.Columns["LastUsed"] is { } colLastUsed)
             {
-                colLastUsed.HeaderText = "Last Used";
+                colLastUsed.HeaderText = "Dernière utilisation";
                 colLastUsed.Width = 130;
             }
         }
@@ -328,7 +328,7 @@ namespace ImageGeneratorApp
             }
 
             // Category filter
-            if (!string.IsNullOrEmpty(selectedCategory) && selectedCategory != "All Categories")
+            if (!string.IsNullOrEmpty(selectedCategory) && selectedCategory != "Toutes les catégories")
             {
                 filtered = filtered.Where(t => string.Equals(t.Category, selectedCategory, StringComparison.OrdinalIgnoreCase));
             }
@@ -403,7 +403,7 @@ namespace ImageGeneratorApp
             var selected = GetSelectedTemplate();
             if (selected == null)
             {
-                MessageBox.Show("Please select a template from the list to duplicate.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Veuillez sélectionner un gabarit dans la liste à dupliquer.", "Sélection requise", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -453,11 +453,11 @@ namespace ImageGeneratorApp
                     }
                 }
 
-                MessageBox.Show($"Template successfully duplicated as '{newKey}'!", "Duplicate Created", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show($"Gabarit dupliqué avec succès sous le nom '{newKey}' !", "Duplication réussie", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error duplicating template:\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Erreur lors de la duplication du gabarit :\n{ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
@@ -470,13 +470,13 @@ namespace ImageGeneratorApp
             var selected = GetSelectedTemplate();
             if (selected == null)
             {
-                MessageBox.Show("Please select a template from the list to delete.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Veuillez sélectionner un gabarit dans la liste à supprimer.", "Sélection requise", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             var confirmResult = MessageBox.Show(
-                $"Are you sure you want to permanently delete the template '{selected.Key}'?",
-                "Confirm Delete",
+                $"Êtes-vous sûr de vouloir supprimer définitivement le gabarit '{selected.Key}' ?",
+                "Confirmer la suppression",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question
             );
@@ -496,12 +496,12 @@ namespace ImageGeneratorApp
                     }
                     else
                     {
-                        MessageBox.Show("Could not find the template in the database to delete.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Impossible de trouver le gabarit dans la base de données pour le supprimer.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error deleting template:\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"Erreur lors de la suppression du gabarit :\n{ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
                 finally
                 {
