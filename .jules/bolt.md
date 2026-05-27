@@ -24,3 +24,7 @@
 ## 2024-05-30 - Avoid duplicate base64 string decoding
 **Learning:** Decoding large base64 strings (like ~20MB AI image results) multiple times using `Convert.FromBase64String` incurs heavy CPU usage and enormous allocations on the Large Object Heap (LOH), leading to noticeable UI stutter when saving or redisplaying an image.
 **Action:** When a base64 string must be decoded, cache the resulting `byte[]` at the application level alongside the base64 string, so subsequent operations (like saving to disk) can reuse the raw bytes instantly.
+
+## 2024-08-05 - Avoid redundant database queries during recursive prompt parsing
+**Learning:** Calling `_repository.GetByKeyAsync(key)` inside a looping/parsing construct (like `TemplateParser.ProcessPromptAsync` which can iterate up to 20 times) causes redundant database lookups for the same key, creating an I/O bottleneck.
+**Action:** Use a local dictionary cache `Dictionary<string, TemplateModel>(StringComparer.OrdinalIgnoreCase)` scoped to the parsing method's execution to cache and reuse previously fetched templates, turning repeated database calls into O(1) hash map lookups.
