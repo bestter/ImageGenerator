@@ -83,6 +83,10 @@ namespace ImageGeneratorApp
             const int maxIterations = 20;
             bool replacedAny;
 
+            // ⚡ Bolt Optimization: Local cache to prevent redundant database queries for the same template key during the parsing loop.
+            // This significantly reduces I/O latency when processing complex or recursive prompts containing duplicate keys.
+            var localCache = new Dictionary<string, TemplateModel>(StringComparer.OrdinalIgnoreCase);
+
             do
             {
                 replacedAny = false;
@@ -114,10 +118,14 @@ namespace ImageGeneratorApp
                     var parts = innerContent.Split(':');
                     var key = parts[0].Trim();
 
-                    var template = await _repository.GetByKeyAsync(key);
-                    if (template == null)
+                    if (!localCache.TryGetValue(key, out var template))
                     {
-                        throw new KeyNotFoundException($"Le modèle '{key}' n'est pas reconnu.");
+                        template = await _repository.GetByKeyAsync(key);
+                        if (template == null)
+                        {
+                            throw new KeyNotFoundException($"Le modèle '{key}' n'est pas reconnu.");
+                        }
+                        localCache[key] = template;
                     }
 
                     var templateValue = template.Value;
