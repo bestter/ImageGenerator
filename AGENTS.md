@@ -2,8 +2,8 @@
 
 Ce fichier fournit un contexte aux agents IA travaillant sur ce projet.
 
-**Version** : 1.6
-**Dernière mise à jour** : 26 mai 2026
+**Version** : 1.7
+**Dernière mise à jour** : 27 mai 2026
 **Propriétaire** : Martin Labelle (@bestter)
 
 ---
@@ -95,13 +95,18 @@ L'application suit une structure modulaire séparant l'UI de la logique réseau 
 - **`ImageUrlObject.cs`** : Modèle d'objet image de référence utilisé pour les éditions d'images (contient type et URL).
 - **`ImageMetadataEmbedder.cs`** : Service responsable de l'intégration automatique des métadonnées de génération (EXIF, XMP, chunks PNG) lors de l'export des images.
 - **`UserIdHelper.cs`** : Utilitaire asynchrone pour la gestion des identifiants (notamment pour la protection PII) avec lectures/écritures non bloquantes de fichiers (`GetOpaqueUserIdAsync`).
-- **`DatabaseHelper.cs`** : Gère la création et l'initialisation de la base SQLite `templates.db` et configure Dapper avec un mapping global snake_case vers PascalCase.
+- **`DatabaseHelper.cs`** : Gère la création et l'initialisation de la base SQLite `templates.db` et configure Dapper avec un mapping global snake_case vers PascalCase (gère également la table `GenerationHistory`).
 - **`TemplateModel.cs`** : Modèle entité représentant un gabarit de prompt stocké en base de données.
 - **`TemplateRepository.cs`** : Gère l'accès aux données (Dapper) avec des opérations CRUD asynchrones et le suivi des statistiques d'usage.
 - **`TemplateParser.cs`** : Moteur d'analyse récursif et sécurisé pour étendre les balises de templates (`{key}` ou `{key:param1}`) avec limite de 20 itérations. Lève des exceptions précises lors d'erreurs de syntaxe (`FormatException`), de récursion infinie (`InvalidOperationException`) ou de clé manquante (`KeyNotFoundException`).
 - **`TemplatesManagerForm.cs`** : Vue WinForms (codée programmatiquement) de gestion de la liste des gabarits avec recherche/filtre en temps réel.
 - **`TemplateEditorForm.cs`** : Dialogue WinForms (codé programmatiquement) d'ajout/édition sécurisé avec détection de collisions de clés.
-- **`Form1.Designer.cs` & `Form1.resx`** : Fichiers générés automatiquement gérant la disposition des éléments d'interface (bien que `Form1.cs` contienne une méthode personnalisée `InitializeControls()` créant l'interface par le code).
+- **`GenerationHistoryModel.cs`** : Modèle entité représentant un enregistrement de l'historique de génération dans la base SQLite.
+- **`GenerationHistoryRepository.cs`** : Gère l'accès aux données (Dapper) pour l'historique avec opérations asynchrones (insertion, liste, recherche de prompts ou modèles).
+- **`ImageProcessingService.cs`** : Gère le décodage et l'encodage d'images (SixLabors.ImageSharp) en tâche d'arrière-plan, notamment la compression en WEBP à 80% avec injection de métadonnées et la conversion compatible GDI+ (clonage Bitmap) pour PictureBox.
+- **`HistoryOrchestrator.cs`** : Service unifié coordonnant la sauvegarde locale d'image en WEBP avec injection automatique de métadonnées EXIF/XMP et journalisation SQLite.
+- **`HistoryViewerForm.cs`** : Vue WinForms scindée (code-first) permettant de rechercher, lister et prévisualiser de manière performante et sécurisée (concurrency token).
+- **`Form1.Designer.cs` & `Form1.resx`** : Fichiers générés automatiquement gérant la disposition des éléments d'interface (bien que `Form1.cs` contienne une méthode personnalisée `InitializeControls()` créant l'interface par le code et incluant le bouton d'historique).
 - **`Program.cs`** : Point d'entrée de l'application (contient la méthode `Main`).
 - **`ImageGeneratorApp.csproj`** : Le fichier de définition du projet C# détaillant les dépendances et la configuration de compilation.
 - **Dossiers `bin/` et `obj/`** : Dossiers contenant les binaires compilés et les fichiers temporaires de build.
@@ -132,6 +137,12 @@ L’édition d’images est disponible exclusivement via le endpoint `POST /v1/i
    - **UI responsive sans Designer** : Dialogues de gestion et d'édition entièrement programmés en C#, avec validation stricte de formulaires.
    - **Autocomplétion Contextuelle (UX)** : Apparition au caret d'un `ListBox` d'autocomplétion mid-string lors de la saisie de `{` avec navigation au clavier et insertion avec accolades auto-fermées.
    - **Aperçu Info-bulle (Hover)** : Info-bulle dynamique sur le bouton de génération pour prévisualiser le prompt entièrement résolu avant envoi.
+5. **Système d'Historique de Génération (Local)** :
+   - **Enregistrement Automatique Silencieux** : Chaque génération d'image réussie déclenche une tâche d'arrière-plan asynchrone non bloquante qui compresse, injecte les métadonnées et journalise la génération dans SQLite.
+   - **Compression WEBP (Qualité 80)** : Conversion automatique des octets bruts (PNG/JPEG) reçus des API en format WEBP compressé dans le dossier `%LocalAppData%/ImageGeneratorApp/HistoryImages/` pour préserver l'espace disque.
+   - **Injection de Métadonnées Standards** : Préservation complète de la traçabilité de l'image d'historique en appliquant le profil de métadonnées EXIF et XMP standardisé (prompt, modèle, date de création, etc.) via ImageSharp.
+   - **Décodage WinForms GDI+ sans verrou** : Service de chargement asynchrone qui convertit le format WEBP (non géré nativement par PictureBox) en Bitmap BMP cloné, libérant instantanément les flux de fichiers sous-jacents pour éviter les blocages mémoires ou les crashes GDI+.
+   - **Visualiseur Split View Premium** : Dialogue d'exploration scindé codé manuellement (code-first) offrant une recherche textuelle en temps réel (requêtes SQL `LIKE` Dapper), des bordures douces anti-aliasées (GDI+), et un formateur de métadonnées JSON avec coloration monospace (Consolas).
 
 ## Directives
 

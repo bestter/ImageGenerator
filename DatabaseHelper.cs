@@ -88,6 +88,20 @@ namespace ImageGeneratorApp
 
             connection.Execute(createTableSql);
 
+            // Create GenerationHistory table if not exists
+            const string createHistoryTableSql = @"
+                CREATE TABLE IF NOT EXISTS GenerationHistory (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ImagePath TEXT NOT NULL,
+                    Prompt TEXT NOT NULL,
+                    ModelName TEXT NOT NULL,
+                    ModelVersion TEXT,
+                    RawMetadata TEXT,
+                    CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+                );";
+
+            connection.Execute(createHistoryTableSql);
+
             // Create standard indexes for efficient lookup
             connection.Execute("CREATE INDEX IF NOT EXISTS IX_templates_key ON templates(key);");
             connection.Execute("CREATE INDEX IF NOT EXISTS IX_templates_category ON templates(category);");

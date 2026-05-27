@@ -1,13 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-
-
-
   </PropertyGroup>
 
   <ItemGroup>
@@ -38,5 +36,9 @@
     <Compile Include="..\TemplateModel.cs" />
     <Compile Include="..\TemplateRepository.cs" />
     <Compile Include="..\TemplateParser.cs" />
+    <Compile Include="..\GenerationHistoryModel.cs" />
+    <Compile Include="..\GenerationHistoryRepository.cs" />
+    <Compile Include="..\ImageProcessingService.cs" />
+    <Compile Include="..\HistoryOrchestrator.cs" />
   </ItemGroup>
 </Project>
