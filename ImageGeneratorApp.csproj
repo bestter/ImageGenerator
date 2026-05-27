@@ -12,7 +12,7 @@
     <AssemblyTitle>Générateur d'image</AssemblyTitle>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryType>git</RepositoryType>
-    <PackageLicenseFile>gpl-3.0.txt</PackageLicenseFile>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
     <RepositoryUrl>https://github.com/bestter/ImageGenerator.git</RepositoryUrl>
     <Copyright>2026 Martin Labelle</Copyright>

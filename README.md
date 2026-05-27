@@ -101,4 +101,4 @@ Ce programme est distribué dans l'espoir qu'il sera utile, mais **SANS AUCUNE G
 
 Vous devriez avoir reçu une copie de la GNU General Public License avec ce programme. Si ce n'est pas le cas, consultez <https://www.gnu.org/licenses/>.
 
-Voir le fichier [LICENSE](gpl-3.0.txt) pour le texte complet de la licence.
+Voir le fichier [LICENSE](LICENSE.txt) pour le texte complet de la licence.
