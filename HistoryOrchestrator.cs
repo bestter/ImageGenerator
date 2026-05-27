@@ -19,7 +19,7 @@ namespace ImageGeneratorApp
         /// <param name="historyRepository">The generation history repository.</param>
         /// <exception cref="ArgumentNullException">Thrown when a dependency is null.</exception>
         public HistoryOrchestrator(
-            ImageProcessingService imageProcessingService, 
+            ImageProcessingService imageProcessingService,
             GenerationHistoryRepository historyRepository)
         {
             _imageProcessingService = imageProcessingService ?? throw new ArgumentNullException(nameof(imageProcessingService));

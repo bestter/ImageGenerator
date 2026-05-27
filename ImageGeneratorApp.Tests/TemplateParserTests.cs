@@ -83,10 +83,10 @@ namespace ImageGeneratorApp.Tests
         public async Task ProcessPromptAsync_ShouldReplaceTemplatesWithParameters()
         {
             // Arrange
-            await _repository.InsertAsync(new TemplateModel 
-            { 
-                Key = "render", 
-                Value = "a professional 3D render of {0} with a {1} background" 
+            await _repository.InsertAsync(new TemplateModel
+            {
+                Key = "render",
+                Value = "a professional 3D render of {0} with a {1} background"
             });
 
             string prompt = "Generate {render:a cute red panda:neon blue}";
@@ -166,7 +166,7 @@ namespace ImageGeneratorApp.Tests
         {
             // Arrange
             await _repository.InsertAsync(new TemplateModel { Key = "extra", Value = "   my   value   " });
-            
+
             string prompt = "   Hello   world!    Here is {extra}   with spaces.   ";
 
             // Act

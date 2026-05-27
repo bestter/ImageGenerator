@@ -1,7 +1,7 @@
+using FluentAssertions;
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Xunit;
 
 namespace ImageGeneratorApp.Tests
@@ -70,11 +70,11 @@ namespace ImageGeneratorApp.Tests
             // Directly query SQLite to verify properties were inserted and retrieved correctly
             using var connection = _databaseHelper.GetConnection();
             connection.Open();
-            
+
             // Using raw SQL query with Dapper to verify mapping of our model
             using var cmd = connection.CreateCommand();
             cmd.CommandText = "SELECT * FROM GenerationHistory WHERE Id = @Id;";
-            
+
             var param = cmd.CreateParameter();
             param.ParameterName = "@Id";
             param.Value = generatedId;
@@ -87,7 +87,7 @@ namespace ImageGeneratorApp.Tests
             reader["ModelName"].ToString().Should().Be(history.ModelName);
             reader["ModelVersion"].ToString().Should().Be(history.ModelVersion);
             reader["RawMetadata"].ToString().Should().Be(history.RawMetadata);
-            
+
             var dbCreatedAt = Convert.ToDateTime(reader["CreatedAt"]);
             // Datetime precision might differ slightly due to SQLite/C# conversions, check within a 1-second delta
             dbCreatedAt.Should().BeCloseTo(history.CreatedAt, TimeSpan.FromSeconds(1));

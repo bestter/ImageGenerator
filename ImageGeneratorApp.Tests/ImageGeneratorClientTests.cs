@@ -14,18 +14,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using FluentAssertions;
+using ImageGeneratorApp;
+using Moq;
+using Moq.Protected;
 using System;
-
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
-using ImageGeneratorApp;
-using Moq;
-using Moq.Protected;
 using Xunit;
 
 namespace ImageGeneratorApp.Tests

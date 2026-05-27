@@ -95,12 +95,12 @@ namespace ImageGeneratorApp
             this.WindowState = FormWindowState.Maximized;
 
             // API Key
-            lblKey = new Label 
-            { 
-                Text = "Clé API xAI :", 
-                Location = new Point(20, 20), 
-                AutoSize = true, 
-                ForeColor = Color.FromArgb(220, 76, 30) 
+            lblKey = new Label
+            {
+                Text = "Clé API xAI :",
+                Location = new Point(20, 20),
+                AutoSize = true,
+                ForeColor = Color.FromArgb(220, 76, 30)
             };
             // ⚡ Bolt Optimization: Enforce MaxLength to prevent UI thread freezing and memory exhaustion from pasting massive strings
             txtApiKey = new TextBox { Location = new Point(190, 17), Width = 580, PasswordChar = '•', Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, MaxLength = 1024 };
@@ -463,7 +463,7 @@ namespace ImageGeneratorApp
                 {
                     // Construct a rawMetadata JSON string to store in the DB
                     var rawMetadataJson = $"{{\"resolution\":\"{resolution}\",\"aspect_ratio\":\"{aspectRatio}\"}}";
-                    
+
                     await _historyOrchestrator.LogGenerationAsync(
                         imageBytes,
                         processedPrompt,

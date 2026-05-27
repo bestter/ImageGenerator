@@ -41,12 +41,12 @@ namespace ImageGeneratorApp
         /// <param name="imageProcessingService">The image processing service from Step 2.</param>
         /// <exception cref="ArgumentNullException">Thrown when dependencies are null.</exception>
         public HistoryViewerForm(
-            GenerationHistoryRepository historyRepository, 
+            GenerationHistoryRepository historyRepository,
             ImageProcessingService imageProcessingService)
         {
             _historyRepository = historyRepository ?? throw new ArgumentNullException(nameof(historyRepository));
             _imageProcessingService = imageProcessingService ?? throw new ArgumentNullException(nameof(imageProcessingService));
-            
+
             InitializeControls();
         }
 
@@ -337,8 +337,8 @@ namespace ImageGeneratorApp
                 Font = new Font("Consolas", 9.0F)
             };
 
-            detailsContainer.Controls.AddRange(new Control[] { 
-                txtMetadata, lblMeta, detailSpacer2, modelInfoPanel, detailSpacer1, txtPrompt, lblPrompt 
+            detailsContainer.Controls.AddRange(new Control[] {
+                txtMetadata, lblMeta, detailSpacer2, modelInfoPanel, detailSpacer1, txtPrompt, lblPrompt
             });
 
             rightPanel.Controls.Add(pictureCard);
@@ -385,7 +385,7 @@ namespace ImageGeneratorApp
             {
                 this.UseWaitCursor = true;
                 var records = await _historyRepository.GetAllAsync();
-                
+
                 _historyList.Clear();
                 foreach (var record in records)
                 {
@@ -414,7 +414,7 @@ namespace ImageGeneratorApp
             try
             {
                 var filtered = await _historyRepository.SearchAsync(searchTerm);
-                
+
                 _historyList.Clear();
                 foreach (var record in filtered)
                 {
@@ -506,7 +506,7 @@ namespace ImageGeneratorApp
         private void ClearDetails()
         {
             _currentSelectionToken++; // invalidate active loading tasks
-            
+
             var oldImage = pictureBoxImage.Image;
             pictureBoxImage.Image = null;
             oldImage?.Dispose();

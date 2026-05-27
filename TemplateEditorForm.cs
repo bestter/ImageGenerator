@@ -59,7 +59,7 @@ namespace ImageGeneratorApp
             _isEditMode = template != null;
 
             InitializeControls();
-            
+
             if (_isEditMode && template != null)
             {
                 PopulateFields(template);
@@ -94,7 +94,7 @@ namespace ImageGeneratorApp
             };
             // Disable editing the key if we are in edit mode to prevent breaking references,
             // or we can allow it with collision checks. Let's allow it but check duplicate keys.
-            
+
             txtCategory = new TextBox
             {
                 Location = new Point(130, 62),

@@ -1,8 +1,8 @@
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Webp;
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Webp;
 
 namespace ImageGeneratorApp
 {
@@ -56,12 +56,12 @@ namespace ImageGeneratorApp
                 {
                     ImageMetadataEmbedder.ApplyMetadata(image, metadata);
                 }
-                
+
                 var encoder = new WebpEncoder
                 {
                     Quality = 80
                 };
-                
+
                 image.Save(fullPath, encoder);
             });
 
@@ -93,7 +93,7 @@ namespace ImageGeneratorApp
             return await Task.Run(async () =>
             {
                 using var memoryStream = new MemoryStream();
-                
+
                 // Load WEBP using ImageSharp asynchronously
                 using (var image = await SixLabors.ImageSharp.Image.LoadAsync(webpFilePath))
                 {
