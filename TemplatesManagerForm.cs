@@ -94,7 +94,8 @@ namespace ImageGeneratorApp
             {
                 Location = new Point(135, 17),
                 Width = 200,
-                Anchor = AnchorStyles.Left | AnchorStyles.Top
+                Anchor = AnchorStyles.Left | AnchorStyles.Top,
+                MaxLength = 200
             };
             txtSearch.TextChanged += TxtSearch_TextChanged;
 
