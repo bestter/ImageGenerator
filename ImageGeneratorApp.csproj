@@ -7,8 +7,7 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <ImplicitUsings>enable</ImplicitUsings>    
     <StartupObject>ImageGeneratorApp.Program</StartupObject>
     <AssemblyTitle>Générateur d'image</AssemblyTitle>
     <PackageReadmeFile>README.md</PackageReadmeFile>
