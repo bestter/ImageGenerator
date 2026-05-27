@@ -26,6 +26,7 @@ Application de bureau Windows Forms (.NET 10) pour la génération d'images par 
 - **Préservation de Métadonnées Provenance** : Les images d'historique WEBP stockées sur disque intègrent les profils de métadonnées EXIF et XMP standardisés contenant le prompt, le nom du modèle, la date/heure de génération et le logiciel de création.
 - **Explorateur d'Historique Premium (Split View)** : Un dialogue moderne scindé (SplitContainer) codé manuellement en code-first (Design-First) offrant une recherche textuelle filtrée par SQL `LIKE` temps réel avec Dapper, prévisualisation de l'image (décodage asynchrone sécurisé WEBP vers Bitmap GDI+), visualiseur monospace de prompt et bloc de métadonnées JSON avec indentation automatique.
 - **Concurrence & Sécurité Mémoire** : Protection contre les race conditions lors d'une navigation rapide dans l'historique (les anciennes requêtes de chargement d'image sont automatiquement ignorées via un jeton de sélection unique), et libération rigoureuse des handles GDI+ pour éviter les fuites de ressources.
+- **Dialogue « À propos » et licence** : Accédez aux informations de version, copyright et au texte complet de la licence GPL v3 directement depuis l'application via le menu **Aide → À propos de Générateur d'image...**. Un bouton permet d'ouvrir le fichier `LICENSE.txt` situé à côté de l'exécutable.
 
 ## Prérequis
 
@@ -60,6 +61,7 @@ dotnet test ImageGeneratorApp.Tests/ImageGeneratorApp.Tests.csproj --verbosity n
 ├── ImageProcessingService.cs     # Service de conversion WEBP, d'injection et de décodage BMP GDI+ (ImageSharp)
 ├── HistoryOrchestrator.cs        # Orchestrateur coordonnant la sauvegarde WEBP et l'écriture SQLite
 ├── HistoryViewerForm.cs          # Explorateur d'historique (split-panel, code-first) avec protection de course
+├── AboutForm.cs                  # Dialogue À propos (licence GPL v3, ouverture de LICENSE.txt)
 ├── ImageGeneratorClient.cs       # Client HTTP multi-provider
 ├── ImageGeneratorRequest.cs      # Modèle de requête (xAI)
 ├── ImageGeneratorResponse.cs     # Modèle de réponse (xAI)
@@ -101,4 +103,6 @@ Ce programme est distribué dans l'espoir qu'il sera utile, mais **SANS AUCUNE G
 
 Vous devriez avoir reçu une copie de la GNU General Public License avec ce programme. Si ce n'est pas le cas, consultez <https://www.gnu.org/licenses/>.
 
-Voir le fichier [LICENSE](gpl-3.0.txt) pour le texte complet de la licence.
+Voir le fichier [LICENSE](LICENSE.txt) pour le texte complet de la licence.
+
+Vous pouvez également consulter les informations de licence et ouvrir le fichier `LICENSE.txt` directement depuis l'application (menu **Aide → À propos de Générateur d'image...**).

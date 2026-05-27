@@ -73,6 +73,7 @@ namespace ImageGeneratorApp
         private Button btnManageTemplates = null!;
         private Button btnHistory = null!;
         private ListBox lstAutocomplete = null!;
+        private MenuStrip mainMenuStrip = null!;
         private List<string> _templateKeysCache = new List<string>();
         private bool _hasPromptError = false;
         private bool _isGenerating = false;
@@ -89,26 +90,45 @@ namespace ImageGeneratorApp
 
         private void InitializeControls()
         {
+            // Create the menu FIRST (before ClientSize / WindowState / any other controls).
+            // This gives the docked MenuStrip the best chance to reserve vertical space
+            // in the client area before we use absolute Locations. Critical on Maximized forms.
+            mainMenuStrip = new MenuStrip();
+            var helpMenu = new ToolStripMenuItem("Aide");
+            var aboutMenuItem = new ToolStripMenuItem("À propos de Générateur d'image...");
+            aboutMenuItem.Click += AboutMenuItem_Click;
+            helpMenu.DropDownItems.Add(aboutMenuItem);
+            mainMenuStrip.Items.Add(helpMenu);
+            this.MainMenuStrip = mainMenuStrip;
+            this.Controls.Add(mainMenuStrip);
+
+            // Force the MenuStrip to perform layout immediately so its Height is measured
+            // and the client area top is correctly offset before we position the first controls.
+            // This prevents the classic MenuStrip-overlapping-absolute-controls bug on Maximized + HighDPI forms.
+            this.PerformLayout();
+            int menuHeight = mainMenuStrip.Height;
+            int contentTop = menuHeight + 6; // small breathing room under the menu
+
             this.Text = "Générateur d'image Grok Imagine et Nano Banana Pro";
             this.ClientSize = new Size(900, 700);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.WindowState = FormWindowState.Maximized;
 
-            // API Key
+            // API Key - first row is explicitly offset below the menu (only this row needs adjustment)
             lblKey = new Label
             {
                 Text = "Clé API xAI :",
-                Location = new Point(20, 20),
+                Location = new Point(20, contentTop),
                 AutoSize = true,
                 ForeColor = Color.FromArgb(220, 76, 30)
             };
             // ⚡ Bolt Optimization: Enforce MaxLength to prevent UI thread freezing and memory exhaustion from pasting massive strings
-            txtApiKey = new TextBox { Location = new Point(190, 17), Width = 580, PasswordChar = '•', Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, MaxLength = 1024 };
+            txtApiKey = new TextBox { Location = new Point(190, contentTop - 3), Width = 580, PasswordChar = '•', Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, MaxLength = 1024 };
             txtApiKey.TextChanged += TxtApiKey_TextChanged;
 
-            // Prompt
-            var lblPrompt = new Label { Text = "Prompt :", Location = new Point(20, 60), AutoSize = true };
-            txtPrompt = new TextBox { Location = new Point(190, 57), Width = 580, Height = 100, Multiline = true, ScrollBars = ScrollBars.Vertical, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, MaxLength = 4000 };
+            // Prompt - also protected from menu overlap using the same measured offset
+            var lblPrompt = new Label { Text = "Prompt :", Location = new Point(20, contentTop + 38), AutoSize = true };
+            txtPrompt = new TextBox { Location = new Point(190, contentTop + 35), Width = 580, Height = 100, Multiline = true, ScrollBars = ScrollBars.Vertical, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, MaxLength = 4000 };
             txtPrompt.KeyDown += TxtPrompt_KeyDown;
             txtPrompt.TextChanged += TxtPrompt_TextChanged;
             txtPrompt.LostFocus += TxtPrompt_LostFocus;
@@ -246,6 +266,15 @@ namespace ImageGeneratorApp
         {
             using var historyForm = new HistoryViewerForm(_historyRepo, _imageProcessingService);
             historyForm.ShowDialog(this);
+        }
+
+        /// <summary>
+        /// Opens the professional About dialog. Called from the Help menu.
+        /// </summary>
+        private void AboutMenuItem_Click(object? sender, EventArgs e)
+        {
+            using var aboutForm = new AboutForm();
+            aboutForm.ShowDialog(this);
         }
 
         private async void BtnGenerate_MouseEnter(object? sender, EventArgs e)

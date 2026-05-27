@@ -2,7 +2,7 @@
 
 Ce fichier fournit un contexte aux agents IA travaillant sur ce projet.
 
-**Version** : 1.7
+**Version** : 1.8
 **Dernière mise à jour** : 27 mai 2026
 **Propriétaire** : Martin Labelle (@bestter)
 
@@ -106,6 +106,7 @@ L'application suit une structure modulaire séparant l'UI de la logique réseau 
 - **`ImageProcessingService.cs`** : Gère le décodage et l'encodage d'images (SixLabors.ImageSharp) en tâche d'arrière-plan, notamment la compression en WEBP à 80% avec injection de métadonnées et la conversion compatible GDI+ (clonage Bitmap) pour PictureBox.
 - **`HistoryOrchestrator.cs`** : Service unifié coordonnant la sauvegarde locale d'image en WEBP avec injection automatique de métadonnées EXIF/XMP et journalisation SQLite.
 - **`HistoryViewerForm.cs`** : Vue WinForms scindée (code-first) permettant de rechercher, lister et prévisualiser de manière performante et sécurisée (concurrency token).
+- **`AboutForm.cs`** : Dialogue « À propos » (code-first) affichant les informations de version, copyright et l'avis de licence GPL v3 en français, avec bouton d'ouverture directe de LICENSE.txt.
 - **`Form1.Designer.cs` & `Form1.resx`** : Fichiers générés automatiquement gérant la disposition des éléments d'interface (bien que `Form1.cs` contienne une méthode personnalisée `InitializeControls()` créant l'interface par le code et incluant le bouton d'historique).
 - **`Program.cs`** : Point d'entrée de l'application (contient la méthode `Main`).
 - **`ImageGeneratorApp.csproj`** : Le fichier de définition du projet C# détaillant les dépendances et la configuration de compilation.
