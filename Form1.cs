@@ -65,9 +65,13 @@ namespace ImageGeneratorApp
         private readonly DatabaseHelper _dbHelper = new DatabaseHelper();
         private readonly TemplateRepository _templateRepo;
         private readonly TemplateParser _templateParser;
+        private readonly GenerationHistoryRepository _historyRepo;
+        private readonly ImageProcessingService _imageProcessingService;
+        private readonly HistoryOrchestrator _historyOrchestrator;
 
         private CheckBox chkEnableTemplates = null!;
         private Button btnManageTemplates = null!;
+        private Button btnHistory = null!;
         private ListBox lstAutocomplete = null!;
         private List<string> _templateKeysCache = new List<string>();
         private bool _hasPromptError = false;
@@ -77,6 +81,9 @@ namespace ImageGeneratorApp
         {
             _templateRepo = new TemplateRepository(_dbHelper);
             _templateParser = new TemplateParser(_templateRepo);
+            _historyRepo = new GenerationHistoryRepository(_dbHelper);
+            _imageProcessingService = new ImageProcessingService();
+            _historyOrchestrator = new HistoryOrchestrator(_imageProcessingService, _historyRepo);
             InitializeControls();
         }
 
@@ -88,12 +95,12 @@ namespace ImageGeneratorApp
             this.WindowState = FormWindowState.Maximized;
 
             // API Key
-            lblKey = new Label 
-            { 
-                Text = "Clé API xAI :", 
-                Location = new Point(20, 20), 
-                AutoSize = true, 
-                ForeColor = Color.FromArgb(220, 76, 30) 
+            lblKey = new Label
+            {
+                Text = "Clé API xAI :",
+                Location = new Point(20, 20),
+                AutoSize = true,
+                ForeColor = Color.FromArgb(220, 76, 30)
             };
             // ⚡ Bolt Optimization: Enforce MaxLength to prevent UI thread freezing and memory exhaustion from pasting massive strings
             txtApiKey = new TextBox { Location = new Point(190, 17), Width = 580, PasswordChar = '•', Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, MaxLength = 1024 };
@@ -160,6 +167,9 @@ namespace ImageGeneratorApp
             btnClear = new Button { Text = "Effacer", Location = new Point(640, 260), Width = 100, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnClear.Click += (s, e) => ClearForm();
 
+            btnHistory = new Button { Text = "📜 Historique", Location = new Point(750, 260), Width = 130, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnHistory.Click += BtnHistory_Click;
+
             // Status
             lblStatus = new Label { Location = new Point(20, 310), Width = 750, Height = 30, ForeColor = Color.DarkBlue, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
 
@@ -212,7 +222,7 @@ namespace ImageGeneratorApp
             lstAutocomplete.DoubleClick += (s, ev) => InsertSelectedTemplate();
 
             this.Controls.AddRange(new Control[] { lblKey, txtApiKey, lblPrompt, txtPrompt, lblModel, cmbModel, lblRes, cmbResolution, btnAddImages, lblRatio, cmbAspectRatio, chkMultiTurnEditing,
-                btnGenerate, btnSave, btnClear, lblStatus, pictureBox, btnManageTemplates, chkEnableTemplates, lstAutocomplete });
+                btnGenerate, btnSave, btnClear, btnHistory, lblStatus, pictureBox, btnManageTemplates, chkEnableTemplates, lstAutocomplete });
 
             lstAutocomplete.BringToFront();
 
@@ -230,6 +240,12 @@ namespace ImageGeneratorApp
             using var managerForm = new TemplatesManagerForm(_templateRepo);
             managerForm.ShowDialog(this);
             await RefreshTemplateKeysCacheAsync();
+        }
+
+        private void BtnHistory_Click(object? sender, EventArgs e)
+        {
+            using var historyForm = new HistoryViewerForm(_historyRepo, _imageProcessingService);
+            historyForm.ShowDialog(this);
         }
 
         private async void BtnGenerate_MouseEnter(object? sender, EventArgs e)
@@ -439,6 +455,28 @@ namespace ImageGeneratorApp
 
             lblStatus.Text = $"✅ Image générée avec {model} ({resolution})";
             btnSave.Enabled = true;
+
+            // Log this generation to our SQLite history asynchronously
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // Construct a rawMetadata JSON string to store in the DB
+                    var rawMetadataJson = $"{{\"resolution\":\"{resolution}\",\"aspect_ratio\":\"{aspectRatio}\"}}";
+
+                    await _historyOrchestrator.LogGenerationAsync(
+                        imageBytes,
+                        processedPrompt,
+                        model,
+                        modelVersion: null,
+                        rawMetadata: rawMetadataJson
+                    );
+                }
+                catch
+                {
+                    // Fail silently for history logging to never disrupt user generation experience
+                }
+            });
         }
 
         private void HandleGenerationException(Exception ex)

@@ -436,7 +436,7 @@ namespace ImageGeneratorApp
                 };
 
                 await _repository.InsertAsync(duplicate);
-                
+
                 // Add duplicate to top of the master cache list
                 _allTemplates.Insert(0, duplicate);
 

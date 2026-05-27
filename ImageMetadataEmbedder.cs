@@ -14,16 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using SixLabors.ImageSharp.Metadata.Profiles.Xmp;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
 
 namespace ImageGeneratorApp
 {
@@ -103,27 +102,8 @@ namespace ImageGeneratorApp
             // Use fully qualified name to avoid ambiguity with System.Drawing.Image brought in by the WinForms project
             using var image = SixLabors.ImageSharp.Image.Load(sourceImageBytes);
 
-            // === EXIF (standard fields, widely supported) ===
-            var exif = image.Metadata.ExifProfile ?? new ExifProfile();
-
-            exif.SetValue(ExifTag.Software, metadata.AppCreator);
-            exif.SetValue(ExifTag.DateTime, metadata.GeneratedAtUtc.ToString("yyyy:MM:dd HH:mm:ss"));
-            exif.SetValue(ExifTag.DateTimeOriginal, metadata.GeneratedAtUtc.ToString("yyyy:MM:dd HH:mm:ss"));
-
-            // ImageDescription holds the prompt (truncated for EXIF length limits in some containers)
-            string desc = metadata.Prompt;
-            if (desc.Length > 180)
-                desc = desc.Substring(0, 177) + "...";
-            exif.SetValue(ExifTag.ImageDescription, desc);
-
-            // Artist/Creator can also carry the generator for tools that only read classic EXIF
-            exif.SetValue(ExifTag.Artist, metadata.Generator);
-
-            image.Metadata.ExifProfile = exif;
-
-            // === XMP (rich structured data - recommended for AI-generated images) ===
-            string xmpXml = BuildXmpPacket(metadata);
-            image.Metadata.XmpProfile = new XmpProfile(Encoding.UTF8.GetBytes(xmpXml));
+            // Apply standard EXIF and XMP metadata profiles
+            ApplyMetadata(image, metadata);
 
             // === PNG-specific text chunks (iTXt/tEXt) for maximum readability and survival ===
             // These appear as simple key/value text in ExifTool ("PNG-tEXt") and many viewers.
@@ -163,6 +143,43 @@ namespace ImageGeneratorApp
             }
 
             return outputStream.ToArray();
+        }
+
+        /// <summary>
+        /// Applies EXIF and XMP metadata directly to an ImageSharp Image object.
+        /// This does not encode or save the image, allowing callers to save it in their desired format (PNG, JPEG, WEBP, etc.).
+        /// </summary>
+        /// <param name="image">The ImageSharp Image instance to enrich.</param>
+        /// <param name="metadata">The metadata model containing prompt and model information.</param>
+        /// <exception cref="ArgumentNullException">Thrown if either argument is null.</exception>
+        public static void ApplyMetadata(SixLabors.ImageSharp.Image image, ImageGenerationMetadata metadata)
+        {
+            if (image == null)
+                throw new ArgumentNullException(nameof(image));
+            if (metadata == null)
+                throw new ArgumentNullException(nameof(metadata));
+
+            // === EXIF (standard fields, widely supported) ===
+            var exif = image.Metadata.ExifProfile ?? new ExifProfile();
+
+            exif.SetValue(ExifTag.Software, metadata.AppCreator);
+            exif.SetValue(ExifTag.DateTime, metadata.GeneratedAtUtc.ToString("yyyy:MM:dd HH:mm:ss"));
+            exif.SetValue(ExifTag.DateTimeOriginal, metadata.GeneratedAtUtc.ToString("yyyy:MM:dd HH:mm:ss"));
+
+            // ImageDescription holds the prompt (truncated for EXIF length limits in some containers)
+            string desc = metadata.Prompt;
+            if (desc.Length > 180)
+                desc = desc.Substring(0, 177) + "...";
+            exif.SetValue(ExifTag.ImageDescription, desc);
+
+            // Artist/Creator can also carry the generator for tools that only read classic EXIF
+            exif.SetValue(ExifTag.Artist, metadata.Generator);
+
+            image.Metadata.ExifProfile = exif;
+
+            // === XMP (rich structured data - recommended for AI-generated images) ===
+            string xmpXml = BuildXmpPacket(metadata);
+            image.Metadata.XmpProfile = new XmpProfile(Encoding.UTF8.GetBytes(xmpXml));
         }
 
         private static bool IsJpegExtension(string? ext)

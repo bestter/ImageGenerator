@@ -22,6 +22,10 @@ Application de bureau Windows Forms (.NET 10) pour la génération d'images par 
 - **Activation dynamique intelligente (Generating button locking)** : Le bouton de génération se désactive et se verrouille automatiquement en cas de champ vide, d'erreur syntaxique, de clé de template absente de la base, ou lorsqu'une génération asynchrone d'image est en cours.
 - **Autocomplétion Mid-String au Caret** : Une liste flottante contextuelle d'autocomplétion apparaît lors de la saisie de l'accolade `{` pour insérer rapidement vos gabarits, alimentée par un cache asynchrone pour éviter tout ralentissement de la saisie.
 - **Aperçu dynamique du Prompt** : Survolez le bouton de génération pour prévisualiser le prompt entièrement résolu et expansé dans une info-bulle avant de l'envoyer à l'API.
+- **Historique de Génération Local (SQLite & WEBP)** : Chaque image générée avec succès déclenche une tâche d'arrière-plan asynchrone et silencieuse qui compresse l'image d'origine en **WEBP (Qualité 80%)** dans le dossier `%LocalAppData%\ImageGeneratorApp\HistoryImages\`, préservant de 5 à 10 fois le stockage par rapport aux PNG d'origine.
+- **Préservation de Métadonnées Provenance** : Les images d'historique WEBP stockées sur disque intègrent les profils de métadonnées EXIF et XMP standardisés contenant le prompt, le nom du modèle, la date/heure de génération et le logiciel de création.
+- **Explorateur d'Historique Premium (Split View)** : Un dialogue moderne scindé (SplitContainer) codé manuellement en code-first (Design-First) offrant une recherche textuelle filtrée par SQL `LIKE` temps réel avec Dapper, prévisualisation de l'image (décodage asynchrone sécurisé WEBP vers Bitmap GDI+), visualiseur monospace de prompt et bloc de métadonnées JSON avec indentation automatique.
+- **Concurrence & Sécurité Mémoire** : Protection contre les race conditions lors d'une navigation rapide dans l'historique (les anciennes requêtes de chargement d'image sont automatiquement ignorées via un jeton de sélection unique), et libération rigoureuse des handles GDI+ pour éviter les fuites de ressources.
 
 ## Prérequis
 
@@ -44,13 +48,18 @@ dotnet test ImageGeneratorApp.Tests/ImageGeneratorApp.Tests.csproj --verbosity n
 ## Structure du projet
 
 ```text
-├── Form1.cs                      # Interface utilisateur (WinForms code-first)
-├── DatabaseHelper.cs             # Initialisation de la base SQLite et type-mapping Dapper
+├── Form1.cs                      # Interface utilisateur (WinForms code-first et bouton historique)
+├── DatabaseHelper.cs             # Initialisation de la base SQLite, type-mapping Dapper (gère templates et historique)
 ├── TemplateModel.cs              # Représentation entité d'un gabarit de prompt
 ├── TemplateRepository.cs         # Opérations CRUD asynchrones alimentées par Dapper
 ├── TemplateParser.cs             # Moteur de résolution récursif avec Regex compilées
-├── TemplatesManagerForm.cs       # Dialogue de gestion programmé en C#
-├── TemplateEditorForm.cs         # Dialogue d'ajout/édition programmé en C#
+├── TemplatesManagerForm.cs       # Dialogue de gestion des gabarits programmé en C#
+├── TemplateEditorForm.cs         # Dialogue d'ajout/édition de gabarits programmé en C#
+├── GenerationHistoryModel.cs     # Représentation entité d'un enregistrement d'historique
+├── GenerationHistoryRepository.cs# Opérations CRUD et recherche (Dapper) pour l'historique
+├── ImageProcessingService.cs     # Service de conversion WEBP, d'injection et de décodage BMP GDI+ (ImageSharp)
+├── HistoryOrchestrator.cs        # Orchestrateur coordonnant la sauvegarde WEBP et l'écriture SQLite
+├── HistoryViewerForm.cs          # Explorateur d'historique (split-panel, code-first) avec protection de course
 ├── ImageGeneratorClient.cs       # Client HTTP multi-provider
 ├── ImageGeneratorRequest.cs      # Modèle de requête (xAI)
 ├── ImageGeneratorResponse.cs     # Modèle de réponse (xAI)
@@ -63,12 +72,14 @@ dotnet test ImageGeneratorApp.Tests/ImageGeneratorApp.Tests.csproj --verbosity n
 ├── Program.cs                    # Point d'entrée
 ├── ImageGeneratorApp.csproj      # Fichier de projet
 ├── ImageGeneratorApp.slnx        # Fichier de solution
-├── ImageGeneratorApp.Tests/      # Tests unitaires (xUnit + Moq + FluentAssertions)
+├── ImageGeneratorApp.Tests/      # Tests unitaires et d'intégration (xUnit + Moq + FluentAssertions)
 │   ├── GlobalUsings.cs
 │   ├── ImageGeneratorClientTests.cs
 │   ├── UserIdHelperTests.cs
 │   ├── TemplateRepositoryTests.cs# Tests de persistance et CRUD SQLite
-│   └── TemplateParserTests.cs    # Tests du moteur d'analyse et de récursion
+│   ├── TemplateParserTests.cs    # Tests du moteur d'analyse et de récursion
+│   ├── GenerationHistoryRepositoryTests.cs # Tests de persistance et recherche d'historique
+│   └── HistoryOrchestratorTests.cs # Tests d'intégration du flux WEBP et de persistance
 │   (inclut les tests pour ImageMetadataEmbedder)
 └── content/
     └── Grok_Logomark_Dark.png    # Logo Grok

@@ -1,6 +1,6 @@
+using FluentAssertions;
 using System;
 using Xunit;
-using FluentAssertions;
 
 namespace ImageGeneratorApp.Tests
 {
