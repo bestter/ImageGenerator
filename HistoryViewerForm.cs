@@ -34,6 +34,20 @@ namespace ImageGeneratorApp
         // Protection against rapid selection change race conditions
         private int _currentSelectionToken = 0;
 
+        private Button btnCopyPrompt = null!;
+        private GenerationHistoryModel? _currentHistoryItem;
+
+        /// <summary>
+        /// Gets the prompt text to paste into the main form's prompt field when the user activates the copy button in history.
+        /// Set only when the copy action is triggered; consumed by the owner form after ShowDialog returns.
+        /// </summary>
+        public string? PromptToLoad { get; private set; }
+
+        /// <summary>
+        /// Gets the model name (exact match for ComboBox items) to select in the main form when the copy action occurs.
+        /// </summary>
+        public string? ModelToLoad { get; private set; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="HistoryViewerForm"/> class.
         /// </summary>
@@ -266,14 +280,48 @@ namespace ImageGeneratorApp
                 Padding = new Padding(0, 15, 0, 0)
             };
 
+            // Prompt header: label + inline "Copie prompt" button (per task requirement).
+            // Button placed immediately to the right of the label using manual positioning inside a fixed-height
+            // header panel (mental layout calc: label ~155px wide + 20px gap => X=175 for compact French text).
+            // Header docks top so it stacks visually above the multiline prompt textbox.
+            // Styling matches the existing dark theme (grays from 28-60 range) and uses Flat for modern look.
+            // No Dock on children; they remain left-aligned on resize (acceptable, prompt content below uses full width).
+            var promptHeaderPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 26,
+                BackColor = Color.FromArgb(28, 28, 28)
+            };
+
             var lblPrompt = new Label
             {
                 Text = "Prompt de génération :",
-                Dock = DockStyle.Top,
-                Height = 20,
+                Location = new Point(0, 4),
+                AutoSize = true,
                 ForeColor = Color.FromArgb(200, 200, 200),
                 Font = titleFont
             };
+
+            btnCopyPrompt = new Button
+            {
+                Text = "Copie prompt",
+                Location = new Point(175, 1),
+                Width = 105,
+                Height = 23,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(60, 60, 60),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 8.5F),
+                Cursor = Cursors.Hand,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left,
+                TabStop = false
+            };
+            btnCopyPrompt.FlatAppearance.BorderColor = Color.FromArgb(90, 90, 90);
+            btnCopyPrompt.FlatAppearance.BorderSize = 1;
+            btnCopyPrompt.Click += BtnCopyPrompt_Click;
+            btnCopyPrompt.Enabled = false; // enabled only on valid selection
+
+            promptHeaderPanel.Controls.AddRange(new Control[] { lblPrompt, btnCopyPrompt });
 
             txtPrompt = new TextBox
             {
@@ -339,7 +387,7 @@ namespace ImageGeneratorApp
             };
 
             detailsContainer.Controls.AddRange(new Control[] {
-                txtMetadata, lblMeta, detailSpacer2, modelInfoPanel, detailSpacer1, txtPrompt, lblPrompt
+                txtMetadata, lblMeta, detailSpacer2, modelInfoPanel, detailSpacer1, txtPrompt, promptHeaderPanel
             });
 
             rightPanel.Controls.Add(pictureCard);
@@ -454,6 +502,10 @@ namespace ImageGeneratorApp
                 return;
             }
 
+            // Track current item for the copy-prompt action (button "Copie prompt")
+            _currentHistoryItem = history;
+            btnCopyPrompt.Enabled = !string.IsNullOrWhiteSpace(history.Prompt);
+
             // Increment the concurrency token to prevent fast-selection race conditions
             var token = ++_currentSelectionToken;
 
@@ -508,6 +560,12 @@ namespace ImageGeneratorApp
         {
             _currentSelectionToken++; // invalidate active loading tasks
 
+            _currentHistoryItem = null;
+            if (btnCopyPrompt != null)
+            {
+                btnCopyPrompt.Enabled = false;
+            }
+
             var oldImage = pictureBoxImage.Image;
             pictureBoxImage.Image = null;
             oldImage?.Dispose();
@@ -517,6 +575,27 @@ namespace ImageGeneratorApp
             txtMetadata.Clear();
             lblImageStatus.Text = "Sélectionnez une génération pour afficher les détails.";
             lblImageStatus.Visible = true;
+        }
+
+        /// <summary>
+        /// Handles the "Copie prompt" button click: captures the current history entry's prompt and model
+        /// into public properties, then closes the dialog immediately. The owner (Form1) applies the
+        /// values to its txtPrompt and cmbModel right after ShowDialog returns, achieving the "immediate paste"
+        /// behavior requested.
+        /// </summary>
+        private void BtnCopyPrompt_Click(object? sender, EventArgs e)
+        {
+            if (_currentHistoryItem == null || string.IsNullOrWhiteSpace(_currentHistoryItem.Prompt))
+            {
+                return;
+            }
+
+            PromptToLoad = _currentHistoryItem.Prompt;
+            ModelToLoad = _currentHistoryItem.ModelName;
+
+            // Close now so caller can transfer values without the user needing to close manually.
+            // This is the minimal, non-refactored way to achieve cross-form immediate copy for a modal dialog.
+            this.Close();
         }
 
         /// <summary>
