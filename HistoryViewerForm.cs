@@ -131,7 +131,8 @@ namespace ImageGeneratorApp
                 ForeColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle,
                 Height = 28,
-                Font = mainFont
+                Font = mainFont,
+                MaxLength = 200
             };
             txtSearch.TextChanged += TxtSearch_TextChanged;
 
