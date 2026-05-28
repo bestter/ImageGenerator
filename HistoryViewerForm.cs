@@ -48,6 +48,8 @@ namespace ImageGeneratorApp
         /// </summary>
         public string? ModelToLoad { get; private set; }
 
+        private System.Windows.Forms.Timer _searchDebounceTimer = null!;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="HistoryViewerForm"/> class.
         /// </summary>
@@ -60,6 +62,9 @@ namespace ImageGeneratorApp
         {
             _historyRepository = historyRepository ?? throw new ArgumentNullException(nameof(historyRepository));
             _imageProcessingService = imageProcessingService ?? throw new ArgumentNullException(nameof(imageProcessingService));
+
+            _searchDebounceTimer = new System.Windows.Forms.Timer { Interval = 300 };
+            _searchDebounceTimer.Tick += SearchDebounceTimer_Tick;
 
             InitializeControls();
         }
@@ -455,10 +460,19 @@ namespace ImageGeneratorApp
         }
 
         /// <summary>
-        /// Handles filtering as the user types in the search text box.
+        /// Handles filtering as the user types in the search text box, using debouncing to prevent excessive queries.
         /// </summary>
-        private async void TxtSearch_TextChanged(object? sender, EventArgs e)
+        private void TxtSearch_TextChanged(object? sender, EventArgs e)
         {
+            // ⚡ Bolt Optimization: Debounce search input to reduce API calls (in this case, SQLite queries).
+            _searchDebounceTimer.Stop();
+            _searchDebounceTimer.Start();
+        }
+
+        private async void SearchDebounceTimer_Tick(object? sender, EventArgs e)
+        {
+            _searchDebounceTimer.Stop();
+
             var searchTerm = txtSearch.Text;
             try
             {
@@ -630,6 +644,9 @@ namespace ImageGeneratorApp
         {
             if (disposing)
             {
+                _searchDebounceTimer?.Stop();
+                _searchDebounceTimer?.Dispose();
+
                 var oldImage = pictureBoxImage.Image;
                 pictureBoxImage.Image = null;
                 oldImage?.Dispose();

@@ -28,3 +28,7 @@
 ## 2024-08-05 - Avoid redundant database queries during recursive prompt parsing
 **Learning:** Calling `_repository.GetByKeyAsync(key)` inside a looping/parsing construct (like `TemplateParser.ProcessPromptAsync` which can iterate up to 20 times) causes redundant database lookups for the same key, creating an I/O bottleneck.
 **Action:** Use a local dictionary cache `Dictionary<string, TemplateModel>(StringComparer.OrdinalIgnoreCase)` scoped to the parsing method's execution to cache and reuse previously fetched templates, turning repeated database calls into O(1) hash map lookups.
+
+## 2026-05-28 - Debounce rapid UI inputs triggering database queries
+**Learning:** Firing asynchronous database queries (`SearchAsync`) on every keystroke in WinForms `TextChanged` events can cause excessive I/O, UI blocking, and race conditions, leading to poor performance and an unresponsive UI.
+**Action:** Always implement a debounce mechanism using `System.Windows.Forms.Timer` (e.g., 300ms interval) for text input events that trigger background queries.
