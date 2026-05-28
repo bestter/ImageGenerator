@@ -61,3 +61,7 @@
 **Vulnerability:** The search filter input (`txtSearch`) lacked maximum length constraints, creating a potential vector for Denial of Service (DoS) attacks via memory exhaustion and CPU spikes if an attacker pastes excessively large strings into the UI thread, causing the filtering logic to hang.
 **Learning:** In desktop applications, unbounded text input can lead to high memory usage, UI thread freezing, and subsequent application crashes (OutOfMemoryException) when massive strings are processed, even if they aren't sent externally.
 **Prevention:** Always enforce reasonable `MaxLength` properties on UI text inputs (e.g., `TextBox`) to prevent memory exhaustion and buffer-related issues, even on local filtering functionality.
+## 2026-05-28 - Missing Input Length Limits on Search TextBoxes in Split Views
+**Vulnerability:** The search filter input (`txtSearch`) in `HistoryViewerForm` lacked a maximum length constraint, similar to the previously fixed issue in `TemplatesManagerForm`. This acts as a potential Denial of Service (DoS) attack vector where pasting massive strings freezes the UI thread and consumes memory.
+**Learning:** When fixing security issues like missing bounds in one location (e.g. `TemplatesManagerForm.cs`), always search the codebase for similar component instantiations (`TextBox` instances) to ensure the vulnerability isn't duplicated in similar views.
+**Prevention:** Apply consistent secure defaults (like `MaxLength`) across all instances of a specific UI pattern (like search boxes) during code reviews.
