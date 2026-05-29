@@ -40,11 +40,29 @@ namespace ImageGeneratorApp
                 Directory.CreateDirectory(folder);
                 string filePath = Path.Combine(folder, "device_id.txt");
 
-                if (File.Exists(filePath))
+                try
                 {
-                    _cachedDefaultUserId = (await File.ReadAllTextAsync(filePath)).Trim();
+                    using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    {
+                        if (fs.Length <= 1024)
+                        {
+                            using (var reader = new StreamReader(fs))
+                            {
+                                _cachedDefaultUserId = (await reader.ReadToEndAsync()).Trim();
+                            }
+                        }
+                    }
                 }
-                else
+                catch (FileNotFoundException)
+                {
+                    // File doesn't exist, will create a new one below
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    // Directory doesn't exist, will create a new one below
+                }
+
+                if (string.IsNullOrEmpty(_cachedDefaultUserId))
                 {
                     _cachedDefaultUserId = Guid.NewGuid().ToString("N");
                     await File.WriteAllTextAsync(filePath, _cachedDefaultUserId);
