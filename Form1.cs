@@ -77,6 +77,7 @@ namespace ImageGeneratorApp
         private List<string> _templateKeysCache = new List<string>();
         private bool _hasPromptError = false;
         private bool _isGenerating = false;
+        private System.Windows.Forms.Timer _validationDebounceTimer = null!;
 
         public Form1()
         {
@@ -90,6 +91,13 @@ namespace ImageGeneratorApp
 
         private void InitializeControls()
         {
+            _validationDebounceTimer = new System.Windows.Forms.Timer { Interval = 300 };
+            _validationDebounceTimer.Tick += (s, ev) =>
+            {
+                _validationDebounceTimer.Stop();
+                _ = UpdateGenerateButtonStateAsync();
+            };
+
             // Create the menu FIRST (before ClientSize / WindowState / any other controls).
             // This gives the docked MenuStrip the best chance to reserve vertical space
             // in the client area before we use absolute Locations. Critical on Maximized forms.
@@ -226,7 +234,10 @@ namespace ImageGeneratorApp
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
                 AutoSize = true
             };
-            chkEnableTemplates.CheckedChanged += (s, ev) => _ = UpdateGenerateButtonStateAsync();
+            chkEnableTemplates.CheckedChanged += (s, ev) => {
+                _validationDebounceTimer.Stop();
+                _validationDebounceTimer.Start();
+            };
 
             // Lightweight custom floating ListBox for autocomplete mid-string
             lstAutocomplete = new ListBox
@@ -898,7 +909,9 @@ namespace ImageGeneratorApp
                 this.Invalidate();
             }
 
-            _ = UpdateGenerateButtonStateAsync();
+            // ⚡ Bolt Optimization: Debounce UI inputs that trigger database queries
+            _validationDebounceTimer.Stop();
+            _validationDebounceTimer.Start();
 
             if (!chkEnableTemplates.Checked)
             {
@@ -972,7 +985,9 @@ namespace ImageGeneratorApp
 
         private void TxtApiKey_TextChanged(object? sender, EventArgs e)
         {
-            _ = UpdateGenerateButtonStateAsync();
+            // ⚡ Bolt Optimization: Debounce UI inputs that trigger database queries
+            _validationDebounceTimer.Stop();
+            _validationDebounceTimer.Start();
         }
 
         private async Task ValidatePromptAsync()
