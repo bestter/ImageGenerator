@@ -65,3 +65,7 @@
 **Vulnerability:** The search filter input (`txtSearch`) in `HistoryViewerForm` lacked a maximum length constraint, similar to the previously fixed issue in `TemplatesManagerForm`. This acts as a potential Denial of Service (DoS) attack vector where pasting massive strings freezes the UI thread and consumes memory.
 **Learning:** When fixing security issues like missing bounds in one location (e.g. `TemplatesManagerForm.cs`), always search the codebase for similar component instantiations (`TextBox` instances) to ensure the vulnerability isn't duplicated in similar views.
 **Prevention:** Apply consistent secure defaults (like `MaxLength`) across all instances of a specific UI pattern (like search boxes) during code reviews.
+## 2026-05-30 - TOCTOU File Read Memory Exhaustion on File.ReadAllTextAsync
+**Vulnerability:** Checking file existence via `File.Exists` before using `File.ReadAllTextAsync` creates a TOCTOU (Time of check to time of use) race condition. If the file is maliciously replaced with an enormous file after the check, reading the text into memory can cause an OutOfMemoryException (DoS).
+**Learning:** Checking file existence is insufficient when reading untrusted or potentially modified local files.
+**Prevention:** Always open a `FileStream` first, and then perform security validations (like `stream.Length`) on the opened handle before reading the contents with a `StreamReader`.
