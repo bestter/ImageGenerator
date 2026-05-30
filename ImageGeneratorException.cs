@@ -23,12 +23,27 @@ namespace ImageGeneratorApp
     {
         public int StatusCode { get; }
 
+        public ImageGeneratorException() : base()
+        {
+            StatusCode = 0;
+        }
+
         public ImageGeneratorException(string message) : base(message)
         {
             StatusCode = 0;
         }
 
+        public ImageGeneratorException(string message, Exception innerException) : base(message, innerException)
+        {
+            StatusCode = 0;
+        }
+
         public ImageGeneratorException(string message, int statusCode) : base(message)
+        {
+            StatusCode = statusCode;
+        }
+
+        public ImageGeneratorException(string message, int statusCode, Exception innerException) : base(message, innerException)
         {
             StatusCode = statusCode;
         }
