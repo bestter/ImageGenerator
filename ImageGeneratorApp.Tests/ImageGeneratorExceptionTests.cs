@@ -1,11 +1,21 @@
-using FluentAssertions;
 using System;
-using Xunit;
 
 namespace ImageGeneratorApp.Tests
 {
     public class ImageGeneratorExceptionTests
     {
+        [Fact]
+        public void Constructor_Default_SetsDefaultValues()
+        {
+            // Act
+            var exception = new ImageGeneratorException();
+
+            // Assert
+            exception.Message.Should().NotBeNullOrEmpty();
+            exception.StatusCode.Should().Be(0);
+            exception.InnerException.Should().BeNull();
+        }
+
         [Fact]
         public void Constructor_WithMessage_SetsMessageAndDefaultStatusCode()
         {
@@ -22,6 +32,22 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
+        public void Constructor_WithMessageAndInnerException_SetsMessageAndInnerException()
+        {
+            // Arrange
+            string expectedMessage = "An error occurred.";
+            var innerException = new InvalidOperationException("Inner error.");
+
+            // Act
+            var exception = new ImageGeneratorException(expectedMessage, innerException);
+
+            // Assert
+            exception.Message.Should().Be(expectedMessage);
+            exception.StatusCode.Should().Be(0);
+            exception.InnerException.Should().Be(innerException);
+        }
+
+        [Fact]
         public void Constructor_WithMessageAndStatusCode_SetsMessageAndStatusCode()
         {
             // Arrange
@@ -35,6 +61,34 @@ namespace ImageGeneratorApp.Tests
             exception.Message.Should().Be(expectedMessage);
             exception.StatusCode.Should().Be(expectedStatusCode);
             exception.InnerException.Should().BeNull();
+        }
+
+        [Fact]
+        public void Constructor_WithMessageStatusCodeAndInnerException_SetsAllProperties()
+        {
+            // Arrange
+            string expectedMessage = "API returned an error with inner exception.";
+            int expectedStatusCode = 500;
+            var innerException = new Exception("Root cause.");
+
+            // Act
+            var exception = new ImageGeneratorException(expectedMessage, expectedStatusCode, innerException);
+
+            // Assert
+            exception.Message.Should().Be(expectedMessage);
+            exception.StatusCode.Should().Be(expectedStatusCode);
+            exception.InnerException.Should().Be(innerException);
+        }
+
+        [Fact]
+        public void Constructor_NullMessage_HandlesGracefully()
+        {
+            // Act
+            var exception = new ImageGeneratorException(null!);
+
+            // Assert
+            exception.Message.Should().NotBeNull();
+            exception.StatusCode.Should().Be(0);
         }
     }
 }
