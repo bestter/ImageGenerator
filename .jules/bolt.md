@@ -32,3 +32,7 @@
 ## 2026-05-28 - Debounce rapid UI inputs triggering database queries
 **Learning:** Firing asynchronous database queries (`SearchAsync`) on every keystroke in WinForms `TextChanged` events can cause excessive I/O, UI blocking, and race conditions, leading to poor performance and an unresponsive UI.
 **Action:** Always implement a debounce mechanism using `System.Windows.Forms.Timer` (e.g., 300ms interval) for text input events that trigger background queries.
+
+## 2026-05-30 - Pre-allocate MemoryStream for image decoding
+**Learning:** When decoding large images to uncompressed formats like BMP, letting `MemoryStream` dynamically grow causes severe Large Object Heap (LOH) fragmentation due to buffer doubling.
+**Action:** Always pre-allocate `MemoryStream` capacity using the image dimensions (e.g., `Width * Height * 4 + 1024`) before writing the decoded bytes.
