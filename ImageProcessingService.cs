@@ -95,13 +95,20 @@ namespace ImageGeneratorApp
                     throw new ArgumentException("File is empty.", nameof(webpFilePath));
                 }
 
-                var memoryStream = new MemoryStream();
+                MemoryStream? memoryStream = null;
 
                 try
                 {
                     // Load WEBP using ImageSharp asynchronously from the stream
                     using (var image = await SixLabors.ImageSharp.Image.LoadAsync(fs))
                     {
+                        // ⚡ Bolt Optimization: Pre-allocate MemoryStream capacity based on image dimensions
+                        // (Width * Height * 4 bytes for RGBA + 1024 bytes for BMP headers).
+                        // This prevents excessive Large Object Heap (LOH) fragmentation caused by default buffer doubling
+                        // when saving uncompressed image data.
+                        int estimatedCapacity = (image.Width * image.Height * 4) + 1024;
+                        memoryStream = new MemoryStream(estimatedCapacity);
+
                         // Encode to BMP format (native and extremely fast for WinForms/GDI+)
                         var bmpEncoder = new SixLabors.ImageSharp.Formats.Bmp.BmpEncoder();
                         await image.SaveAsync(memoryStream, bmpEncoder);
@@ -119,7 +126,7 @@ namespace ImageGeneratorApp
                 }
                 finally
                 {
-                    memoryStream.Dispose();
+                    memoryStream?.Dispose();
                 }
             });
         }
