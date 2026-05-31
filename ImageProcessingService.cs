@@ -95,26 +95,20 @@ namespace ImageGeneratorApp
                     throw new ArgumentException("File is empty.", nameof(webpFilePath));
                 }
 
-                MemoryStream memoryStream;
-
-                // Load WEBP using ImageSharp asynchronously from the validated stream handle
-                using (var image = await SixLabors.ImageSharp.Image.LoadAsync(fs))
-                {
-                    // ⚡ Bolt Optimization: Pre-allocate MemoryStream capacity based on image dimensions
-                    // (Width * Height * 4 bytes for 32-bit BMP + header margin) to prevent LOH fragmentation
-                    // caused by buffer doubling during encoding.
-                    int estimatedCapacity = (image.Width * image.Height * 4) + 1024;
-                    memoryStream = new MemoryStream(estimatedCapacity);
-
-                    // Encode to BMP format (native and extremely fast for WinForms/GDI+)
-                    var bmpEncoder = new SixLabors.ImageSharp.Formats.Bmp.BmpEncoder();
-                    await image.SaveAsync(memoryStream, bmpEncoder);
-                }
-
-                memoryStream.Position = 0;
+                var memoryStream = new MemoryStream();
 
                 try
                 {
+                    // Load WEBP using ImageSharp asynchronously from the stream
+                    using (var image = await SixLabors.ImageSharp.Image.LoadAsync(fs))
+                    {
+                        // Encode to BMP format (native and extremely fast for WinForms/GDI+)
+                        var bmpEncoder = new SixLabors.ImageSharp.Formats.Bmp.BmpEncoder();
+                        await image.SaveAsync(memoryStream, bmpEncoder);
+                    }
+
+                    memoryStream.Position = 0;
+
                     // CRITICAL WinForms/GDI+ detail: A Bitmap constructed from a stream requires
                     // the stream to remain open for the bitmap's lifetime.
                     // Cloning the bitmap decouples it from the stream so we can safely dispose of it.
