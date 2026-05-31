@@ -84,34 +84,31 @@ namespace ImageGeneratorApp
                 throw new ArgumentException("WebP file path cannot be null or whitespace.", nameof(webpFilePath));
             }
 
-            if (!File.Exists(webpFilePath))
-            {
-                throw new FileNotFoundException("The specified WebP file was not found.", webpFilePath);
-            }
-
             // Perform image loading and conversion on a background thread
             return await Task.Run(async () =>
             {
-                MemoryStream memoryStream;
+                // 🛡️ Sentinel: Prevent TOCTOU race condition and handle file existence securely
+                using var fs = new FileStream(webpFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
 
-                // Load WEBP using ImageSharp asynchronously
-                using (var image = await SixLabors.ImageSharp.Image.LoadAsync(webpFilePath))
+                if (fs.Length == 0)
                 {
-                    // ⚡ Bolt Optimization: Pre-allocate MemoryStream capacity based on image dimensions
-                    // (Width * Height * 4 bytes for 32-bit BMP + header margin) to prevent LOH fragmentation
-                    // caused by buffer doubling during encoding.
-                    int estimatedCapacity = (image.Width * image.Height * 4) + 1024;
-                    memoryStream = new MemoryStream(estimatedCapacity);
-
-                    // Encode to BMP format (native and extremely fast for WinForms/GDI+)
-                    var bmpEncoder = new SixLabors.ImageSharp.Formats.Bmp.BmpEncoder();
-                    await image.SaveAsync(memoryStream, bmpEncoder);
+                    throw new ArgumentException("File is empty.", nameof(webpFilePath));
                 }
 
-                memoryStream.Position = 0;
+                var memoryStream = new MemoryStream();
 
                 try
                 {
+                    // Load WEBP using ImageSharp asynchronously from the stream
+                    using (var image = await SixLabors.ImageSharp.Image.LoadAsync(fs))
+                    {
+                        // Encode to BMP format (native and extremely fast for WinForms/GDI+)
+                        var bmpEncoder = new SixLabors.ImageSharp.Formats.Bmp.BmpEncoder();
+                        await image.SaveAsync(memoryStream, bmpEncoder);
+                    }
+
+                    memoryStream.Position = 0;
+
                     // CRITICAL WinForms/GDI+ detail: A Bitmap constructed from a stream requires
                     // the stream to remain open for the bitmap's lifetime.
                     // Cloning the bitmap decouples it from the stream so we can safely dispose of it.
