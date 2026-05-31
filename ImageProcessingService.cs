@@ -95,10 +95,10 @@ namespace ImageGeneratorApp
                     throw new ArgumentException("File is empty.", nameof(webpFilePath));
                 }
 
-                using var memoryStream = new MemoryStream();
+                MemoryStream memoryStream;
 
-                // Load WEBP using ImageSharp asynchronously
-                using (var image = await SixLabors.ImageSharp.Image.LoadAsync(webpFilePath))
+                // Load WEBP using ImageSharp asynchronously from the validated stream handle
+                using (var image = await SixLabors.ImageSharp.Image.LoadAsync(fs))
                 {
                     // ⚡ Bolt Optimization: Pre-allocate MemoryStream capacity based on image dimensions
                     // (Width * Height * 4 bytes for 32-bit BMP + header margin) to prevent LOH fragmentation
