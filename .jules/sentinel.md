@@ -69,3 +69,7 @@
 **Vulnerability:** Checking file existence via `File.Exists` before using `File.ReadAllTextAsync` creates a TOCTOU (Time of check to time of use) race condition. If the file is maliciously replaced with an enormous file after the check, reading the text into memory can cause an OutOfMemoryException (DoS).
 **Learning:** Checking file existence is insufficient when reading untrusted or potentially modified local files.
 **Prevention:** Always open a `FileStream` first, and then perform security validations (like `stream.Length`) on the opened handle before reading the contents with a `StreamReader`.
+## 2026-05-31 - TOCTOU File Read Memory Exhaustion on Image.LoadAsync
+**Vulnerability:** Checking file existence via `File.Exists` before using `Image.LoadAsync` creates a TOCTOU (Time of check to time of use) race condition. An attacker can replace a small file with a large one or delete it after the check but before the read.
+**Learning:** Checking file existence is insufficient when reading untrusted or potentially modified local files into third party libraries like ImageSharp.
+**Prevention:** Always open a `FileStream` first with `FileShare.Read`, and then perform security validations (like `fs.Length`) on the opened handle before passing it to `Image.LoadAsync`.

@@ -84,18 +84,21 @@ namespace ImageGeneratorApp
                 throw new ArgumentException("WebP file path cannot be null or whitespace.", nameof(webpFilePath));
             }
 
-            if (!File.Exists(webpFilePath))
-            {
-                throw new FileNotFoundException("The specified WebP file was not found.", webpFilePath);
-            }
-
             // Perform image loading and conversion on a background thread
             return await Task.Run(async () =>
             {
+                // 🛡️ Sentinel: Prevent TOCTOU race condition and handle file existence securely
+                using var fs = new FileStream(webpFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                if (fs.Length == 0)
+                {
+                    throw new ArgumentException("File is empty.", nameof(webpFilePath));
+                }
+
                 using var memoryStream = new MemoryStream();
 
-                // Load WEBP using ImageSharp asynchronously
-                using (var image = await SixLabors.ImageSharp.Image.LoadAsync(webpFilePath))
+                // Load WEBP using ImageSharp asynchronously from the stream
+                using (var image = await SixLabors.ImageSharp.Image.LoadAsync(fs))
                 {
                     // Encode to BMP format (native and extremely fast for WinForms/GDI+)
                     var bmpEncoder = new SixLabors.ImageSharp.Formats.Bmp.BmpEncoder();
