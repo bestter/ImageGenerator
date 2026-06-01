@@ -449,9 +449,9 @@ namespace ImageGeneratorApp
                 dataGridViewHistory.DataSource = _historyList;
                 UpdateSelectionDetails();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                MessageBox.Show($"Erreur lors du chargement de l'historique :\n{ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Une erreur inattendue est survenue lors du chargement de l'historique.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {

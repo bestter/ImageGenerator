@@ -545,23 +545,23 @@ namespace ImageGeneratorApp
             {
                 _hasPromptError = true;
                 this.Invalidate();
-                MessageBox.Show(ex.Message, "Modèle non reconnu", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Le gabarit demandé n'est pas reconnu ou introuvable.", "Modèle non reconnu", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else if (ex is FormatException)
             {
                 _hasPromptError = true;
                 this.Invalidate();
-                MessageBox.Show($"Erreur de syntaxe des modèles :\n{ex.Message}", "Erreur de modèles", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Une erreur de syntaxe a été détectée dans le gabarit.", "Erreur de modèles", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else if (ex is InvalidOperationException && ex.Message.Contains("récursion"))
             {
                 _hasPromptError = true;
                 this.Invalidate();
-                MessageBox.Show(ex.Message, "Erreur de récursion", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Une boucle de récursion infinie a été détectée dans les gabarits.", "Erreur de récursion", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else if (ex is ArgumentException)
             {
-                MessageBox.Show(ex.Message, "Erreur de validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Une erreur de validation est survenue. Veuillez vérifier vos entrées.", "Erreur de validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             else if (ex is ImageGeneratorException generatorEx)
             {

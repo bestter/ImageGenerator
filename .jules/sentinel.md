@@ -73,3 +73,7 @@
 **Vulnerability:** Checking file existence via `File.Exists` before using `Image.LoadAsync` creates a TOCTOU (Time of check to time of use) race condition. An attacker can replace a small file with a large one or delete it after the check but before the read.
 **Learning:** Checking file existence is insufficient when reading untrusted or potentially modified local files into third party libraries like ImageSharp.
 **Prevention:** Always open a `FileStream` first with `FileShare.Read`, and then perform security validations (like `fs.Length`) on the opened handle before passing it to `Image.LoadAsync`.
+## 2026-06-03 - Prevent Information Leakage in MessageBox Dailogs
+**Vulnerability:** Calling `MessageBox.Show(ex.Message)` or interpolating `ex.Message` directly in user-facing dialogs can inadvertently expose sensitive internal details (such as database structure, exact file paths, or internal error states) to the user.
+**Learning:** Any unhandled or explicitly caught exceptions that are passed to the UI layer must be sanitized to prevent leaking diagnostic internals.
+**Prevention:** Always catch specific exceptions where possible, and present generic, safe error messages to the user in `MessageBox.Show` instead of relying on the raw exception string.
