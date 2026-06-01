@@ -216,9 +216,9 @@ namespace ImageGeneratorApp
                 PopulateCategoryFilter();
                 ApplyFilters();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                MessageBox.Show($"Erreur lors du chargement des gabarits depuis la base de données :\n{ex.Message}", "Erreur de base de données", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Une erreur inattendue est survenue lors du chargement des gabarits depuis la base de données.", "Erreur de base de données", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
@@ -456,9 +456,9 @@ namespace ImageGeneratorApp
 
                 MessageBox.Show($"Gabarit dupliqué avec succès sous le nom '{newKey}' !", "Duplication réussie", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                MessageBox.Show($"Erreur lors de la duplication du gabarit :\n{ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Une erreur inattendue est survenue lors de la duplication du gabarit.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
@@ -500,9 +500,9 @@ namespace ImageGeneratorApp
                         MessageBox.Show("Impossible de trouver le gabarit dans la base de données pour le supprimer.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    MessageBox.Show($"Erreur lors de la suppression du gabarit :\n{ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Une erreur inattendue est survenue lors de la suppression du gabarit.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
                 finally
                 {
