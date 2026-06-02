@@ -47,13 +47,14 @@ namespace ImageGeneratorApp.Tests
             exception.InnerException.Should().Be(innerException);
         }
 
-        [Fact]
-        public void Constructor_WithMessageAndStatusCode_SetsMessageAndStatusCode()
+        [Theory]
+        [InlineData("API returned an error.", 400)]
+        [InlineData("Not Found", 404)]
+        [InlineData("Server Error", 500)]
+        [InlineData("Negative Status", -1)]
+        [InlineData("Max Status", int.MaxValue)]
+        public void Constructor_WithMessageAndStatusCode_SetsMessageAndStatusCode(string expectedMessage, int expectedStatusCode)
         {
-            // Arrange
-            string expectedMessage = "API returned an error.";
-            int expectedStatusCode = 400;
-
             // Act
             var exception = new ImageGeneratorException(expectedMessage, expectedStatusCode);
 
@@ -63,12 +64,13 @@ namespace ImageGeneratorApp.Tests
             exception.InnerException.Should().BeNull();
         }
 
-        [Fact]
-        public void Constructor_WithMessageStatusCodeAndInnerException_SetsAllProperties()
+        [Theory]
+        [InlineData("API returned an error with inner exception.", 500)]
+        [InlineData("Another error.", 403)]
+        [InlineData("Negative error.", -1)]
+        public void Constructor_WithMessageStatusCodeAndInnerException_SetsAllProperties(string expectedMessage, int expectedStatusCode)
         {
             // Arrange
-            string expectedMessage = "API returned an error with inner exception.";
-            int expectedStatusCode = 500;
             var innerException = new Exception("Root cause.");
 
             // Act
@@ -89,6 +91,33 @@ namespace ImageGeneratorApp.Tests
             // Assert
             exception.Message.Should().NotBeNull();
             exception.StatusCode.Should().Be(0);
+        }
+
+        [Fact]
+        public void ThrowAndCatch_PreservesExceptionProperties()
+        {
+            // Arrange
+            string expectedMessage = "Test throw message";
+            int expectedStatusCode = 401;
+
+            // Act
+            Exception? caughtException = null;
+            try
+            {
+                throw new ImageGeneratorException(expectedMessage, expectedStatusCode);
+            }
+            catch (Exception ex)
+            {
+                caughtException = ex;
+            }
+
+            // Assert
+            caughtException.Should().NotBeNull();
+            caughtException.Should().BeOfType<ImageGeneratorException>();
+
+            var typedException = (ImageGeneratorException)caughtException!;
+            typedException.Message.Should().Be(expectedMessage);
+            typedException.StatusCode.Should().Be(expectedStatusCode);
         }
     }
 }
