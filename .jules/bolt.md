@@ -35,3 +35,6 @@
 ## 2026-05-31 - Pre-allocate MemoryStream for uncompressed images
 **Learning:** Writing uncompressed image data (e.g., BMP format) to a default `MemoryStream` causes the stream's internal buffer to repeatedly double in size as data is written. This leads to excessive copying and severe Large Object Heap (LOH) fragmentation, severely degrading performance.
 **Action:** Always pre-allocate `MemoryStream` capacity using the formula `(Width * Height * 4) + 1024` before writing uncompressed image data to avoid LOH fragmentation.
+## 2026-06-05 - Avoid fetching full entity models when only keys are needed
+**Learning:** Fetching full entity models (e.g., using `GetAllAsync`) when only a single column like a `key` is required for an autocomplete cache causes unnecessary data loading, memory allocation for properties (especially large text fields), and object instantiation overhead.
+**Action:** Always create targeted queries (e.g., `GetAllKeysAsync`) that select only the specifically required columns when populating UI caches or lists that don't need the entire entity model.
