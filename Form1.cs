@@ -779,8 +779,8 @@ namespace ImageGeneratorApp
         {
             try
             {
-                var templates = await _templateRepo.GetAllAsync();
-                _templateKeysCache = templates.Select(t => t.Key).OrderBy(k => k).ToList();
+                var templateKeys = await _templateRepo.GetAllKeysAsync();
+                _templateKeysCache = templateKeys.OrderBy(k => k).ToList();
             }
             catch
             {

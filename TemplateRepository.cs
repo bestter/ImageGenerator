@@ -35,6 +35,17 @@ namespace ImageGeneratorApp
         }
 
         /// <summary>
+        /// Retrieves only the keys of all templates from the database.
+        /// </summary>
+        /// <returns>A collection of all template keys.</returns>
+        public async Task<IEnumerable<string>> GetAllKeysAsync()
+        {
+            const string sql = "SELECT key FROM templates;";
+            using var connection = _databaseHelper.GetConnection();
+            return await connection.QueryAsync<string>(sql);
+        }
+
+        /// <summary>
         /// Retrieves a single template by its unique key (case-insensitive).
         /// </summary>
         /// <param name="key">The unique key of the template.</param>
