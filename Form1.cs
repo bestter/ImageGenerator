@@ -360,7 +360,8 @@ namespace ImageGeneratorApp
         {
             string apiKey = txtApiKey.Text?.Trim() ?? string.Empty;
 
-            ApiKeyStorageHelper.SaveApiKey(apiKey);
+            string provider = cmbModel.Text == "nano-banana-pro" ? "Google" : "xAI";
+            ApiKeyStorageHelper.SaveApiKey(provider, apiKey);
 
             string? imageToEditBase64 = null;
             if (chkMultiTurnEditing.Checked && !string.IsNullOrEmpty(currentBase64Image))
@@ -753,11 +754,17 @@ namespace ImageGeneratorApp
             {
                 lblKey.Text = "Clé Google Cloud :";
                 lblKey.ForeColor = Color.FromArgb(26, 115, 232); // Google Blue
+
+                string savedKey = ApiKeyStorageHelper.LoadApiKey("Google");
+                if (txtApiKey != null) txtApiKey.Text = savedKey ?? string.Empty;
             }
             else
             {
                 lblKey.Text = "Clé API xAI :";
                 lblKey.ForeColor = Color.FromArgb(220, 76, 30); // xAI Orange-Red
+
+                string savedKey = ApiKeyStorageHelper.LoadApiKey("xAI");
+                if (txtApiKey != null) txtApiKey.Text = savedKey ?? string.Empty;
             }
         }
 
@@ -775,7 +782,8 @@ namespace ImageGeneratorApp
         {
             base.OnLoad(e);
 
-            string savedKey = ApiKeyStorageHelper.LoadApiKey();
+            string initialProvider = cmbModel?.Text == "nano-banana-pro" ? "Google" : "xAI";
+            string savedKey = ApiKeyStorageHelper.LoadApiKey(initialProvider);
             if (!string.IsNullOrEmpty(savedKey) && txtApiKey != null)
             {
                 txtApiKey.Text = savedKey;

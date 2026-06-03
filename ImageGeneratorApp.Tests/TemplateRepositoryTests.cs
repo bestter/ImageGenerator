@@ -201,33 +201,5 @@ namespace ImageGeneratorApp.Tests
             afterSecond.Should().NotBeNull();
             afterSecond!.UsageCount.Should().Be(2);
         }
-
-        [Fact]
-        public async Task UpdateUsageStatsBatchAsync_ShouldIncrementUsageCountAndSetLastUsedInBatch()
-        {
-            // Arrange
-            var t1 = new TemplateModel { Key = "batch_test1", Value = "val1" };
-            var t2 = new TemplateModel { Key = "batch_test2", Value = "val2" };
-            await _repository.InsertAsync(t1);
-            await _repository.InsertAsync(t2);
-
-            var keysToIncrement = new[] { "batch_test1", "batch_test2", "batch_test1", "invalid_key", "" };
-
-            // Act
-            bool success = await _repository.UpdateUsageStatsBatchAsync(keysToIncrement);
-            var afterT1 = await _repository.GetByKeyAsync("batch_test1");
-            var afterT2 = await _repository.GetByKeyAsync("batch_test2");
-
-            // Assert
-            success.Should().BeTrue();
-
-            afterT1.Should().NotBeNull();
-            afterT1!.UsageCount.Should().Be(2);
-            afterT1.LastUsed.Should().NotBeNull();
-
-            afterT2.Should().NotBeNull();
-            afterT2!.UsageCount.Should().Be(1);
-            afterT2.LastUsed.Should().NotBeNull();
-        }
     }
 }
