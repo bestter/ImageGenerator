@@ -241,12 +241,11 @@ namespace ImageGeneratorApp
                 .Select(t => t.Category)
                 .Where(c => !string.IsNullOrWhiteSpace(c))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(c => c);
+                .OrderBy(c => c)
+                .Cast<object>()
+                .ToArray();
 
-            foreach (var category in categories)
-            {
-                cmbCategory.Items.Add(category!);
-            }
+            cmbCategory.Items.AddRange(categories);
 
             if (previousSelection != null && cmbCategory.Items.Contains(previousSelection))
             {

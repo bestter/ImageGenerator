@@ -87,6 +87,9 @@ namespace ImageGeneratorApp
             // This significantly reduces I/O latency when processing complex or recursive prompts containing duplicate keys.
             var localCache = new Dictionary<string, TemplateModel>(StringComparer.OrdinalIgnoreCase);
 
+            // ⚡ Bolt Optimization: Batch usage stats updates to prevent N+1 query issue
+            var keysToIncrement = new List<string>();
+
             do
             {
                 replacedAny = false;
@@ -108,6 +111,27 @@ namespace ImageGeneratorApp
                     .Distinct()
                     .ToList();
 
+                var missingKeys = uniqueTags
+                    .Select(tag => tag[1..^1].Split(':')[0].Trim())
+                    .Where(key => !localCache.ContainsKey(key))
+                    .Distinct()
+                    .ToList();
+
+                if (missingKeys.Any())
+                {
+                    var fetchedTemplates = await _repository.GetByKeysAsync(missingKeys);
+                    foreach (var t in fetchedTemplates)
+                    {
+                        localCache[t.Key] = t;
+                    }
+
+                    var unfoundKey = missingKeys.FirstOrDefault(k => !localCache.ContainsKey(k));
+                    if (unfoundKey != null)
+                    {
+                        throw new KeyNotFoundException($"Le modèle '{unfoundKey}' n'est pas reconnu.");
+                    }
+                }
+
                 foreach (var tag in uniqueTags)
                 {
                     // tag is e.g. "{subject:dog:red}"
@@ -118,15 +142,7 @@ namespace ImageGeneratorApp
                     var parts = innerContent.Split(':');
                     var key = parts[0].Trim();
 
-                    if (!localCache.TryGetValue(key, out var template))
-                    {
-                        template = await _repository.GetByKeyAsync(key);
-                        if (template == null)
-                        {
-                            throw new KeyNotFoundException($"Le modèle '{key}' n'est pas reconnu.");
-                        }
-                        localCache[key] = template;
-                    }
+                    var template = localCache[key];
 
                     var templateValue = template.Value;
 
@@ -144,16 +160,21 @@ namespace ImageGeneratorApp
                     currentPrompt = currentPrompt.Replace(tag, templateValue);
                     replacedAny = true;
 
-                    // If requested, asynchronously increment usage stats for this key in the database
+                    // If requested, track this key to asynchronously increment usage stats later in batch
                     if (incrementUsageStats)
                     {
-                        await _repository.UpdateUsageStatsAsync(key);
+                        keysToIncrement.Add(key);
                     }
                 }
 
                 iterations++;
 
             } while (replacedAny);
+
+            if (incrementUsageStats && keysToIncrement.Count > 0)
+            {
+                await _repository.UpdateUsageStatsBatchAsync(keysToIncrement);
+            }
 
             // Clean up double/multiple spaces and trim the final result
             currentPrompt = MultipleSpacesRegex().Replace(currentPrompt, " ").Trim();
