@@ -38,3 +38,6 @@
 ## 2026-06-05 - Avoid fetching full entity models when only keys are needed
 **Learning:** Fetching full entity models (e.g., using `GetAllAsync`) when only a single column like a `key` is required for an autocomplete cache causes unnecessary data loading, memory allocation for properties (especially large text fields), and object instantiation overhead.
 **Action:** Always create targeted queries (e.g., `GetAllKeysAsync`) that select only the specifically required columns when populating UI caches or lists that don't need the entire entity model.
+## 2026-06-03 - Test ImageProcessingService ArgumentExceptions
+**Learning:** Argument validation like `sourceImageBytes` or `baseFileName` being null/empty/whitespace are easy cases to test but critical to ensure robust file operations.
+**Action:** Always add tests to ensure basic ArgumentExceptions are caught before more complex execution paths are traversed.
