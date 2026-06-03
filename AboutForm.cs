@@ -183,8 +183,9 @@ https://www.gnu.org/licenses/";
 
                 Process.Start(new ProcessStartInfo
                 {
-                    FileName = licensePath,
-                    UseShellExecute = true
+                    FileName = "notepad.exe",
+                    UseShellExecute = false,
+                    ArgumentList = { licensePath }
                 });
             }
             catch (Exception ex)
