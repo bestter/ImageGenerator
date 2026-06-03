@@ -46,21 +46,6 @@ namespace ImageGeneratorApp
         }
 
         /// <summary>
-        /// Retrieves multiple templates by their unique keys.
-        /// </summary>
-        /// <param name="keys">The unique keys of the templates.</param>
-        /// <returns>A collection of templates found.</returns>
-        public async Task<IEnumerable<TemplateModel>> GetByKeysAsync(IEnumerable<string> keys)
-        {
-            if (keys == null || !System.Linq.Enumerable.Any(keys))
-            {
-                return System.Linq.Enumerable.Empty<TemplateModel>();
-            }
-            const string sql = "SELECT * FROM templates WHERE key IN @Keys;";
-            using var connection = _databaseHelper.GetConnection();
-            return await connection.QueryAsync<TemplateModel>(sql, new { Keys = keys });
-        }
-        /// <summary>
         /// Retrieves a single template by its unique key (case-insensitive).
         /// </summary>
         /// <param name="key">The unique key of the template.</param>
@@ -174,69 +159,6 @@ namespace ImageGeneratorApp
             var now = DateTime.UtcNow;
             using var connection = _databaseHelper.GetConnection();
             var rowsAffected = await connection.ExecuteAsync(sql, new { Key = key, LastUsed = now, UpdatedAt = now });
-            return rowsAffected > 0;
-        }
-
-        /// <summary>
-        /// Increments the usage count of multiple templates and updates their last used timestamp in a single batch transaction.
-        /// </summary>
-        /// <param name="keys">The unique keys of the templates.</param>
-        /// <returns>True if the stats were successfully updated; otherwise, false.</returns>
-        public async Task<bool> UpdateUsageStatsBatchAsync(IEnumerable<string> keys)
-        {
-            if (keys == null)
-            {
-                return false;
-            }
-
-            var keysList = new List<string>(keys);
-            if (keysList.Count == 0)
-            {
-                return false;
-            }
-
-            var now = DateTime.UtcNow;
-            var keyCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            foreach (var key in keysList)
-            {
-                if (!string.IsNullOrWhiteSpace(key))
-                {
-                    if (keyCounts.TryGetValue(key, out int count))
-                    {
-                        keyCounts[key] = count + 1;
-                    }
-                    else
-                    {
-                        keyCounts[key] = 1;
-                    }
-                }
-            }
-
-            if (keyCounts.Count == 0)
-            {
-                return false;
-            }
-
-            var parameters = new List<object>(keyCounts.Count);
-            foreach (var kvp in keyCounts)
-            {
-                parameters.Add(new { Key = kvp.Key, Increment = kvp.Value, LastUsed = now, UpdatedAt = now });
-            }
-
-            const string sql = @"
-                UPDATE templates
-                SET usage_count = usage_count + @Increment,
-                    last_used = @LastUsed,
-                    updated_at = @UpdatedAt
-                WHERE key = @Key;";
-
-            using var connection = _databaseHelper.GetConnection();
-            connection.Open();
-            using var transaction = connection.BeginTransaction();
-
-            var rowsAffected = await connection.ExecuteAsync(sql, parameters, transaction);
-            transaction.Commit();
-
             return rowsAffected > 0;
         }
     }

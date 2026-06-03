@@ -440,20 +440,10 @@ namespace ImageGeneratorApp
                 this.UseWaitCursor = true;
                 var records = await _historyRepository.GetAllAsync();
 
-                // Suspend events to prevent UI thread freezing during bulk inserts
-                _historyList.RaiseListChangedEvents = false;
-                try
+                _historyList.Clear();
+                foreach (var record in records)
                 {
-                    _historyList.Clear();
-                    foreach (var record in records)
-                    {
-                        _historyList.Add(record);
-                    }
-                }
-                finally
-                {
-                    _historyList.RaiseListChangedEvents = true;
-                    _historyList.ResetBindings();
+                    _historyList.Add(record);
                 }
 
                 dataGridViewHistory.DataSource = _historyList;
@@ -488,20 +478,10 @@ namespace ImageGeneratorApp
             {
                 var filtered = await _historyRepository.SearchAsync(searchTerm);
 
-                // Suspend events to prevent UI thread freezing during bulk inserts
-                _historyList.RaiseListChangedEvents = false;
-                try
+                _historyList.Clear();
+                foreach (var record in filtered)
                 {
-                    _historyList.Clear();
-                    foreach (var record in filtered)
-                    {
-                        _historyList.Add(record);
-                    }
-                }
-                finally
-                {
-                    _historyList.RaiseListChangedEvents = true;
-                    _historyList.ResetBindings();
+                    _historyList.Add(record);
                 }
 
                 UpdateSelectionDetails();
