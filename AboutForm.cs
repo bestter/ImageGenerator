@@ -188,10 +188,11 @@ https://www.gnu.org/licenses/";
                     ArgumentList = { licensePath }
                 });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
+                // 🛡️ Sentinel: Present a generic error message and avoid leaking system paths or raw exceptions.
                 MessageBox.Show(
-                    $"Impossible d'ouvrir le fichier de licence.\n\nErreur : {ex.Message}\n\nChemin : {licensePath}",
+                    "Impossible d'ouvrir le fichier de licence en raison d'une erreur système inattendue.",
                     "Erreur d'ouverture",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);

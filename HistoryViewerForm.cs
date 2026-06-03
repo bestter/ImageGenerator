@@ -506,9 +506,10 @@ namespace ImageGeneratorApp
 
                 UpdateSelectionDetails();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                lblImageStatus.Text = $"Error searching: {ex.Message}";
+                // 🛡️ Sentinel: Present a generic error message and avoid leaking raw exceptions.
+                lblImageStatus.Text = "❌ Erreur inattendue lors de la recherche.";
             }
         }
 
@@ -580,11 +581,12 @@ namespace ImageGeneratorApp
                     gdiImage.Dispose();
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 if (token == _currentSelectionToken)
                 {
-                    lblImageStatus.Text = $"❌ Erreur de chargement: {ex.Message}";
+                    // 🛡️ Sentinel: Present a generic error message and avoid leaking raw exceptions.
+                    lblImageStatus.Text = "❌ Erreur inattendue lors du chargement de l'image.";
                     lblImageStatus.Visible = true;
                 }
             }

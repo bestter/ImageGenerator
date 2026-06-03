@@ -333,9 +333,10 @@ namespace ImageGeneratorApp
                         this.Invalidate();
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    toolTipGenerate.SetToolTip(btnGenerate, $"Erreur de résolution :\n{ex.Message}");
+                    // 🛡️ Sentinel: Present a generic error message and avoid leaking raw exceptions.
+                    toolTipGenerate.SetToolTip(btnGenerate, "Erreur lors de la résolution du gabarit.");
 
                     if (!_hasPromptError)
                     {
