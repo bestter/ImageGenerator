@@ -77,3 +77,7 @@
 **Vulnerability:** Calling `MessageBox.Show(ex.Message)` or interpolating `ex.Message` directly in user-facing dialogs can inadvertently expose sensitive internal details (such as database structure, exact file paths, or internal error states) to the user.
 **Learning:** Any unhandled or explicitly caught exceptions that are passed to the UI layer must be sanitized to prevent leaking diagnostic internals.
 **Prevention:** Always catch specific exceptions where possible, and present generic, safe error messages to the user in `MessageBox.Show` instead of relying on the raw exception string.
+## 2024-06-05 - Command Injection via Process.Start and UseShellExecute
+**Vulnerability:** Invoking `Process.Start` with `UseShellExecute = true` and a file path can be manipulated for command injection. If the file path comes from an untrusted source, it can be abused. While this codebase uses `AppContext.BaseDirectory`, it is best practice to avoid relying on shell execution semantics.
+**Learning:** Depending on `UseShellExecute=true` to open text files exposes the application to command injection if environment path parsing behaves unexpectedly or is tampered with.
+**Prevention:** Invoke the explicit application binary (e.g., `notepad.exe`) directly by setting `UseShellExecute = false`, and pass untrusted parameters securely via `ArgumentList`.
