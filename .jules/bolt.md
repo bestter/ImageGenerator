@@ -38,3 +38,7 @@
 ## 2026-06-05 - Avoid fetching full entity models when only keys are needed
 **Learning:** Fetching full entity models (e.g., using `GetAllAsync`) when only a single column like a `key` is required for an autocomplete cache causes unnecessary data loading, memory allocation for properties (especially large text fields), and object instantiation overhead.
 **Action:** Always create targeted queries (e.g., `GetAllKeysAsync`) that select only the specifically required columns when populating UI caches or lists that don't need the entire entity model.
+
+## 2026-06-08 - Suspend DataGridView BindingList events during bulk inserts
+**Learning:** Adding items one-by-one to a `BindingList` that is bound to a `DataGridView` without suspending `RaiseListChangedEvents` triggers expensive UI layout and redraw operations on every single addition, heavily degrading performance and freezing the UI during bulk loads or searches.
+**Action:** Set `RaiseListChangedEvents = false` on the `BindingList`, perform the bulk `Clear` and `Add` operations, then reset `RaiseListChangedEvents = true` and call `ResetBindings()` to update the UI only once.
