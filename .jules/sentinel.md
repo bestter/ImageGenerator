@@ -77,3 +77,7 @@
 **Vulnerability:** Calling `MessageBox.Show(ex.Message)` or interpolating `ex.Message` directly in user-facing dialogs can inadvertently expose sensitive internal details (such as database structure, exact file paths, or internal error states) to the user.
 **Learning:** Any unhandled or explicitly caught exceptions that are passed to the UI layer must be sanitized to prevent leaking diagnostic internals.
 **Prevention:** Always catch specific exceptions where possible, and present generic, safe error messages to the user in `MessageBox.Show` instead of relying on the raw exception string.
+## 2026-06-04 - Unsecured Plain Text API Key Storage
+**Vulnerability:** The API key was previously pulled directly from a TextBox without any secure persistence mechanism. Forcing users to repeatedly paste credentials increases the risk of clipboard scraping, key leakage, or user error.
+**Learning:** Forcing users to paste credentials repeatedly without a secure local persistence mechanism is a usability and security issue. Using `ProtectedData` (Windows DPAPI) provides a secure way to store secrets tied to the current Windows user without managing explicit encryption keys.
+**Prevention:** Use Windows DPAPI (`System.Security.Cryptography.ProtectedData.Protect` and `Unprotect`) to save and load secrets on disk to avoid requiring users to repeatedly type them or keeping them globally accessible in plain text.

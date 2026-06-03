@@ -360,6 +360,8 @@ namespace ImageGeneratorApp
         {
             string apiKey = txtApiKey.Text?.Trim() ?? string.Empty;
 
+            ApiKeyStorageHelper.SaveApiKey(apiKey);
+
             string? imageToEditBase64 = null;
             if (chkMultiTurnEditing.Checked && !string.IsNullOrEmpty(currentBase64Image))
             {
@@ -772,6 +774,13 @@ namespace ImageGeneratorApp
         protected override async void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
+
+            string savedKey = ApiKeyStorageHelper.LoadApiKey();
+            if (!string.IsNullOrEmpty(savedKey) && txtApiKey != null)
+            {
+                txtApiKey.Text = savedKey;
+            }
+
             await RefreshTemplateKeysCacheAsync();
         }
 
