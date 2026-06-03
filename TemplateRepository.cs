@@ -161,5 +161,68 @@ namespace ImageGeneratorApp
             var rowsAffected = await connection.ExecuteAsync(sql, new { Key = key, LastUsed = now, UpdatedAt = now });
             return rowsAffected > 0;
         }
+
+        /// <summary>
+        /// Increments the usage count of multiple templates and updates their last used timestamp in a single batch transaction.
+        /// </summary>
+        /// <param name="keys">The unique keys of the templates.</param>
+        /// <returns>True if the stats were successfully updated; otherwise, false.</returns>
+        public async Task<bool> UpdateUsageStatsBatchAsync(IEnumerable<string> keys)
+        {
+            if (keys == null)
+            {
+                return false;
+            }
+
+            var keysList = new List<string>(keys);
+            if (keysList.Count == 0)
+            {
+                return false;
+            }
+
+            var now = DateTime.UtcNow;
+            var keyCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            foreach (var key in keysList)
+            {
+                if (!string.IsNullOrWhiteSpace(key))
+                {
+                    if (keyCounts.TryGetValue(key, out int count))
+                    {
+                        keyCounts[key] = count + 1;
+                    }
+                    else
+                    {
+                        keyCounts[key] = 1;
+                    }
+                }
+            }
+
+            if (keyCounts.Count == 0)
+            {
+                return false;
+            }
+
+            var parameters = new List<object>(keyCounts.Count);
+            foreach (var kvp in keyCounts)
+            {
+                parameters.Add(new { Key = kvp.Key, Increment = kvp.Value, LastUsed = now, UpdatedAt = now });
+            }
+
+            const string sql = @"
+                UPDATE templates
+                SET usage_count = usage_count + @Increment,
+                    last_used = @LastUsed,
+                    updated_at = @UpdatedAt
+                WHERE key = @Key;";
+
+            using var connection = _databaseHelper.GetConnection();
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+
+            var rowsAffected = await connection.ExecuteAsync(sql, parameters, transaction);
+            transaction.Commit();
+
+            return rowsAffected > 0;
+        }
     }
 }

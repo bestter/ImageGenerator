@@ -87,6 +87,9 @@ namespace ImageGeneratorApp
             // This significantly reduces I/O latency when processing complex or recursive prompts containing duplicate keys.
             var localCache = new Dictionary<string, TemplateModel>(StringComparer.OrdinalIgnoreCase);
 
+            // ⚡ Bolt Optimization: Batch usage stats updates to prevent N+1 query issue
+            var keysToIncrement = new List<string>();
+
             do
             {
                 replacedAny = false;
@@ -144,16 +147,21 @@ namespace ImageGeneratorApp
                     currentPrompt = currentPrompt.Replace(tag, templateValue);
                     replacedAny = true;
 
-                    // If requested, asynchronously increment usage stats for this key in the database
+                    // If requested, track this key to asynchronously increment usage stats later in batch
                     if (incrementUsageStats)
                     {
-                        await _repository.UpdateUsageStatsAsync(key);
+                        keysToIncrement.Add(key);
                     }
                 }
 
                 iterations++;
 
             } while (replacedAny);
+
+            if (incrementUsageStats && keysToIncrement.Count > 0)
+            {
+                await _repository.UpdateUsageStatsBatchAsync(keysToIncrement);
+            }
 
             // Clean up double/multiple spaces and trim the final result
             currentPrompt = MultipleSpacesRegex().Replace(currentPrompt, " ").Trim();
