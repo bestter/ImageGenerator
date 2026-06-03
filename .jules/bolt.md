@@ -42,3 +42,6 @@
 ## 2026-06-08 - Suspend DataGridView BindingList events during bulk inserts
 **Learning:** Adding items one-by-one to a `BindingList` that is bound to a `DataGridView` without suspending `RaiseListChangedEvents` triggers expensive UI layout and redraw operations on every single addition, heavily degrading performance and freezing the UI during bulk loads or searches.
 **Action:** Set `RaiseListChangedEvents = false` on the `BindingList`, perform the bulk `Clear` and `Add` operations, then reset `RaiseListChangedEvents = true` and call `ResetBindings()` to update the UI only once.
+## 2026-06-03 - Avoid N+1 queries during prompt parsing loop
+**Learning:** Running queries iteratively inside a parsing loop causes N+1 problems and excessive DB lookups.
+**Action:** Extract all keys and bulk load missing templates with a single IN query (e.g. `GetByKeysAsync`) before iterating to replace template strings, which brings parsing benchmark time from 1.1s down to ~0.3s.
