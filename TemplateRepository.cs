@@ -46,6 +46,21 @@ namespace ImageGeneratorApp
         }
 
         /// <summary>
+        /// Retrieves multiple templates by their unique keys.
+        /// </summary>
+        /// <param name="keys">The unique keys of the templates.</param>
+        /// <returns>A collection of templates found.</returns>
+        public async Task<IEnumerable<TemplateModel>> GetByKeysAsync(IEnumerable<string> keys)
+        {
+            if (keys == null || !System.Linq.Enumerable.Any(keys))
+            {
+                return System.Linq.Enumerable.Empty<TemplateModel>();
+            }
+            const string sql = "SELECT * FROM templates WHERE key IN @Keys;";
+            using var connection = _databaseHelper.GetConnection();
+            return await connection.QueryAsync<TemplateModel>(sql, new { Keys = keys });
+        }
+        /// <summary>
         /// Retrieves a single template by its unique key (case-insensitive).
         /// </summary>
         /// <param name="key">The unique key of the template.</param>

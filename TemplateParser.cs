@@ -108,6 +108,27 @@ namespace ImageGeneratorApp
                     .Distinct()
                     .ToList();
 
+                var missingKeys = uniqueTags
+                    .Select(tag => tag[1..^1].Split(':')[0].Trim())
+                    .Where(key => !localCache.ContainsKey(key))
+                    .Distinct()
+                    .ToList();
+
+                if (missingKeys.Any())
+                {
+                    var fetchedTemplates = await _repository.GetByKeysAsync(missingKeys);
+                    foreach (var t in fetchedTemplates)
+                    {
+                        localCache[t.Key] = t;
+                    }
+
+                    var unfoundKey = missingKeys.FirstOrDefault(k => !localCache.ContainsKey(k));
+                    if (unfoundKey != null)
+                    {
+                        throw new KeyNotFoundException($"Le modèle '{unfoundKey}' n'est pas reconnu.");
+                    }
+                }
+
                 foreach (var tag in uniqueTags)
                 {
                     // tag is e.g. "{subject:dog:red}"
@@ -118,15 +139,7 @@ namespace ImageGeneratorApp
                     var parts = innerContent.Split(':');
                     var key = parts[0].Trim();
 
-                    if (!localCache.TryGetValue(key, out var template))
-                    {
-                        template = await _repository.GetByKeyAsync(key);
-                        if (template == null)
-                        {
-                            throw new KeyNotFoundException($"Le modèle '{key}' n'est pas reconnu.");
-                        }
-                        localCache[key] = template;
-                    }
+                    var template = localCache[key];
 
                     var templateValue = template.Value;
 
