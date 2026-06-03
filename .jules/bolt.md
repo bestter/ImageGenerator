@@ -48,3 +48,6 @@
 ## 2026-06-03 - Test ImageProcessingService ArgumentExceptions
 **Learning:** Argument validation like `sourceImageBytes` or `baseFileName` being null/empty/whitespace are easy cases to test but critical to ensure robust file operations.
 **Action:** Always add tests to ensure basic ArgumentExceptions are caught before more complex execution paths are traversed.
+## 2026-06-10 - Batch insert items in UI collections
+**Learning:** Adding items one-by-one to UI collections like `ListBox.Items` or `ComboBox.Items` inside a `foreach` loop forces repeated internal array resizing and recalculations.
+**Action:** Always batch insert items using the `.AddRange(object[])` method when populating UI lists to optimize rendering performance.
