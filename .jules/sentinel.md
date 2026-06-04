@@ -81,3 +81,7 @@
 **Vulnerability:** The API key was previously pulled directly from a TextBox without any secure persistence mechanism. Forcing users to repeatedly paste credentials increases the risk of clipboard scraping, key leakage, or user error.
 **Learning:** Forcing users to paste credentials repeatedly without a secure local persistence mechanism is a usability and security issue. Using `ProtectedData` (Windows DPAPI) provides a secure way to store secrets tied to the current Windows user without managing explicit encryption keys.
 **Prevention:** Use Windows DPAPI (`System.Security.Cryptography.ProtectedData.Protect` and `Unprotect`) to save and load secrets on disk to avoid requiring users to repeatedly type them or keeping them globally accessible in plain text.
+## 2026-06-05 - SQL Wildcard Injection
+**Vulnerability:** User-supplied search terms were directly placed into SQL `LIKE` clauses surrounded by `%`. If an attacker input a search term with `%`, `_`, or `[`, it could be interpreted as a wildcard by the database, leading to wildcard injection. This can bypass input intent or cause Denial of Service (DoS) due to expensive database operations.
+**Learning:** Standard SQL parameters do not escape wildcard characters within a string used for a `LIKE` operator.
+**Prevention:** Always explicitly escape `\`, `%`, and `_` characters in user input and append `ESCAPE '\'` to the SQL query when constructing parameterized `LIKE` queries.
