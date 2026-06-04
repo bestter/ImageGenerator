@@ -243,10 +243,9 @@ namespace ImageGeneratorApp
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(c => c);
 
-            foreach (var category in categories)
-            {
-                cmbCategory.Items.Add(category!);
-            }
+            // ⚡ Bolt Optimization: Batch insert categories using .AddRange() instead of a foreach loop
+            // This reduces internal recalculations within the ComboBox collection when filtering the master list
+            cmbCategory.Items.AddRange(categories.Cast<object>().ToArray());
 
             if (previousSelection != null && cmbCategory.Items.Contains(previousSelection))
             {

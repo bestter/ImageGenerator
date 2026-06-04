@@ -948,10 +948,9 @@ namespace ImageGeneratorApp
                 {
                     lstAutocomplete.BeginUpdate();
                     lstAutocomplete.Items.Clear();
-                    foreach (var key in matched)
-                    {
-                        lstAutocomplete.Items.Add(key);
-                    }
+                    // ⚡ Bolt Optimization: Batch insert autocomplete items using .AddRange() instead of a foreach loop
+                    // This prevents repeated array resizing and layout recalculations, optimizing rendering performance
+                    lstAutocomplete.Items.AddRange(matched.Cast<object>().ToArray());
                     lstAutocomplete.SelectedIndex = 0;
                     lstAutocomplete.EndUpdate();
 
