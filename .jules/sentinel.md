@@ -85,3 +85,7 @@
 **Vulnerability:** User-supplied search terms were directly placed into SQL `LIKE` clauses surrounded by `%`. If an attacker input a search term with `%`, `_`, or `[`, it could be interpreted as a wildcard by the database, leading to wildcard injection. This can bypass input intent or cause Denial of Service (DoS) due to expensive database operations.
 **Learning:** Standard SQL parameters do not escape wildcard characters within a string used for a `LIKE` operator.
 **Prevention:** Always explicitly escape `\`, `%`, and `_` characters in user input and append `ESCAPE '\'` to the SQL query when constructing parameterized `LIKE` queries.
+## 2026-06-06 - Prevent Command Injection via Process.Start
+**Vulnerability:** The application used `Process.Start` with `UseShellExecute = true` to open local files (like `LICENSE.txt`). If an attacker could control or manipulate the target path or environment variables, `UseShellExecute = true` could allow executing unintended shell commands or opening malicious applications instead of just reading the text file.
+**Learning:** `UseShellExecute = true` inherently passes strings to the Windows shell (cmd.exe or similar), which applies its own parsing rules, making it dangerous for dynamic paths.
+**Prevention:** Always invoke the specific target executable (e.g., `notepad.exe`) with `UseShellExecute = false`, and securely pass file paths or arguments using the `ArgumentList` property instead of string concatenation.

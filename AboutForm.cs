@@ -162,7 +162,7 @@ https://www.gnu.org/licenses/";
 
         /// <summary>
         /// Opens the LICENSE.txt file located in the same directory as the running executable.
-        /// Uses Process.Start with UseShellExecute for shell association (Notepad, etc.).
+        /// Uses explicitly notepad.exe to prevent command injection via UseShellExecute.
         /// Gracefully handles the case where the file is missing.
         /// </summary>
         private void BtnShowLicense_Click(object? sender, EventArgs e)
@@ -181,11 +181,14 @@ https://www.gnu.org/licenses/";
                     return;
                 }
 
-                Process.Start(new ProcessStartInfo
+                var startInfo = new ProcessStartInfo
                 {
-                    FileName = licensePath,
-                    UseShellExecute = true
-                });
+                    FileName = "notepad.exe",
+                    UseShellExecute = false
+                };
+                startInfo.ArgumentList.Add(licensePath);
+
+                Process.Start(startInfo);
             }
             catch (Exception)
             {
