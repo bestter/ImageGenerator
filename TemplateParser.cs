@@ -108,6 +108,28 @@ namespace ImageGeneratorApp
                     .Distinct()
                     .ToList();
 
+                // ⚡ Bolt Optimization: Extract all keys and bulk load missing templates with a single IN query
+                // to avoid N+1 queries during the prompt parsing loop.
+                var missingKeys = new List<string>();
+                foreach (var tag in uniqueTags)
+                {
+                    var innerContent = tag[1..^1];
+                    var key = innerContent.Split(':')[0].Trim();
+                    if (!localCache.ContainsKey(key) && !missingKeys.Contains(key))
+                    {
+                        missingKeys.Add(key);
+                    }
+                }
+
+                if (missingKeys.Count > 0)
+                {
+                    var fetchedTemplates = await _repository.GetByKeysAsync(missingKeys);
+                    foreach (var t in fetchedTemplates)
+                    {
+                        localCache[t.Key] = t;
+                    }
+                }
+
                 foreach (var tag in uniqueTags)
                 {
                     // tag is e.g. "{subject:dog:red}"
@@ -120,12 +142,7 @@ namespace ImageGeneratorApp
 
                     if (!localCache.TryGetValue(key, out var template))
                     {
-                        template = await _repository.GetByKeyAsync(key);
-                        if (template == null)
-                        {
-                            throw new KeyNotFoundException($"Le modèle '{key}' n'est pas reconnu.");
-                        }
-                        localCache[key] = template;
+                        throw new KeyNotFoundException($"Le modèle '{key}' n'est pas reconnu.");
                     }
 
                     var templateValue = template.Value;
