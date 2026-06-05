@@ -63,6 +63,37 @@ namespace ImageGeneratorApp
         }
 
         /// <summary>
+        /// Retrieves multiple templates by their unique keys.
+        /// </summary>
+        /// <param name="keys">The collection of unique keys.</param>
+        /// <returns>A collection of matching templates.</returns>
+        public async Task<IEnumerable<TemplateModel>> GetByKeysAsync(IEnumerable<string> keys)
+        {
+            if (keys == null)
+            {
+                return Array.Empty<TemplateModel>();
+            }
+
+            var keysList = new List<string>();
+            foreach (var key in keys)
+            {
+                if (!string.IsNullOrWhiteSpace(key))
+                {
+                    keysList.Add(key);
+                }
+            }
+
+            if (keysList.Count == 0)
+            {
+                return Array.Empty<TemplateModel>();
+            }
+
+            const string sql = "SELECT * FROM templates WHERE key IN @Keys;";
+            using var connection = _databaseHelper.GetConnection();
+            return await connection.QueryAsync<TemplateModel>(sql, new { Keys = keysList });
+        }
+
+        /// <summary>
         /// Inserts a new template record.
         /// Sets the <see cref="TemplateModel.Id"/> property with the newly generated auto-incrementing value.
         /// </summary>
