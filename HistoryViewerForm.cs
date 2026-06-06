@@ -440,10 +440,22 @@ namespace ImageGeneratorApp
                 this.UseWaitCursor = true;
                 var records = await _historyRepository.GetAllAsync();
 
-                _historyList.Clear();
-                foreach (var record in records)
+                try
                 {
-                    _historyList.Add(record);
+                    // ⚡ Bolt Optimization: Suspend DataGridView BindingList events during bulk inserts
+                    // This avoids expensive UI layout and redraw operations on every single addition,
+                    // heavily improving performance and preventing the UI from freezing.
+                    _historyList.RaiseListChangedEvents = false;
+                    _historyList.Clear();
+                    foreach (var record in records)
+                    {
+                        _historyList.Add(record);
+                    }
+                }
+                finally
+                {
+                    _historyList.RaiseListChangedEvents = true;
+                    _historyList.ResetBindings();
                 }
 
                 dataGridViewHistory.DataSource = _historyList;
@@ -478,10 +490,22 @@ namespace ImageGeneratorApp
             {
                 var filtered = await _historyRepository.SearchAsync(searchTerm);
 
-                _historyList.Clear();
-                foreach (var record in filtered)
+                try
                 {
-                    _historyList.Add(record);
+                    // ⚡ Bolt Optimization: Suspend DataGridView BindingList events during bulk inserts
+                    // This avoids expensive UI layout and redraw operations on every single addition,
+                    // heavily improving performance and preventing the UI from freezing.
+                    _historyList.RaiseListChangedEvents = false;
+                    _historyList.Clear();
+                    foreach (var record in filtered)
+                    {
+                        _historyList.Add(record);
+                    }
+                }
+                finally
+                {
+                    _historyList.RaiseListChangedEvents = true;
+                    _historyList.ResetBindings();
                 }
 
                 UpdateSelectionDetails();
