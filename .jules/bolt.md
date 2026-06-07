@@ -51,3 +51,6 @@
 ## 2026-06-10 - Batch insert items in UI collections
 **Learning:** Adding items one-by-one to UI collections like `ListBox.Items` or `ComboBox.Items` inside a `foreach` loop forces repeated internal array resizing and recalculations.
 **Action:** Always batch insert items using the `.AddRange(object[])` method when populating UI lists to optimize rendering performance.
+## 2026-06-15 - Debounce rapid UI inputs triggering list filtering
+**Learning:** Firing synchronous `ApplyFilters()` methods that clear and rebuild a `BindingList` on every keystroke in WinForms `TextChanged` events causes excessive UI stutters, even when list changed events are suspended.
+**Action:** Always implement a debounce mechanism using `System.Windows.Forms.Timer` (e.g., 300ms interval) for text input events that trigger UI list filtering and DataGridView bindings.
