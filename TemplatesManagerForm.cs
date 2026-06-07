@@ -42,6 +42,7 @@ namespace ImageGeneratorApp
         private Button btnEdit = null!;
         private Button btnDuplicate = null!;
         private Button btnDelete = null!;
+        private System.Windows.Forms.Timer _searchDebounceTimer = null!;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TemplatesManagerForm"/> class.
@@ -51,6 +52,10 @@ namespace ImageGeneratorApp
         public TemplatesManagerForm(TemplateRepository repository)
         {
             _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+
+            _searchDebounceTimer = new System.Windows.Forms.Timer { Interval = 300 };
+            _searchDebounceTimer.Tick += SearchDebounceTimer_Tick;
+
             InitializeControls();
         }
 
@@ -365,6 +370,14 @@ namespace ImageGeneratorApp
 
         private void TxtSearch_TextChanged(object? sender, EventArgs e)
         {
+            // ⚡ Bolt Optimization: Debounce UI inputs that trigger list filtering and DataGridView updates
+            _searchDebounceTimer.Stop();
+            _searchDebounceTimer.Start();
+        }
+
+        private void SearchDebounceTimer_Tick(object? sender, EventArgs e)
+        {
+            _searchDebounceTimer.Stop();
             ApplyFilters();
         }
 
@@ -508,6 +521,19 @@ namespace ImageGeneratorApp
                     this.UseWaitCursor = false;
                 }
             }
+        }
+
+        /// <summary>
+        /// Ensures standard WinForms disposals are handled clean.
+        /// </summary>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _searchDebounceTimer?.Stop();
+                _searchDebounceTimer?.Dispose();
+            }
+            base.Dispose(disposing);
         }
     }
 }
