@@ -131,6 +131,7 @@ namespace ImageGeneratorApp.Tests
             var list = System.Linq.Enumerable.ToList(results);
             list.Count.Should().Be(2);
             list[0].ImagePath.Should().Be("path2.webp"); // newer should be first
+            list[0].RawMetadata.Should().BeNull(); // ⚡ Bolt Optimization: RawMetadata omitted from GetAll
             list[1].ImagePath.Should().Be("path1.webp");
         }
 
@@ -158,10 +159,42 @@ namespace ImageGeneratorApp.Tests
             var searchGrok = await _repository.SearchAsync("grok");
             var grokList = System.Linq.Enumerable.ToList(searchGrok);
             grokList.Count.Should().Be(2);
+            grokList[0].RawMetadata.Should().BeNull(); // ⚡ Bolt Optimization: RawMetadata omitted from Search
 
             // Act & Assert empty/null query returns all
             var searchEmpty = await _repository.SearchAsync("  ");
             System.Linq.Enumerable.Count(searchEmpty).Should().Be(3);
+        }
+
+        [Fact]
+        public async Task GetRawMetadataAsync_ShouldReturnMetadata_WhenIdExists()
+        {
+            // Arrange
+            var history = new GenerationHistoryModel
+            {
+                ImagePath = "path.webp",
+                Prompt = "Some prompt",
+                ModelName = "model",
+                RawMetadata = "{\"key\": \"value\"}",
+                CreatedAt = DateTime.UtcNow
+            };
+            int generatedId = await _repository.InsertAsync(history);
+
+            // Act
+            var metadata = await _repository.GetRawMetadataAsync(generatedId);
+
+            // Assert
+            metadata.Should().Be("{\"key\": \"value\"}");
+        }
+
+        [Fact]
+        public async Task GetRawMetadataAsync_ShouldReturnNull_WhenIdDoesNotExist()
+        {
+            // Act
+            var metadata = await _repository.GetRawMetadataAsync(9999);
+
+            // Assert
+            metadata.Should().BeNull();
         }
     }
 }
