@@ -69,6 +69,8 @@ dotnet test ImageGeneratorApp.Tests/ImageGeneratorApp.Tests.csproj --verbosity n
 ├── ImageGeneratorJsonContext.cs  # Sérialisation JSON source-generated
 ├── GeminiModels.cs               # Modèles Gemini (requête/réponse)
 ├── ImageUrlObject.cs             # Objet de référence image (type + URL)
+├── Helpers/
+│   └── ApiKeyStorageHelper.cs      # Service de stockage sécurisé des clés API (chiffrement DPAPI)
 ├── ImageMetadataEmbedder.cs      # Service d'intégration de métadonnées AI (EXIF/XMP/PNG)
 ├── UserIdHelper.cs               # Gestion des identifiants (PII)
 ├── Program.cs                    # Point d'entrée
@@ -77,6 +79,7 @@ dotnet test ImageGeneratorApp.Tests/ImageGeneratorApp.Tests.csproj --verbosity n
 ├── ImageGeneratorApp.Tests/      # Tests unitaires et d'intégration (xUnit + Moq + FluentAssertions)
 │   ├── GlobalUsings.cs
 │   ├── ImageGeneratorClientTests.cs
+│   ├── ApiKeyStorageHelperTests.cs # Tests de stockage et chargement sécurisé des clés API
 │   ├── UserIdHelperTests.cs
 │   ├── TemplateRepositoryTests.cs# Tests de persistance et CRUD SQLite
 │   ├── TemplateParserTests.cs    # Tests du moteur d'analyse et de récursion
@@ -89,7 +92,8 @@ dotnet test ImageGeneratorApp.Tests/ImageGeneratorApp.Tests.csproj --verbosity n
 
 ## Sécurité
 
-- Les clés API sont saisies au runtime et **ne sont jamais persistées** sur le disque.
+- Les clés API saisies sont sauvegardées localement de manière chiffrée sur le disque via l'API DPAPI de Windows (`ProtectedData`), restreignant l'accès à l'utilisateur Windows courant.
+- Le chargement des clés sur le disque est protégé contre les attaques de type TOCTOU (*Time-of-Check to Time-of-Use*) et DoS par épuisement mémoire (avec limite de taille stricte à 4096 octets).
 - L'identifiant utilisateur envoyé à l'API est un hash opaque (SHA-256) pour protéger les PII.
 - Un `device_id` aléatoire est stocké localement dans `%LOCALAPPDATA%\GrokImagineApp\device_id.txt` comme identifiant stable.
 

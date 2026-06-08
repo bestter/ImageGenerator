@@ -47,16 +47,38 @@ namespace ImageGeneratorApp
             try
             {
                 string filePath = GetStorageFilePath(provider);
-                if (File.Exists(filePath))
+                using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
-                    byte[] encryptedBytes = File.ReadAllBytes(filePath);
+                    if (fs.Length > 4096)
+                    {
+                        return string.Empty;
+                    }
+
+                    int length = (int)fs.Length;
+                    byte[] encryptedBytes = new byte[length];
+                    int bytesRead = 0;
+                    while (bytesRead < length)
+                    {
+                        int read = fs.Read(encryptedBytes, bytesRead, length - bytesRead);
+                        if (read == 0)
+                        {
+                            break;
+                        }
+                        bytesRead += read;
+                    }
+
+                    if (bytesRead != length)
+                    {
+                        return string.Empty;
+                    }
+
                     byte[] plainBytes = ProtectedData.Unprotect(encryptedBytes, null, DataProtectionScope.CurrentUser);
                     return Encoding.UTF8.GetString(plainBytes);
                 }
             }
             catch (Exception)
             {
-                // Return empty if fails to unprotect
+                // Return empty if fails to load/unprotect
             }
             return string.Empty;
         }

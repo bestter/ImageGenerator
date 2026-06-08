@@ -22,11 +22,9 @@
     <PackageReference Include="FluentAssertions" Version="*" />
     <PackageReference Include="Dapper" Version="2.1.35" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.8" />
   </ItemGroup>
 
-  <ItemGroup>
-
-  </ItemGroup>
   <ItemGroup>
     <Compile Include="..\ImageGeneratorClient.cs" />
     <Compile Include="..\ImageGeneratorJsonContext.cs" />
@@ -45,5 +43,6 @@
     <Compile Include="..\GenerationHistoryRepository.cs" />
     <Compile Include="..\ImageProcessingService.cs" />
     <Compile Include="..\HistoryOrchestrator.cs" />
+    <Compile Include="..\Helpers\ApiKeyStorageHelper.cs" />
   </ItemGroup>
 </Project>

@@ -601,6 +601,30 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
+        public void Embed_NominalJpeg_ProducesLoadableImageWithExifAndXmpProfiles()
+        {
+            // Arrange
+            var original = CreateTinyTestPngBytes();
+            var meta = new ImageGenerationMetadata(
+                "Grok Imagine",
+                "A majestic mountain at sunset, highly detailed",
+                "grok-imagine-image",
+                new DateTime(2026, 5, 25, 12, 0, 0, DateTimeKind.Utc),
+                "2k",
+                "16:9",
+                "GrokImagineApp 1.1.0");
+
+            // Act
+            var embedded = ImageMetadataEmbedder.Embed(original, meta, ".jpg");
+
+            // Assert - basic roundtrip: loadable + profiles present
+            embedded.Should().NotBeNull();
+            using var reloaded = SixLabors.ImageSharp.Image.Load(embedded);
+            reloaded.Metadata.ExifProfile.Should().NotBeNull();
+            reloaded.Metadata.XmpProfile.Should().NotBeNull();
+        }
+
+        [Fact]
         public void GetFriendlyGeneratorName_MapsKnownModelsAndFallsBackForUnknown()
         {
             ImageMetadataEmbedder.GetFriendlyGeneratorName("grok-imagine-image").Should().Be("Grok Imagine");
