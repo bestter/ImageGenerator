@@ -54,3 +54,7 @@
 ## 2026-06-15 - Debounce rapid UI inputs triggering list filtering
 **Learning:** Firing synchronous `ApplyFilters()` methods that clear and rebuild a `BindingList` on every keystroke in WinForms `TextChanged` events causes excessive UI stutters, even when list changed events are suspended.
 **Action:** Always implement a debounce mechanism using `System.Windows.Forms.Timer` (e.g., 300ms interval) for text input events that trigger UI list filtering and DataGridView bindings.
+
+## 2026-06-20 - Avoid loading full entity models with large strings in lists
+**Learning:** Fetching full entity models (e.g., using `SELECT *` in `GetAllAsync` and `SearchAsync`) when populating a UI list causes unnecessary memory allocation for very large text fields (like `RawMetadata`), leading to Large Object Heap (LOH) fragmentation and I/O bottlenecks.
+**Action:** Explicitly select only the columns needed for the list view, and lazily load large payload columns (like metadata JSON strings) via a separate targeted query (e.g., `GetRawMetadataAsync`) only when the user selects the specific record.

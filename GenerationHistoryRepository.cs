@@ -54,7 +54,9 @@ namespace ImageGeneratorApp
         /// <returns>A collection of all history records.</returns>
         public async Task<IEnumerable<GenerationHistoryModel>> GetAllAsync()
         {
-            const string sql = "SELECT * FROM GenerationHistory ORDER BY CreatedAt DESC;";
+            // ⚡ Bolt Optimization: Avoid fetching full entity models when only keys/summaries are needed.
+            // Omitting the large RawMetadata column drastically reduces LOH allocations and I/O bottlenecks during list population.
+            const string sql = "SELECT Id, ImagePath, Prompt, ModelName, ModelVersion, CreatedAt FROM GenerationHistory ORDER BY CreatedAt DESC;";
             using var connection = _databaseHelper.GetConnection();
             return await connection.QueryAsync<GenerationHistoryModel>(sql);
         }
@@ -72,8 +74,9 @@ namespace ImageGeneratorApp
                 return await GetAllAsync();
             }
 
+            // ⚡ Bolt Optimization: Avoid fetching full entity models when only keys/summaries are needed.
             const string sql = @"
-                SELECT * FROM GenerationHistory 
+                SELECT Id, ImagePath, Prompt, ModelName, ModelVersion, CreatedAt FROM GenerationHistory
                 WHERE Prompt LIKE @Query ESCAPE '\'
                    OR ModelName LIKE @Query ESCAPE '\'
                 ORDER BY CreatedAt DESC;";
@@ -88,6 +91,18 @@ namespace ImageGeneratorApp
             var queryParam = $"%{escapedTerm}%";
             using var connection = _databaseHelper.GetConnection();
             return await connection.QueryAsync<GenerationHistoryModel>(sql, new { Query = queryParam });
+        }
+
+        /// <summary>
+        /// Retrieves only the RawMetadata column for a specific generation history record.
+        /// </summary>
+        /// <param name="id">The Id of the history record.</param>
+        /// <returns>The raw metadata JSON string, or null if not found.</returns>
+        public async Task<string?> GetRawMetadataAsync(int id)
+        {
+            const string sql = "SELECT RawMetadata FROM GenerationHistory WHERE Id = @Id;";
+            using var connection = _databaseHelper.GetConnection();
+            return await connection.QueryFirstOrDefaultAsync<string>(sql, new { Id = id });
         }
     }
 }
