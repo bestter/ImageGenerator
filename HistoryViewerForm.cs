@@ -551,7 +551,17 @@ namespace ImageGeneratorApp
             // Immediately display texts
             txtPrompt.Text = history.Prompt;
             lblModelValue.Text = $"{history.ModelName}  {(string.IsNullOrEmpty(history.ModelVersion) ? "" : $"({history.ModelVersion})")}";
-            txtMetadata.Text = FormatJson(history.RawMetadata);
+
+            // ⚡ Bolt Optimization: Lazily fetch RawMetadata on selection instead of loading it for the entire list
+            try
+            {
+                var rawMetadata = await _historyRepository.GetRawMetadataAsync((int)history.Id);
+                txtMetadata.Text = FormatJson(rawMetadata);
+            }
+            catch
+            {
+                txtMetadata.Text = "{ \"error\": \"Impossible de charger les métadonnées\" }";
+            }
 
             // Clean up the old image before rendering a new one to prevent GDI+ memory leaks
             var oldImage = pictureBoxImage.Image;
