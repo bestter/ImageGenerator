@@ -87,6 +87,43 @@ namespace ImageGeneratorApp
             // This significantly reduces I/O latency when processing complex or recursive prompts containing duplicate keys.
             var localCache = new Dictionary<string, TemplateModel>(StringComparer.OrdinalIgnoreCase);
 
+            // ⚡ Bolt Optimization: Completely avoid N+1 queries inside the template resolution loop.
+            // Pre-fetch all required templates recursively in bulk using a single IN query per depth level,
+            // before beginning any string replacements.
+            var keysToFetch = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            var initialMatches = TemplateRegex().Matches(inputPrompt);
+            foreach (System.Text.RegularExpressions.Match match in initialMatches)
+            {
+                var key = match.Value[1..^1].Split(':')[0].Trim();
+                keysToFetch.Add(key);
+            }
+
+            int fetchIterations = 0;
+            const int maxFetchIterations = 20;
+
+            while (keysToFetch.Count > 0 && fetchIterations < maxFetchIterations)
+            {
+                var fetchedTemplates = await _repository.GetByKeysAsync(keysToFetch);
+                keysToFetch.Clear();
+
+                foreach (var template in fetchedTemplates)
+                {
+                    localCache[template.Key] = template;
+
+                    var templateMatches = TemplateRegex().Matches(template.Value);
+                    foreach (System.Text.RegularExpressions.Match match in templateMatches)
+                    {
+                        var innerKey = match.Value[1..^1].Split(':')[0].Trim();
+                        if (!localCache.ContainsKey(innerKey))
+                        {
+                            keysToFetch.Add(innerKey);
+                        }
+                    }
+                }
+                fetchIterations++;
+            }
+
             do
             {
                 replacedAny = false;
@@ -107,28 +144,6 @@ namespace ImageGeneratorApp
                     .Select(m => m.Value)
                     .Distinct()
                     .ToList();
-
-                // ⚡ Bolt Optimization: Extract all keys and bulk load missing templates with a single IN query
-                // to avoid N+1 queries during the prompt parsing loop.
-                var missingKeys = new List<string>();
-                foreach (var tag in uniqueTags)
-                {
-                    var innerContent = tag[1..^1];
-                    var key = innerContent.Split(':')[0].Trim();
-                    if (!localCache.ContainsKey(key) && !missingKeys.Contains(key))
-                    {
-                        missingKeys.Add(key);
-                    }
-                }
-
-                if (missingKeys.Count > 0)
-                {
-                    var fetchedTemplates = await _repository.GetByKeysAsync(missingKeys);
-                    foreach (var t in fetchedTemplates)
-                    {
-                        localCache[t.Key] = t;
-                    }
-                }
 
                 foreach (var tag in uniqueTags)
                 {

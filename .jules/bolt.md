@@ -58,3 +58,7 @@
 ## 2026-06-20 - Avoid loading full entity models with large strings in lists
 **Learning:** Fetching full entity models (e.g., using `SELECT *` in `GetAllAsync` and `SearchAsync`) when populating a UI list causes unnecessary memory allocation for very large text fields (like `RawMetadata`), leading to Large Object Heap (LOH) fragmentation and I/O bottlenecks.
 **Action:** Explicitly select only the columns needed for the list view, and lazily load large payload columns (like metadata JSON strings) via a separate targeted query (e.g., `GetRawMetadataAsync`) only when the user selects the specific record.
+
+## 2024-08-05 - Avoid redundant database queries during recursive prompt parsing
+**Learning:** Even when bulk loading keys (`GetByKeysAsync`) inside a parsing loop, if the process loops over recursive key dependencies, running the query inside the iterative loop can still cause redundant database lookups per depth level.
+**Action:** Extract all keys recursively upfront and bulk load all missing templates using a single IN query loop *before* executing the primary string replacement loop, effectively eliminating DB lookups during string replacement.
