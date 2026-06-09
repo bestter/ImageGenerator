@@ -97,3 +97,8 @@
 **Vulnerability:** A file save utility directly used `Path.GetFileNameWithoutExtension(baseFileName)` to extract the base name. Since it didn't explicitly strip directory segments first, malicious directory traversal sequences (like `..\..\`) could bypass checks if the file lacked an extension, allowing an attacker to write files outside the intended target directory.
 **Learning:** `Path.GetFileNameWithoutExtension` does not inherently sanitize directory traversal segments if an extension is absent or improperly formatted.
 **Prevention:** Always use `Path.GetFileName` to definitively isolate the final file component from a user-provided or potentially tainted path before extracting its extension or combining it into a target folder.
+
+## 2026-06-11 - Prevent Information Leakage in MessageBox Dialogs
+**Vulnerability:** The application was exposing the full local path (`licensePath`) of the application directory when displaying a `MessageBox` for a missing license file.
+**Learning:** Hardcoding or dynamically interpolating full system paths in user-facing UI elements (like `MessageBox`) can leak sensitive directory structure and execution context information, giving an attacker hints about the underlying system.
+**Prevention:** Remove specific local paths from user-facing error dialogs and use generic messages.
