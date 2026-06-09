@@ -116,6 +116,22 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
+        public async Task GetByKeysAsync_WithNullEmptyOrWhitespaceKeys_ShouldReturnEmptyArray()
+        {
+            // Act & Assert for null
+            var resultNull = await _repository.GetByKeysAsync(null!);
+            resultNull.Should().BeEmpty();
+
+            // Act & Assert for empty
+            var resultEmpty = await _repository.GetByKeysAsync(Array.Empty<string>());
+            resultEmpty.Should().BeEmpty();
+
+            // Act & Assert for whitespace only
+            var resultWhitespace = await _repository.GetByKeysAsync(new[] { " ", "", null! });
+            resultWhitespace.Should().BeEmpty();
+        }
+
+        [Fact]
         public async Task GetAllAsync_ShouldReturnAllTemplatesOrderedByCreatedAtDescending()
         {
             // Arrange
