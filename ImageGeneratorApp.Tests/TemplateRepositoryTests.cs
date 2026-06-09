@@ -177,6 +177,20 @@ namespace ImageGeneratorApp.Tests
             retrieved.Should().BeNull();
         }
 
+
+        [Theory]
+        [InlineData("")]
+        [InlineData(" ")]
+        [InlineData(null)]
+        public async Task DeleteAsync_ShouldReturnFalse_WhenKeyIsEmptyOrNull(string? invalidKey)
+        {
+            // Act
+            bool deleted = await _repository.DeleteAsync(invalidKey!); // Suppress null warning as we are explicitly testing null input
+
+            // Assert
+            deleted.Should().BeFalse();
+        }
+
         [Fact]
         public async Task UpdateUsageStatsAsync_ShouldIncrementUsageCountAndSetLastUsed()
         {
