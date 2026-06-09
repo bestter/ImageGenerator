@@ -36,7 +36,7 @@ namespace ImageGeneratorApp
             try
             {
                 // 🛡️ Sentinel: Prevent PII leakage by using a stable GUID instead of Environment.UserName
-                string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GrokImagineApp");
+                string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ImageGeneratorApp");
                 Directory.CreateDirectory(folder);
                 string filePath = Path.Combine(folder, "device_id.txt");
 
