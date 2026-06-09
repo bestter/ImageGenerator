@@ -183,5 +183,31 @@ namespace ImageGeneratorApp.Tests
             Func<Task> act3 = async () => await _imageProcessingService.LoadWebpForWinFormsAsync(nonExistentPath);
             await act3.Should().ThrowAsync<FileNotFoundException>();
         }
+
+        [Fact]
+        public async Task LoadWebpForWinFormsAsync_EmptyFile_ThrowsArgumentException()
+        {
+            // Arrange
+            var emptyFilePath = Path.Combine(Path.GetTempPath(), $"empty_{Guid.NewGuid():N}.webp");
+            await File.WriteAllBytesAsync(emptyFilePath, Array.Empty<byte>());
+            _createdWebpPath = emptyFilePath; // Register for cleanup
+
+            try
+            {
+                // Act
+                Func<Task> act = async () => await _imageProcessingService.LoadWebpForWinFormsAsync(emptyFilePath);
+
+                // Assert
+                await act.Should().ThrowAsync<ArgumentException>()
+                    .WithMessage("File is empty.*");
+            }
+            finally
+            {
+                if (File.Exists(emptyFilePath))
+                {
+                    File.Delete(emptyFilePath);
+                }
+            }
+        }
     }
 }
