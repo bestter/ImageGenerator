@@ -58,3 +58,6 @@
 ## 2026-06-20 - Avoid loading full entity models with large strings in lists
 **Learning:** Fetching full entity models (e.g., using `SELECT *` in `GetAllAsync` and `SearchAsync`) when populating a UI list causes unnecessary memory allocation for very large text fields (like `RawMetadata`), leading to Large Object Heap (LOH) fragmentation and I/O bottlenecks.
 **Action:** Explicitly select only the columns needed for the list view, and lazily load large payload columns (like metadata JSON strings) via a separate targeted query (e.g., `GetRawMetadataAsync`) only when the user selects the specific record.
+## 2026-06-25 - Ensure TOCTOU empty file tests are comprehensive
+**Learning:** Testing explicitly thrown exceptions on empty files ensures robust application handling before parsing operations fail ambiguously.
+**Action:** Always write tests to confirm explicitly caught errors (like empty files) fail predictably and generate appropriate exceptions.
