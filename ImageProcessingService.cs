@@ -43,7 +43,8 @@ namespace ImageGeneratorApp
             Directory.CreateDirectory(historyFolder);
 
             // Clean the base file name, strip any existing extension, and append .webp
-            var cleanFileName = Path.GetFileNameWithoutExtension(baseFileName) + ".webp";
+            var safeBaseName = Path.GetFileName(baseFileName);
+            var cleanFileName = Path.GetFileNameWithoutExtension(safeBaseName) + ".webp";
             var fullPath = Path.Combine(historyFolder, cleanFileName);
 
             // Offload CPU-heavy image loading, encoding, and IO-heavy saving to a background thread to prevent UI freezing
