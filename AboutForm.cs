@@ -171,24 +171,27 @@ https://www.gnu.org/licenses/";
 
             try
             {
-                if (!File.Exists(licensePath))
+                // 🛡️ Sentinel: Open a FileStream to validate existence and prevent TOCTOU before launching Notepad.
+                // We use FileShare.ReadWrite so Notepad can still open it while we hold the handle briefly.
+                using (var fs = new FileStream(licensePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 {
-                    MessageBox.Show(
-                        $"Le fichier de licence LICENSE.txt est introuvable dans le dossier de l'application.\n\nChemin attendu :\n{licensePath}",
-                        "Licence introuvable",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
-                    return;
+                    var startInfo = new ProcessStartInfo
+                    {
+                        FileName = "notepad.exe",
+                        UseShellExecute = false
+                    };
+                    startInfo.ArgumentList.Add(licensePath);
+
+                    Process.Start(startInfo);
                 }
-
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = "notepad.exe",
-                    UseShellExecute = false
-                };
-                startInfo.ArgumentList.Add(licensePath);
-
-                Process.Start(startInfo);
+            }
+            catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException)
+            {
+                MessageBox.Show(
+                    $"Le fichier de licence LICENSE.txt est introuvable dans le dossier de l'application.\n\nChemin attendu :\n{licensePath}",
+                    "Licence introuvable",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
             }
             catch (Exception)
             {
