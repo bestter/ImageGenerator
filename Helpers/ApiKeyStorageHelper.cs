@@ -85,19 +85,19 @@ namespace ImageGeneratorApp
                     return Encoding.UTF8.GetString(plainBytes);
                 }
             }
-            catch (Exception ex)
-            catch (IOException)
+            catch (IOException ex)
             {
                 Debug.WriteLine($"Failed to load API key for {provider}: {ex.Message}");
-                // Return empty if fails to load/unprotect
                 // Return empty if fails to read file
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException ex)
             {
+                Debug.WriteLine($"Failed to load API key for {provider}: {ex.Message}");
                 // Return empty if permission denied
             }
-            catch (CryptographicException)
+            catch (CryptographicException ex)
             {
+                Debug.WriteLine($"Failed to load API key for {provider}: {ex.Message}");
                 // Return empty if unprotect fails
             }
             return string.Empty;
