@@ -61,3 +61,7 @@
 ## 2026-06-25 - Ensure TOCTOU empty file tests are comprehensive
 **Learning:** Testing explicitly thrown exceptions on empty files ensures robust application handling before parsing operations fail ambiguously.
 **Action:** Always write tests to confirm explicitly caught errors (like empty files) fail predictably and generate appropriate exceptions.
+
+## 2024-08-05 - Avoid redundant database queries during recursive prompt parsing
+**Learning:** Even when bulk loading keys (`GetByKeysAsync`) inside a parsing loop, if the process loops over recursive key dependencies, running the query inside the iterative loop can still cause redundant database lookups per depth level.
+**Action:** Extract all keys recursively upfront and bulk load all missing templates using a single IN query loop *before* executing the primary string replacement loop, effectively eliminating DB lookups during string replacement.
