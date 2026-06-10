@@ -207,6 +207,21 @@ namespace ImageGeneratorApp.Tests
             deleted.Should().BeFalse();
         }
 
+
+        [Fact]
+        public async Task DeleteAsync_EmptyString_ReturnsFalse()
+        {
+            bool result = await _repository.DeleteAsync("");
+            result.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task DeleteAsync_NullString_ReturnsFalse()
+        {
+            bool result = await _repository.DeleteAsync(null!);
+            result.Should().BeFalse();
+        }
+
         [Fact]
         public async Task UpdateUsageStatsAsync_ShouldIncrementUsageCountAndSetLastUsed()
         {
