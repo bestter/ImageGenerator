@@ -2,8 +2,8 @@
 
 Ce fichier fournit un contexte aux agents IA travaillant sur ce projet.
 
-**Version** : 1.8
-**Dernière mise à jour** : 27 mai 2026
+**Version** : 1.9
+**Dernière mise à jour** : 10 juin 2026
 **Propriétaire** : Martin Labelle (@bestter)
 
 ---
@@ -99,7 +99,7 @@ L'application suit une structure modulaire séparant l'UI de la logique réseau 
 - **`DatabaseHelper.cs`** : Gère la création et l'initialisation de la base SQLite `templates.db` et configure Dapper avec un mapping global snake_case vers PascalCase (gère également la table `GenerationHistory`).
 - **`TemplateModel.cs`** : Modèle entité représentant un gabarit de prompt stocké en base de données.
 - **`TemplateRepository.cs`** : Gère l'accès aux données (Dapper) avec des opérations CRUD asynchrones et le suivi des statistiques d'usage.
-- **`TemplateParser.cs`** : Moteur d'analyse récursif et sécurisé pour étendre les balises de templates (`{key}` ou `{key:param1}`) avec limite de 20 itérations. Lève des exceptions précises lors d'erreurs de syntaxe (`FormatException`), de récursion infinie (`InvalidOperationException`) ou de clé manquante (`KeyNotFoundException`).
+- **`TemplateParser.cs`** : Moteur d'analyse récursif et sécurisé pour étendre les balises de templates (`{key}` ou `{key:param1}`) avec limite de 20 itérations. Intègre une optimisation de pré-chargement récursif en lot (IN query par niveau de profondeur) pour éliminer les requêtes N+1 en cours de parsing. Lève des exceptions précises lors d'erreurs de syntaxe (`FormatException`), de récursion infinie (`InvalidOperationException`) ou de clé manquante (`KeyNotFoundException`).
 - **`TemplatesManagerForm.cs`** : Vue WinForms (codée programmatiquement) de gestion de la liste des gabarits avec recherche/filtre en temps réel.
 - **`TemplateEditorForm.cs`** : Dialogue WinForms (codé programmatiquement) d'ajout/édition sécurisé avec détection de collisions de clés.
 - **`GenerationHistoryModel.cs`** : Modèle entité représentant un enregistrement de l'historique de génération dans la base SQLite.
@@ -107,7 +107,7 @@ L'application suit une structure modulaire séparant l'UI de la logique réseau 
 - **`ImageProcessingService.cs`** : Gère le décodage et l'encodage d'images (SixLabors.ImageSharp) en tâche d'arrière-plan, notamment la compression en WEBP à 80% avec injection de métadonnées et la conversion compatible GDI+ (clonage Bitmap) pour PictureBox.
 - **`HistoryOrchestrator.cs`** : Service unifié coordonnant la sauvegarde locale d'image en WEBP avec injection automatique de métadonnées EXIF/XMP et journalisation SQLite.
 - **`HistoryViewerForm.cs`** : Vue WinForms scindée (code-first) permettant de rechercher, lister et prévisualiser de manière performante et sécurisée (concurrency token).
-- **`AboutForm.cs`** : Dialogue « À propos » (code-first) affichant les informations de version, copyright et l'avis de licence GPL v3 en français, avec bouton d'ouverture directe de LICENSE.txt.
+- **`AboutForm.cs`** : Dialogue « À propos » (code-first) affichant les informations de version, copyright et l'avis de licence GPL v3 en français, avec bouton d'ouverture directe de LICENSE.txt. Protégé contre le TOCTOU via `FileStream` et contre la divulgation de chemins absolus système lors des erreurs.
 - **`Form1.Designer.cs` & `Form1.resx`** : Fichiers générés automatiquement gérant la disposition des éléments d'interface (bien que `Form1.cs` contienne une méthode personnalisée `InitializeControls()` créant l'interface par le code et incluant le bouton d'historique).
 - **`Program.cs`** : Point d'entrée de l'application (contient la méthode `Main`).
 - **`ImageGeneratorApp.csproj`** : Le fichier de définition du projet C# détaillant les dépendances et la configuration de compilation.
