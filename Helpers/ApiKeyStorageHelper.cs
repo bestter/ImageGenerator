@@ -37,10 +37,17 @@ namespace ImageGeneratorApp
                 byte[] encryptedBytes = ProtectedData.Protect(plainBytes, null, DataProtectionScope.CurrentUser);
                 File.WriteAllBytes(filePath, encryptedBytes);
             }
-            catch (Exception ex)
+            catch (IOException)
             {
-                Debug.WriteLine($"Failed to save API key for {provider}: {ex.Message}");
-                // Silently fail on storage errors for the caller, but log for debugging
+                // Silently fail on storage errors
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Silently fail on permission errors
+            }
+            catch (CryptographicException)
+            {
+                // Silently fail on encryption errors
             }
         }
 
@@ -79,9 +86,19 @@ namespace ImageGeneratorApp
                 }
             }
             catch (Exception ex)
+            catch (IOException)
             {
                 Debug.WriteLine($"Failed to load API key for {provider}: {ex.Message}");
                 // Return empty if fails to load/unprotect
+                // Return empty if fails to read file
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Return empty if permission denied
+            }
+            catch (CryptographicException)
+            {
+                // Return empty if unprotect fails
             }
             return string.Empty;
         }
