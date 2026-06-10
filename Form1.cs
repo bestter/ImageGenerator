@@ -334,8 +334,9 @@ namespace ImageGeneratorApp
                         this.Invalidate();
                     }
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    System.Diagnostics.Debug.WriteLine($"Error: {ex.Message}");
                     // 🛡️ Sentinel: Present a generic error message and avoid leaking raw exceptions.
                     toolTipGenerate.SetToolTip(btnGenerate, "Erreur lors de la résolution du gabarit.");
 
@@ -628,8 +629,9 @@ namespace ImageGeneratorApp
                     lblStatus.Text = "💾 Image sauvegardée avec métadonnées AI intégrées.";
                     MessageBox.Show("Image enregistrée avec succès !", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    System.Diagnostics.Debug.WriteLine($"Error saving image: {ex.Message}");
                     lblStatus.Text = "❌ Erreur de sauvegarde";
                     MessageBox.Show("Une erreur est survenue lors de la sauvegarde de l'image.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
@@ -676,8 +678,9 @@ namespace ImageGeneratorApp
                                 }
                             }
                         }
-                        catch (Exception)
+                        catch (Exception ex)
                         {
+                            System.Diagnostics.Debug.WriteLine($"Error opening image: {ex.Message}");
                             MessageBox.Show($"Impossible d'ouvrir l'image '{Path.GetFileName(file)}'.", "Erreur de lecture", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                             continue;
                         }
@@ -690,8 +693,9 @@ namespace ImageGeneratorApp
                     UpdateImageButtonText();
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"Error selecting images: {ex.Message}");
                 MessageBox.Show("Une erreur est survenue lors de la sélection des images.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }

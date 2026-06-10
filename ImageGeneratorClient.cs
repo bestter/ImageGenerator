@@ -229,9 +229,9 @@ namespace ImageGeneratorApp
                         }
                     }
                 }
-                catch (Exception)
+                catch (System.Text.Json.JsonException)
                 {
-                    // Fallback to generic message if parsing or property retrieval fails
+                    // Fallback to generic message if parsing fails
                 }
             }
 
