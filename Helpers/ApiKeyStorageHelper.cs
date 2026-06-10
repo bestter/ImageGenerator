@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
@@ -36,9 +37,17 @@ namespace ImageGeneratorApp
                 byte[] encryptedBytes = ProtectedData.Protect(plainBytes, null, DataProtectionScope.CurrentUser);
                 File.WriteAllBytes(filePath, encryptedBytes);
             }
-            catch (Exception)
+            catch (IOException)
             {
                 // Silently fail on storage errors
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Silently fail on permission errors
+            }
+            catch (CryptographicException)
+            {
+                // Silently fail on encryption errors
             }
         }
 
@@ -76,9 +85,20 @@ namespace ImageGeneratorApp
                     return Encoding.UTF8.GetString(plainBytes);
                 }
             }
-            catch (Exception)
+            catch (IOException ex)
             {
-                // Return empty if fails to load/unprotect
+                Debug.WriteLine($"Failed to load API key for {provider}: {ex.Message}");
+                // Return empty if fails to read file
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                Debug.WriteLine($"Failed to load API key for {provider}: {ex.Message}");
+                // Return empty if permission denied
+            }
+            catch (CryptographicException ex)
+            {
+                Debug.WriteLine($"Failed to load API key for {provider}: {ex.Message}");
+                // Return empty if unprotect fails
             }
             return string.Empty;
         }

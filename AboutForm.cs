@@ -174,7 +174,7 @@ https://www.gnu.org/licenses/";
                 if (!File.Exists(licensePath))
                 {
                     MessageBox.Show(
-                        $"Le fichier de licence LICENSE.txt est introuvable dans le dossier de l'application.\n\nChemin attendu :\n{licensePath}",
+                        "Le fichier de licence LICENSE.txt est introuvable dans le dossier de l'application.",
                         "Licence introuvable",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Warning);

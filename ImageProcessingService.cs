@@ -13,7 +13,7 @@ namespace ImageGeneratorApp
     public class ImageProcessingService
     {
         /// <summary>
-        /// Loads an image from a byte array (PNG/JPEG), encodes it to WEBP format at 80% quality, 
+        /// Loads an image from a byte array (PNG/JPEG), encodes it to WEBP format at 80% quality,
         /// and saves it to a dedicated history subfolder in LocalApplicationData.
         /// Optionally embeds AI generation metadata into the WebP file.
         /// </summary>
@@ -70,7 +70,7 @@ namespace ImageGeneratorApp
         }
 
         /// <summary>
-        /// Loads a WEBP image from disk using ImageSharp, converts it to a standard BMP stream, 
+        /// Loads a WEBP image from disk using ImageSharp, converts it to a standard BMP stream,
         /// and returns a GDI+ compatible System.Drawing.Image suitable for WinForms PictureBox.
         /// Properly clones the bitmap to prevent GDI+ dependency on the underlying memory stream.
         /// </summary>
