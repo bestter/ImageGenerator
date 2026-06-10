@@ -187,8 +187,9 @@ https://www.gnu.org/licenses/";
             }
             catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException)
             {
+                // 🛡️ Sentinel: Avoid leaking system paths or directory structure in user-facing message boxes.
                 MessageBox.Show(
-                    $"Le fichier de licence LICENSE.txt est introuvable dans le dossier de l'application.\n\nChemin attendu :\n{licensePath}",
+                    "Le fichier de licence LICENSE.txt est introuvable dans le dossier de l'application.",
                     "Licence introuvable",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);

@@ -77,12 +77,12 @@ namespace ImageGeneratorApp
         /// <summary>
         /// Embeds generation metadata into the provided image bytes and returns the new bytes
         /// encoded in the format indicated by fileExtension (or PNG if null/unknown).
-        /// 
+        ///
         /// Embedded fields (standards-based and tool-friendly):
         /// - EXIF: Software, DateTime, ImageDescription (prompt)
         /// - XMP: CreatorTool, CreateDate, dc:description (prompt), plus ai:Generator, ai:Model, ai:Prompt etc.
         /// - PNG only: additional tEXt/iTXt chunks for "Prompt", "Generator", "Software" (human readable, survives many uploaders).
-        /// 
+        ///
         /// The metadata is designed to be readable by ExifTool, Adobe tools, gallery sites, and OS viewers.
         /// </summary>
         /// <param name="sourceImageBytes">Original image bytes (typically PNG from the generator APIs).</param>

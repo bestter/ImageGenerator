@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 namespace ImageGeneratorApp
 {
     /// <summary>
-    /// Coordinates the post-generation workflow: converting the image to WEBP, saving it locally, 
+    /// Coordinates the post-generation workflow: converting the image to WEBP, saving it locally,
     /// and logging the details into the SQLite generation history database.
     /// </summary>
     public class HistoryOrchestrator
@@ -27,7 +27,7 @@ namespace ImageGeneratorApp
         }
 
         /// <summary>
-        /// Converts the generated image to a highly compressed WEBP file, writes it to disk, 
+        /// Converts the generated image to a highly compressed WEBP file, writes it to disk,
         /// and records the generation context in the SQLite history database.
         /// </summary>
         /// <param name="imageBytes">The raw bytes of the generated image (PNG/JPEG).</param>
