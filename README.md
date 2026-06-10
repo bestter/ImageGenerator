@@ -81,8 +81,9 @@ dotnet test ImageGeneratorApp.Tests/ImageGeneratorApp.Tests.csproj --verbosity n
 │   ├── ImageGeneratorClientTests.cs
 │   ├── ApiKeyStorageHelperTests.cs # Tests de stockage et chargement sécurisé des clés API
 │   ├── UserIdHelperTests.cs
-│   ├── TemplateRepositoryTests.cs# Tests de persistance et CRUD SQLite
-│   ├── TemplateParserTests.cs    # Tests du moteur d'analyse et de récursion
+│   ├── DatabaseHelperTests.cs      # Tests de configuration et initialisation SQLite
+│   ├── TemplateRepositoryTests.cs  # Tests de persistance et CRUD SQLite
+│   ├── TemplateParserTests.cs      # Tests du moteur d'analyse et de récursion
 │   ├── GenerationHistoryRepositoryTests.cs # Tests de persistance et recherche d'historique
 │   └── HistoryOrchestratorTests.cs # Tests d'intégration du flux WEBP et de persistance
 │   (inclut les tests pour ImageMetadataEmbedder)
@@ -94,6 +95,7 @@ dotnet test ImageGeneratorApp.Tests/ImageGeneratorApp.Tests.csproj --verbosity n
 
 - Les clés API saisies sont sauvegardées localement de manière chiffrée sur le disque via l'API DPAPI de Windows (`ProtectedData`), restreignant l'accès à l'utilisateur Windows courant.
 - Le chargement des clés sur le disque est protégé contre les attaques de type TOCTOU (*Time-of-Check to Time-of-Use*) et DoS par épuisement mémoire (avec limite de taille stricte à 4096 octets).
+- L'ouverture du fichier de licence dans le dialogue « À propos » est protégée contre le TOCTOU par un verrouillage via `FileStream` et exclut les chemins système absolus des dialogues d'erreur pour éviter la fuite d'informations (Path Disclosure).
 - L'identifiant utilisateur envoyé à l'API est un hash opaque (SHA-256) pour protéger les PII.
 - Un `device_id` aléatoire est stocké localement dans `%LOCALAPPDATA%\GrokImagineApp\device_id.txt` comme identifiant stable.
 

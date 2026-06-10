@@ -102,3 +102,7 @@
 **Vulnerability:** The application was exposing the full local path (`licensePath`) of the application directory when displaying a `MessageBox` for a missing license file.
 **Learning:** Hardcoding or dynamically interpolating full system paths in user-facing UI elements (like `MessageBox`) can leak sensitive directory structure and execution context information, giving an attacker hints about the underlying system.
 **Prevention:** Remove specific local paths from user-facing error dialogs and use generic messages.
+## 2026-06-12 - Prevent TOCTOU File Read Before Process.Start
+**Vulnerability:** Checking `File.Exists` before launching an external viewer like `notepad.exe` via `Process.Start` creates a TOCTOU (Time of Check to Time of Use) race condition. An attacker could delete or replace the file in the split second after the check passes.
+**Learning:** `Process.Start` relies on the external executable to handle its own file opening, meaning we cannot directly stream a locked file handle to it.
+**Prevention:** To validate file presence and prevent TOCTOU, wrap the `Process.Start` call inside a `FileStream` block using `FileShare.ReadWrite`. This ensures the file exists at execution time and prevents malicious modifications, while still allowing the external program to open it. Catch `FileNotFoundException` or `DirectoryNotFoundException` on the stream creation instead of relying on `File.Exists`.
