@@ -22,7 +22,7 @@ namespace ImageGeneratorApp
         /// Initializes a new instance of the <see cref="DatabaseHelper"/> class.
         /// </summary>
         /// <param name="connectionString">
-        /// Optional connection string. If null, the database file 'templates.db' 
+        /// Optional connection string. If null, the database file 'templates.db'
         /// will be created in Environment.SpecialFolder.LocalApplicationData.
         /// </param>
         public DatabaseHelper(string? connectionString = null)

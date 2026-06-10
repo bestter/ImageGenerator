@@ -234,7 +234,8 @@ namespace ImageGeneratorApp
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
                 AutoSize = true
             };
-            chkEnableTemplates.CheckedChanged += (s, ev) => {
+            chkEnableTemplates.CheckedChanged += (s, ev) =>
+            {
                 _validationDebounceTimer.Stop();
                 _validationDebounceTimer.Start();
             };
