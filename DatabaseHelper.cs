@@ -105,6 +105,10 @@ namespace ImageGeneratorApp
             // Create standard indexes for efficient lookup
             connection.Execute("CREATE INDEX IF NOT EXISTS IX_templates_key ON templates(key);");
             connection.Execute("CREATE INDEX IF NOT EXISTS IX_templates_category ON templates(category);");
+
+            // ⚡ Bolt Optimization: Add database index on frequently queried fields to speed up ORDER BY queries
+            connection.Execute("CREATE INDEX IF NOT EXISTS IX_templates_created_at ON templates(created_at DESC);");
+            connection.Execute("CREATE INDEX IF NOT EXISTS IX_GenerationHistory_CreatedAt ON GenerationHistory(CreatedAt DESC);");
         }
     }
 }
