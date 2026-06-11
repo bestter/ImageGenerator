@@ -197,7 +197,7 @@ namespace ImageGeneratorApp.Tests
             var originalUpdatedAt = template.UpdatedAt;
 
             // Wait a brief moment to ensure time progression
-            await Task.Delay(15);
+            await Task.Delay(15, TestContext.Current.CancellationToken);
 
             // Act
             template.Key = "renamed";

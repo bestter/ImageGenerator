@@ -7,6 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <OutputType>Exe</OutputType>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,13 +17,12 @@
     </PackageReference>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="*" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
-    <PackageReference Include="xunit" Version="*" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="*" />
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageReference Include="Moq" Version="*" />
     <PackageReference Include="FluentAssertions" Version="*" />
-    <PackageReference Include="Dapper" Version="2.1.35" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.8" />
+    <PackageReference Include="Dapper" Version="2.1.79" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.9" />
   </ItemGroup>
 
   <ItemGroup>

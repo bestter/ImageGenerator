@@ -50,7 +50,7 @@ namespace ImageGeneratorApp
         /// Application name and version string written into Software / CreatorTool fields.
         /// Update when releasing new versions. This is the value used for "Standard / Creator metadata".
         /// </summary>
-        public const string AppNameVersion = "GrokImagineApp 1.1.0";
+        public const string AppNameVersion = "GrokImagineApp 1.2.0";
 
         private static readonly Dictionary<string, string> ModelToGenerator = new(StringComparer.OrdinalIgnoreCase)
         {
