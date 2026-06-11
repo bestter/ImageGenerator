@@ -116,6 +116,45 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
+        public async Task GetByKeysAsync_ShouldReturnMatchingTemplates()
+        {
+            // Arrange
+            var t1 = new TemplateModel { Key = "key_a", Value = "val_a" };
+            var t2 = new TemplateModel { Key = "key_b", Value = "val_b" };
+            var t3 = new TemplateModel { Key = "key_c", Value = "val_c" };
+            await _repository.InsertAsync(t1);
+            await _repository.InsertAsync(t2);
+            await _repository.InsertAsync(t3);
+
+            // Act
+            var result = (await _repository.GetByKeysAsync(new[] { "key_a", "key_c", "unknown_key" })).ToList();
+
+            // Assert
+            result.Should().HaveCount(2);
+            result.Should().Contain(t => t.Key == "key_a");
+            result.Should().Contain(t => t.Key == "key_c");
+            result.Should().NotContain(t => t.Key == "key_b");
+        }
+
+        [Fact]
+        public async Task GetAllKeysAsync_ShouldReturnAllKeys()
+        {
+            // Arrange
+            var t1 = new TemplateModel { Key = "key1", Value = "val1" };
+            var t2 = new TemplateModel { Key = "key2", Value = "val2" };
+            await _repository.InsertAsync(t1);
+            await _repository.InsertAsync(t2);
+
+            // Act
+            var keys = (await _repository.GetAllKeysAsync()).ToList();
+
+            // Assert
+            keys.Should().HaveCount(2);
+            keys.Should().Contain("key1");
+            keys.Should().Contain("key2");
+        }
+
+        [Fact]
         public async Task GetByKeysAsync_WithNullEmptyOrWhitespaceKeys_ShouldReturnEmptyArray()
         {
             // Act & Assert for null
