@@ -10,7 +10,7 @@ Ce fichier fournit un contexte aux agents IA travaillant sur ce projet.
 
 ## Golden Rules – Règles Absolues (Ne jamais transgresser)
 
-1. **Ne modifie jamais les fichiers AGENTS.md, ANTIGRAVITY.md et .editorconfig sans autorisation explicite**
+1. **Ne modifie jamais les RÈGLES ET INSTRUCTIONS des fichiers AGENTS.md, ANTIGRAVITY.md et .editorconfig sans autorisation explicite**
    Ces fichiers sont la source de vérité pour l’agent IA.
    **Toute modification nécessite une autorisation claire et explicite du propriétaire du projet** (exemple : « Tu peux réécrire AGENTS.md » ou « Mets à jour la section X »). Sans cette autorisation, tu n’y touches pas.
 
