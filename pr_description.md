@@ -1,11 +1,13 @@
 🎯 **What:**
-Added an explicit test case `DeleteAsync_ShouldReturnFalse_WhenKeyIsEmptyOrNull` to verify that `TemplateRepository.DeleteAsync` gracefully handles null, empty, or whitespace keys by returning false instead of failing or affecting the database.
+Extracted `LoadWebpForWinFormsAsync` and `SaveImageAsWebpAsync` tests from `HistoryOrchestratorTests.cs` into a dedicated `ImageProcessingServiceTests.cs` file. Added specific test coverage for `SaveImageAsWebpAsync` error conditions (null/empty bytes, null/whitespace base file name).
 
 📊 **Coverage:**
-The new theory test provides full coverage for the initial validation block within `TemplateRepository.DeleteAsync(string key)`, testing:
-- Empty strings (`""`)
-- Whitespace strings (`" "`)
-- Null references (`null`)
+The new `ImageProcessingServiceTests.cs` isolated test class now explicitly covers:
+- `LoadWebpForWinFormsAsync` resolving to a valid `System.Drawing.Bitmap` correctly
+- `LoadWebpForWinFormsAsync` rejecting an empty WebP file (with `ArgumentException` stating "File is empty.*")
+- `LoadWebpForWinFormsAsync` properly validating invalid paths (null/whitespace paths) and handling non-existent files.
+- `SaveImageAsWebpAsync` properly throwing `ArgumentException` for null or empty source image byte arrays.
+- `SaveImageAsWebpAsync` properly throwing `ArgumentException` for null or whitespace base file names.
 
 ✨ **Result:**
-By passing null/empty parameters (with nullable warnings suppressed for null-testing purposes) to the delete function and asserting a `false` response, this commit increases confidence that invalid input arguments do not compromise database state or throw exceptions.
+The codebase has significantly improved reliability by structurally segregating integration tests from unit tests. `ImageProcessingService` now has full dedicated test coverage for all edge cases including the TOCTOU protection and file existence assertions.
