@@ -106,3 +106,7 @@
 **Vulnerability:** Checking `File.Exists` before launching an external viewer like `notepad.exe` via `Process.Start` creates a TOCTOU (Time of Check to Time of Use) race condition. An attacker could delete or replace the file in the split second after the check passes.
 **Learning:** `Process.Start` relies on the external executable to handle its own file opening, meaning we cannot directly stream a locked file handle to it.
 **Prevention:** To validate file presence and prevent TOCTOU, wrap the `Process.Start` call inside a `FileStream` block using `FileShare.ReadWrite`. This ensures the file exists at execution time and prevents malicious modifications, while still allowing the external program to open it. Catch `FileNotFoundException` or `DirectoryNotFoundException` on the stream creation instead of relying on `File.Exists`.
+## 2026-06-11 - Prevent TOCTOU File Read Before Displaying Image
+**Vulnerability:** Checking `File.Exists` before loading an image file like `LoadWebpForWinFormsAsync` creates a TOCTOU (Time of Check to Time of Use) race condition. An attacker could delete or replace the file in the split second after the check passes.
+**Learning:** Relying on `File.Exists` for existence checking before operating on a file can lead to race conditions where the file's state changes unexpectedly.
+**Prevention:** To validate file presence and prevent TOCTOU, remove the `File.Exists` check and handle the `FileNotFoundException` and `DirectoryNotFoundException` explicitly when opening the file stream during loading.

@@ -568,7 +568,7 @@ namespace ImageGeneratorApp
             pictureBoxImage.Image = null;
             oldImage?.Dispose();
 
-            if (string.IsNullOrWhiteSpace(history.ImagePath) || !File.Exists(history.ImagePath))
+            if (string.IsNullOrWhiteSpace(history.ImagePath))
             {
                 lblImageStatus.Text = "⚠️ Image absente du disque.";
                 lblImageStatus.Visible = true;
@@ -593,6 +593,14 @@ namespace ImageGeneratorApp
                 {
                     // Selection changed in the meantime, discard the loaded image resources
                     gdiImage.Dispose();
+                }
+            }
+            catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException)
+            {
+                if (token == _currentSelectionToken)
+                {
+                    lblImageStatus.Text = "⚠️ Image absente du disque.";
+                    lblImageStatus.Visible = true;
                 }
             }
             catch (Exception)
