@@ -2,7 +2,7 @@
 
 Ce fichier fournit un contexte aux agents IA travaillant sur ce projet.
 
-**Version** : 1.9
+**Version** : 2.0
 **Dernière mise à jour** : 10 juin 2026
 **Propriétaire** : Martin Labelle (@bestter)
 
@@ -157,7 +157,7 @@ L’édition d’images est disponible exclusivement via le endpoint `POST /v1/i
 - **Multi-provider** : Le client `ImageGeneratorClient` gère le routage vers le bon endpoint selon le modèle sélectionné. Pour ajouter un nouveau provider, étendre la logique conditionnelle dans `GenerateImageAsync()`.
 - **Sécurité** : Les clés API sont stockées temporairement dans le champ de texte `txtApiKey`, passées via l'en-tête HTTP approprié (`Bearer` pour xAI, `x-goog-api-key` pour Google), et persistées de manière sécurisée (chiffrement DPAPI utilisateur via `ProtectedData`) dans LocalApplicationData via `ApiKeyStorageHelper`. Le chargement applique une protection stricte contre le TOCTOU et les fichiers malicieux surdimensionnés (limite de 4096 octets).
 - **Dépendances** : Le projet utilise les bibliothèques standards `System.Net.Http` pour les appels d'API et `System.Text.Json` pour la manipulation des données JSON. Une dépendance externe validée a été ajoutée : `SixLabors.ImageSharp` (version 3.1.12) pour la gestion robuste des métadonnées EXIF/XMP/PNG. Toute nouvelle dépendance doit faire l'objet d'une validation explicite.
-- **Tests** : Le projet inclut des tests unitaires dans le dossier `ImageGeneratorApp.Tests` (ex: `ImageGeneratorClientTests.cs`). Toute modification d’une méthode publique existante ou ajout de fonctionnalité doit être accompagnée de tests unitaires couvrant les cas nominaux + erreurs (API key invalide, rate limit, JSON mal formé, etc.). Objectif : 100 % des tests verts en local avant tout commit.
+- **Tests** : Le projet inclut des tests unitaires basés sur xUnit v3 dans le dossier `ImageGeneratorApp.Tests` (ex: `ImageGeneratorClientTests.cs`). Toute modification d’une méthode publique existante ou ajout de fonctionnalité doit être accompagnée de tests unitaires couvrant les cas nominaux + erreurs (API key invalide, rate limit, JSON mal formé, etc.). Objectif : 100 % des tests verts en local avant tout commit.
 - **Design** : L'application doit être visuellement attrayante et moderne.
 - **Extensibilité** : Pour ajouter un nouveau provider, étendre uniquement ImageGeneratorClient.GenerateImageAsync() et ajouter les tests correspondants. Pas de nouvelle dépendance sans validation explicite.
 - **Qualité & Style** : Respect strict du .editorconfig. Tous les commentaires techniques en anglais. Pas de code mort, pas de warnings à la compilation.

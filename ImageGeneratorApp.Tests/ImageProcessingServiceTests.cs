@@ -76,7 +76,7 @@ namespace ImageGeneratorApp.Tests
         {
             // Arrange
             var emptyFilePath = Path.Combine(Path.GetTempPath(), $"empty_{Guid.NewGuid():N}.webp");
-            await File.WriteAllBytesAsync(emptyFilePath, Array.Empty<byte>());
+            await File.WriteAllBytesAsync(emptyFilePath, Array.Empty<byte>(), TestContext.Current.CancellationToken);
             _createdWebpPath = emptyFilePath; // Register for cleanup
 
             try
