@@ -128,8 +128,10 @@ namespace ImageGeneratorApp
                 }
             }
 
-            // Encode to requested format (Save + encoder is reliable across v3/v4)
-            using var outputStream = new MemoryStream();
+            // ⚡ Bolt Optimization: Pre-allocate MemoryStream capacity based on the original source image size.
+            // Since we are primarily embedding metadata and re-encoding, the output size will be very similar
+            // to the input size. Pre-allocating prevents repeated buffer doubling and severe Large Object Heap (LOH) fragmentation.
+            using var outputStream = new MemoryStream(sourceImageBytes.Length + 4096);
             if (wantJpeg)
             {
                 // Quality 92 gives excellent visual fidelity for AI art while keeping file size reasonable.

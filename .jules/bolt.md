@@ -65,3 +65,7 @@
 ## 2024-08-05 - Avoid redundant database queries during recursive prompt parsing
 **Learning:** Even when bulk loading keys (`GetByKeysAsync`) inside a parsing loop, if the process loops over recursive key dependencies, running the query inside the iterative loop can still cause redundant database lookups per depth level.
 **Action:** Extract all keys recursively upfront and bulk load all missing templates using a single IN query loop *before* executing the primary string replacement loop, effectively eliminating DB lookups during string replacement.
+
+## 2026-06-26 - Pre-allocate MemoryStream for image re-encoding
+**Learning:** Re-encoding large images (e.g., adding metadata and saving as PNG/JPEG) into a default `MemoryStream` causes its internal buffer to double repeatedly, creating excessive Large Object Heap (LOH) garbage.
+**Action:** Always pre-allocate the `MemoryStream` capacity when re-encoding an existing image by using the original byte array's length as a baseline estimate (e.g., `sourceImageBytes.Length + 4096`).
