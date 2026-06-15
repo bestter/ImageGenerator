@@ -110,3 +110,7 @@
 **Vulnerability:** Checking `File.Exists` before loading an image file like `LoadWebpForWinFormsAsync` creates a TOCTOU (Time of Check to Time of Use) race condition. An attacker could delete or replace the file in the split second after the check passes.
 **Learning:** Relying on `File.Exists` for existence checking before operating on a file can lead to race conditions where the file's state changes unexpectedly.
 **Prevention:** To validate file presence and prevent TOCTOU, remove the `File.Exists` check and handle the `FileNotFoundException` and `DirectoryNotFoundException` explicitly when opening the file stream during loading.
+## 2026-06-13 - Incomplete SQL Wildcard Injection Prevention
+**Vulnerability:** While SQL wildcard characters like `%` and `_` were properly escaped for `LIKE` clauses, the opening bracket `[` was omitted. In certain SQL environments or when using specific collations, an unescaped `[` can act as a wildcard, leading to unexpected query results or potential Denial of Service (DoS).
+**Learning:** Standard SQL parameters do not escape wildcard characters within a string used for a `LIKE` operator, and `[` must be included in the sanitization chain along with `%` and `_`.
+**Prevention:** Always explicitly escape `\`, `%`, `_`, and `[` characters in user input and append `ESCAPE '\'` to the SQL query when constructing parameterized `LIKE` queries.

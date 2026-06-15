@@ -81,12 +81,13 @@ namespace ImageGeneratorApp
                    OR ModelName LIKE @Query ESCAPE '\'
                 ORDER BY CreatedAt DESC;";
 
-            // SÉCURITÉ : Échappe les caractères joker SQL (%, _, et le caractère d'échappement lui-même)
+            // SÉCURITÉ : Échappe les caractères joker SQL (%, _, [, et le caractère d'échappement lui-même)
             // pour prévenir les attaques par injection de wildcards (qui peuvent causer des lenteurs DoS).
             var escapedTerm = searchTerm.Trim()
                 .Replace(@"\", @"\\")
                 .Replace("%", @"\%")
-                .Replace("_", @"\_");
+                .Replace("_", @"\_")
+                .Replace("[", @"\[");
 
             var queryParam = $"%{escapedTerm}%";
             using var connection = _databaseHelper.GetConnection();
