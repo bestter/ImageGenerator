@@ -44,5 +44,6 @@
     <Compile Include="..\ImageProcessingService.cs" />
     <Compile Include="..\HistoryOrchestrator.cs" />
     <Compile Include="..\Helpers\ApiKeyStorageHelper.cs" />
+    <Compile Include="..\AboutForm.cs" />
   </ItemGroup>
 </Project>
