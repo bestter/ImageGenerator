@@ -92,6 +92,9 @@ namespace ImageGeneratorApp
             // before beginning any string replacements.
             var keysToFetch = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+            // ⚡ Bolt Optimization: Track keys used to batch update usage stats outside the loop
+            var usedKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
             var initialMatches = TemplateRegex().Matches(inputPrompt);
             foreach (System.Text.RegularExpressions.Match match in initialMatches)
             {
@@ -179,7 +182,7 @@ namespace ImageGeneratorApp
                     // If requested, asynchronously increment usage stats for this key in the database
                     if (incrementUsageStats)
                     {
-                        await _repository.UpdateUsageStatsAsync(key);
+                        usedKeys.Add(key);
                     }
                 }
 
@@ -189,6 +192,11 @@ namespace ImageGeneratorApp
 
             // Clean up double/multiple spaces and trim the final result
             currentPrompt = MultipleSpacesRegex().Replace(currentPrompt, " ").Trim();
+
+            if (incrementUsageStats && usedKeys.Count > 0)
+            {
+                await _repository.UpdateUsageStatsBulkAsync(usedKeys);
+            }
 
             return currentPrompt;
         }

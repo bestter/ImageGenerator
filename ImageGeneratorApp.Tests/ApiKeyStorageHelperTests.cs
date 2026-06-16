@@ -42,16 +42,20 @@ namespace ImageGeneratorApp.Tests
 
         public void Dispose()
         {
-            if (File.Exists(_filePath))
+            try
             {
-                try
+                if (File.Exists(_filePath))
                 {
                     File.Delete(_filePath);
                 }
-                catch
+                else if (Directory.Exists(_filePath))
                 {
-                    // Ignore cleanup errors
+                    Directory.Delete(_filePath, true);
                 }
+            }
+            catch
+            {
+                // Ignore cleanup errors
             }
         }
 
@@ -93,6 +97,72 @@ namespace ImageGeneratorApp.Tests
                 Directory.CreateDirectory(directory);
             }
             File.WriteAllBytes(_filePath, oversizedBytes);
+
+            // Act
+            string result = ApiKeyStorageHelper.LoadApiKey(_testProvider);
+
+            // Assert
+            result.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void SaveApiKey_WhenFileIsLocked_SilentlyFails_IOException()
+        {
+            // Arrange
+            string? directory = Path.GetDirectoryName(_filePath);
+            if (directory != null)
+            {
+                Directory.CreateDirectory(directory);
+            }
+            File.WriteAllText(_filePath, "initial content");
+
+            // Act & Assert
+            using (var fs = new FileStream(_filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+                // Action should not throw
+                Action act = () => ApiKeyStorageHelper.SaveApiKey(_testProvider, "new key");
+                act.Should().NotThrow();
+            }
+        }
+
+        [Fact]
+        public void LoadApiKey_WhenFileIsLocked_ReturnsEmptyString_IOException()
+        {
+            // Arrange
+            string? directory = Path.GetDirectoryName(_filePath);
+            if (directory != null)
+            {
+                Directory.CreateDirectory(directory);
+            }
+            File.WriteAllText(_filePath, "initial content");
+
+            // Act & Assert
+            using (var fs = new FileStream(_filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+                // Action should not throw and return empty string
+                string result = ApiKeyStorageHelper.LoadApiKey(_testProvider);
+                result.Should().BeEmpty();
+            }
+        }
+
+        [Fact]
+        public void SaveApiKey_WhenPathIsDirectory_SilentlyFails_UnauthorizedAccessException()
+        {
+            // Arrange
+            // Create a directory at the file path to trigger UnauthorizedAccessException
+            Directory.CreateDirectory(_filePath);
+
+            // Act & Assert
+            Action act = () => ApiKeyStorageHelper.SaveApiKey(_testProvider, "new key");
+            act.Should().NotThrow();
+        }
+
+        [Fact]
+        public void LoadApiKey_WhenPathIsDirectory_ReturnsEmptyString_UnauthorizedAccessException()
+        {
+            // Arrange
+            // Create a directory at the file path to trigger UnauthorizedAccessException
+            Directory.CreateDirectory(_filePath);
 
             // Act
             string result = ApiKeyStorageHelper.LoadApiKey(_testProvider);

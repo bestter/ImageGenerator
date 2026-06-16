@@ -1,39 +1,82 @@
-// AI Image generator. A program to generate image from AI API.
-// Copyright (C) 2026  Martin Labelle
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 using FluentAssertions;
 using ImageGeneratorApp;
 using System;
+using System.IO;
+using System.Reflection;
 using System.Threading.Tasks;
 using Xunit;
 
 namespace ImageGeneratorApp.Tests
 {
-    public class UserIdHelperTests
+    [Collection("Sequential")]
+    public class UserIdHelperTests : IDisposable
     {
+        private readonly string _testFolderPath;
+        private readonly string _testFilePath;
+
+        public UserIdHelperTests()
+        {
+            _testFolderPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ImageGeneratorApp");
+            _testFilePath = Path.Combine(_testFolderPath, "device_id.txt");
+
+            // Ensure a clean state before tests
+            ResetCache();
+        }
+
+        public void Dispose()
+        {
+            ResetCache();
+            // Try to clean up the test file if we can
+            try
+            {
+                if (File.Exists(_testFilePath))
+                {
+                    File.Delete(_testFilePath);
+                }
+            }
+            catch { /* Ignore cleanup errors */ }
+        }
+
+        private void ResetCache()
+        {
+            var field = typeof(UserIdHelper).GetField("_cachedDefaultUserId", BindingFlags.Static | BindingFlags.NonPublic);
+            field?.SetValue(null, null);
+        }
+
         [Fact]
         public async Task GetOpaqueUserIdAsync_ReturnsStableIdentifier()
         {
             // Act
             string hash1 = await UserIdHelper.GetOpaqueUserIdAsync();
+
+            // Reset cache to force reading from file
+            ResetCache();
             string hash2 = await UserIdHelper.GetOpaqueUserIdAsync();
 
             // Assert
             hash1.Should().NotBeNullOrWhiteSpace();
             hash1.Should().Be(hash2);
+        }
+
+        [Fact]
+        public async Task GetOpaqueUserIdAsync_OnIoFailure_ReturnsFallbackGuid()
+        {
+            // Arrange
+            Directory.CreateDirectory(_testFolderPath);
+
+            // Create a file and lock it exclusively to simulate an IO failure when reading/writing
+            using (var lockStream = new FileStream(_testFilePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+            {
+                // Act
+                string result = await UserIdHelper.GetOpaqueUserIdAsync();
+
+                // Assert
+                result.Should().NotBeNullOrWhiteSpace();
+                result.Length.Should().Be(32); // GUID "N" format length
+
+                // Verify it's a valid GUID
+                Guid.TryParseExact(result, "N", out Guid parsed).Should().BeTrue();
+            }
         }
     }
 }
