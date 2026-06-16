@@ -122,7 +122,7 @@ namespace ImageGeneratorApp
             this.StartPosition = FormStartPosition.CenterScreen;
             this.WindowState = FormWindowState.Maximized;
 
-            // API Key - first row is explicitly offset below the menu (only this row needs adjustment)
+            // UI elements are offset relative to contentTop to avoid MenuStrip overlap on HighDPI/Maximized
             lblKey = new Label
             {
                 Text = "Clé API xAI :",
@@ -142,25 +142,25 @@ namespace ImageGeneratorApp
             txtPrompt.LostFocus += TxtPrompt_LostFocus;
 
             // Modèle
-            var lblModel = new Label { Text = "Modèle :", Location = new Point(20, 175), AutoSize = true };
-            cmbModel = new ComboBox { Location = new Point(190, 172), Width = 230, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            var lblModel = new Label { Text = "Modèle :", Location = new Point(20, contentTop + 145), AutoSize = true };
+            cmbModel = new ComboBox { Location = new Point(190, contentTop + 142), Width = 230, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             cmbModel.Items.AddRange(new[] { "grok-imagine-image", "grok-imagine-image-pro", "nano-banana-pro" });
             cmbModel.SelectedIndex = 0;
             cmbModel.SelectedIndexChanged += CmbModel_SelectedIndexChanged;
 
             // Résolution (haute dispo)
-            var lblRes = new Label { Text = "Résolution :", Location = new Point(440, 175), AutoSize = true };
-            cmbResolution = new ComboBox { Location = new Point(520, 172), Width = 150, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            var lblRes = new Label { Text = "Résolution :", Location = new Point(440, contentTop + 145), AutoSize = true };
+            cmbResolution = new ComboBox { Location = new Point(520, contentTop + 142), Width = 150, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             cmbResolution.Items.AddRange(new[] { "1k", "2k" });
             cmbResolution.SelectedIndex = 1; // 2k par défaut (haute résolution)
 
             // Images
-            btnAddImages = new Button { Text = "Ajouter images (0/3)", Location = new Point(690, 171), Width = 150, Height = 25, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnAddImages = new Button { Text = "Ajouter images (0/3)", Location = new Point(690, contentTop + 141), Width = 150, Height = 25, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnAddImages.Click += BtnAddImages_Click;
 
             // Aspect Ratio
-            var lblRatio = new Label { Text = "Aspect Ratio :", Location = new Point(20, 220), AutoSize = true };
-            cmbAspectRatio = new ComboBox { Location = new Point(190, 217), Width = 210, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            var lblRatio = new Label { Text = "Aspect Ratio :", Location = new Point(20, contentTop + 190), AutoSize = true };
+            cmbAspectRatio = new ComboBox { Location = new Point(190, contentTop + 187), Width = 210, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             cmbAspectRatio.Items.AddRange(new[] { "1:1 (Médias sociaux)", "16:9 (Widescreen)", "9:16 (Stories/Reels)", "4:3 (Standard)", "3:2 (Photographie)", "20:9 (Panoramique cellulaire)" });
             cmbAspectRatio.SelectedIndex = 1; // 16:9 par défaut
 
@@ -168,13 +168,13 @@ namespace ImageGeneratorApp
             chkMultiTurnEditing = new CheckBox
             {
                 Text = "Éditer l'image actuelle (Multi-turn)",
-                Location = new Point(440, 220),
+                Location = new Point(440, contentTop + 190),
                 AutoSize = true,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
 
             // Boutons
-            btnGenerate = new Button { Text = "Générer l'image", Location = new Point(190, 260), Width = 160, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnGenerate = new Button { Text = "Générer l\'image", Location = new Point(190, contentTop + 230), Width = 160, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnGenerate.Click += BtnGenerate_Click;
             btnGenerate.MouseEnter += BtnGenerate_MouseEnter;
 
@@ -189,22 +189,22 @@ namespace ImageGeneratorApp
                 ReshowDelay = 100
             };
 
-            btnSave = new Button { Text = "📥 Enregistrer l'image (haute rés.)", Location = new Point(370, 260), Width = 250, Height = 40, Enabled = false, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnSave = new Button { Text = "📥 Enregistrer l\'image (haute rés.)", Location = new Point(370, contentTop + 230), Width = 250, Height = 40, Enabled = false, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnSave.Click += BtnSave_Click;
 
-            btnClear = new Button { Text = "Effacer", Location = new Point(640, 260), Width = 100, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnClear = new Button { Text = "Effacer", Location = new Point(640, contentTop + 230), Width = 100, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnClear.Click += (s, e) => ClearForm();
 
-            btnHistory = new Button { Text = "📜 Historique", Location = new Point(750, 260), Width = 130, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnHistory = new Button { Text = "📜 Historique", Location = new Point(750, contentTop + 230), Width = 130, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnHistory.Click += BtnHistory_Click;
 
             // Status
-            lblStatus = new Label { Location = new Point(20, 310), Width = 750, Height = 30, ForeColor = Color.DarkBlue, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
+            lblStatus = new Label { Location = new Point(20, contentTop + 280), Width = 750, Height = 30, ForeColor = Color.DarkBlue, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
 
             // PictureBox
             pictureBox = new PictureBox
             {
-                Location = new Point(20, 340),
+                Location = new Point(20, contentTop + 310),
                 Size = new Size(840, 320),
                 SizeMode = PictureBoxSizeMode.Zoom,
                 BorderStyle = BorderStyle.FixedSingle,
@@ -216,7 +216,7 @@ namespace ImageGeneratorApp
             btnManageTemplates = new Button
             {
                 Text = "Modèles",
-                Location = new Point(780, 57),
+                Location = new Point(780, contentTop + 27),
                 Width = 100,
                 Height = 60,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
@@ -227,7 +227,7 @@ namespace ImageGeneratorApp
             chkEnableTemplates = new CheckBox
             {
                 Text = "Activer modèles",
-                Location = new Point(780, 125),
+                Location = new Point(780, contentTop + 95),
                 Width = 110,
                 Height = 30,
                 Checked = true,
