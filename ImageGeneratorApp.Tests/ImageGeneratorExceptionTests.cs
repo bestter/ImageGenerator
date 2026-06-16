@@ -53,6 +53,8 @@ namespace ImageGeneratorApp.Tests
         [InlineData("Server Error", 500)]
         [InlineData("Negative Status", -1)]
         [InlineData("Max Status", int.MaxValue)]
+        [InlineData("Min Status", int.MinValue)]
+        [InlineData("Zero Status", 0)]
         public void Constructor_WithMessageAndStatusCode_SetsMessageAndStatusCode(string expectedMessage, int expectedStatusCode)
         {
             // Act
@@ -68,6 +70,9 @@ namespace ImageGeneratorApp.Tests
         [InlineData("API returned an error with inner exception.", 500)]
         [InlineData("Another error.", 403)]
         [InlineData("Negative error.", -1)]
+        [InlineData("Zero error.", 0)]
+        [InlineData("Min value error.", int.MinValue)]
+        [InlineData("Max value error.", int.MaxValue)]
         public void Constructor_WithMessageStatusCodeAndInnerException_SetsAllProperties(string expectedMessage, int expectedStatusCode)
         {
             // Arrange
