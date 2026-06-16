@@ -1,3 +1,14 @@
-🎯 **What:** The `ImageMetadataEmbedder` class lacked comprehensive and isolated tests. Testing logic was previously nested inside `ImageGeneratorClientTests.cs`, which didn't test all scenarios.
-📊 **Coverage:** Created `ImageMetadataEmbedderTests.cs` and added comprehensive tests for the `Embed` and `ApplyMetadata` methods. The new tests verify both PNG and JPEG extensions, ensure correct exception throwing (e.g., for null bytes or metadata), and check proper EXIF/XMP profile application and truncation logic. We also test the `GetFriendlyGeneratorName` method mappings.
-✨ **Result:** Improved test organization, and significantly better test coverage for the metadata embedding utility, making future refactoring safer.
+🛡️ Sentinel: [HIGH] Fix executable hijacking vulnerability in Process.Start
+
+🎯 **What:**
+Fixed an executable hijacking vulnerability in `AboutForm.cs`. The application previously used `Process.Start` with `UseShellExecute = false` and hardcoded `"notepad.exe"` without an absolute path to open the `LICENSE.txt` file.
+
+⚠️ **Risk:**
+High. If a malicious executable named `notepad.exe` were placed in the application's base directory or injected into the user's `PATH`, the application could unknowingly execute it instead of the system's legitimate text editor.
+
+🛡️ **Solution:**
+Changed `UseShellExecute` to `true` and passed the explicit file path (`licensePath`) as the `FileName` property. This ensures that the file is safely delegated to the operating system's registered default handler, thereby sidestepping command injection and arbitrary executable hijacking.
+
+Verification:
+- Manual code review ensuring no other vulnerable `Process.Start` calls exist for simple file opening.
+- Confirmed with `dotnet build` and `dotnet test`.
