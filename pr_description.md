@@ -1,4 +1,13 @@
-🎯 **What:** Removed the commented-out `Main` method in `Program.cs`.
-💡 **Why:** The commented-out code was a duplicate entry point that is not used and introduces unnecessary noise in the file. Removing it improves code readability and maintainability.
-✅ **Verification:** Verified that the code builds correctly (`dotnet build`) and the remaining `Main` method correctly configures error handling and launches `Form1`.
-✨ **Result:** A cleaner `Program.cs` without dead, commented-out code.
+🧪 [testing improvement] Add missing edge case tests for ImageGeneratorException
+
+🎯 **What:**
+Added missing edge-case unit tests to `ImageGeneratorExceptionTests.cs`. Previously, only the `(string message)` constructor was tested for null inputs. Now, other constructors are verified against empty strings, whitespace, nulls, and very long strings.
+
+📊 **Coverage:**
+- Tested `(string message, int statusCode)` with empty strings, whitespace, and null messages.
+- Tested `(string message, int statusCode, Exception innerException)` with the same edge cases.
+- Tested `(string message, Exception innerException)` with a null message.
+- Tested extremely long message strings (100,000 characters).
+
+✨ **Result:**
+Enhanced the robustness of the unit tests, proving that `ImageGeneratorException` handles all expected constructor inputs safely.

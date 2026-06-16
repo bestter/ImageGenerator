@@ -87,6 +87,84 @@ namespace ImageGeneratorApp.Tests
             exception.InnerException.Should().Be(innerException);
         }
 
+
+        [Theory]
+        [InlineData("", 200)]
+        [InlineData("   ", 404)]
+        [InlineData(null, 500)]
+        public void Constructor_WithMessageAndStatusCodeEdgeCases_SetsPropertiesCorrectly(string? message, int expectedStatusCode)
+        {
+            // Act
+            var exception = new ImageGeneratorException(message!, expectedStatusCode);
+
+            // Assert
+            if (message == null)
+            {
+                exception.Message.Should().NotBeNull(); // Exception base class provides a default message when null is passed
+            }
+            else
+            {
+                exception.Message.Should().Be(message);
+            }
+            exception.StatusCode.Should().Be(expectedStatusCode);
+            exception.InnerException.Should().BeNull();
+        }
+
+        [Fact]
+        public void Constructor_ExtremelyLongMessage_SetsMessageCorrectly()
+        {
+            // Arrange
+            string longMessage = new string('A', 100000);
+
+            // Act
+            var exception = new ImageGeneratorException(longMessage, 500);
+
+            // Assert
+            exception.Message.Should().Be(longMessage);
+            exception.StatusCode.Should().Be(500);
+            exception.InnerException.Should().BeNull();
+        }
+
+        [Fact]
+        public void Constructor_WithNullMessageAndInnerException_HandlesGracefully()
+        {
+            // Arrange
+            var innerException = new Exception("Inner");
+
+            // Act
+            var exception = new ImageGeneratorException(null!, innerException);
+
+            // Assert
+            exception.Message.Should().NotBeNull();
+            exception.StatusCode.Should().Be(0);
+            exception.InnerException.Should().Be(innerException);
+        }
+
+        [Theory]
+        [InlineData("", 400)]
+        [InlineData("   ", 500)]
+        [InlineData(null, 200)]
+        public void Constructor_WithMessageStatusCodeAndInnerExceptionEdgeCases_SetsPropertiesCorrectly(string? message, int expectedStatusCode)
+        {
+            // Arrange
+            var innerException = new InvalidOperationException("Test inner");
+
+            // Act
+            var exception = new ImageGeneratorException(message!, expectedStatusCode, innerException);
+
+            // Assert
+            if (message == null)
+            {
+                exception.Message.Should().NotBeNull();
+            }
+            else
+            {
+                exception.Message.Should().Be(message);
+            }
+            exception.StatusCode.Should().Be(expectedStatusCode);
+            exception.InnerException.Should().Be(innerException);
+        }
+
         [Fact]
         public void Constructor_NullMessage_HandlesGracefully()
         {
