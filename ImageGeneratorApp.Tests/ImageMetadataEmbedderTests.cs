@@ -184,5 +184,97 @@ namespace ImageGeneratorApp.Tests
             ImageMetadataEmbedder.GetFriendlyGeneratorName("future-dall-e-4").Should().Be("future-dall-e-4");
             ImageMetadataEmbedder.GetFriendlyGeneratorName("").Should().Be("Unknown");
         }
+
+        [Fact]
+        public void BuildXmpPacket_HasExpectedContent()
+        {
+            var meta = CreateDummyMetadata();
+            using var image = new Image<Rgba32>(10, 10);
+            ImageMetadataEmbedder.ApplyMetadata(image, meta);
+
+            var xmpXml = System.Text.Encoding.UTF8.GetString(image.Metadata.XmpProfile!.ToByteArray());
+
+            xmpXml.Should().Contain("TestGenerator");
+            xmpXml.Should().Contain("A test prompt");
+            xmpXml.Should().Contain("TestModel");
+            xmpXml.Should().Contain("1024x1024");
+            xmpXml.Should().Contain("1:1");
+            xmpXml.Should().Contain("TestApp");
+        }
+
+        [Fact]
+        public void XmlEscape_HandlesSpecialChars()
+        {
+            var meta = new ImageGenerationMetadata(
+                Generator: "Test <Generator>",
+                Prompt: "Test <>&\"'",
+                ModelId: "TestModel",
+                GeneratedAtUtc: new DateTime(2023, 10, 1, 12, 0, 0, DateTimeKind.Utc),
+                Resolution: "1024x1024",
+                AspectRatio: "1:1",
+                AppCreator: "TestApp"
+            );
+            using var image = new Image<Rgba32>(10, 10);
+            ImageMetadataEmbedder.ApplyMetadata(image, meta);
+
+            var xmpXml = System.Text.Encoding.UTF8.GetString(image.Metadata.XmpProfile!.ToByteArray());
+
+            xmpXml.Should().Contain("Test &lt;Generator&gt;");
+            xmpXml.Should().Contain("Test &lt;&gt;&amp;&quot;&apos;");
+        }
+
+        [Fact]
+        public void BuildXmpPacket_MissingResolution_OmitsElement()
+        {
+            var meta = new ImageGenerationMetadata(
+                Generator: "TestGenerator",
+                Prompt: "A test prompt",
+                ModelId: "TestModel",
+                GeneratedAtUtc: new DateTime(2023, 10, 1, 12, 0, 0, DateTimeKind.Utc),
+                Resolution: null,
+                AspectRatio: null,
+                AppCreator: "TestApp"
+            );
+            using var image = new Image<Rgba32>(10, 10);
+            ImageMetadataEmbedder.ApplyMetadata(image, meta);
+
+            var xmpXml = System.Text.Encoding.UTF8.GetString(image.Metadata.XmpProfile!.ToByteArray());
+
+            xmpXml.Should().NotContain("ai:Resolution=");
+            xmpXml.Should().NotContain("ai:AspectRatio=");
+        }
+
+        [Theory]
+        [InlineData(".jpg", true)]
+        [InlineData(".jpeg", true)]
+        [InlineData(".JPG", true)]
+        [InlineData(".JPEG", true)]
+        [InlineData("jpg", true)]
+        [InlineData("jpeg", true)]
+        [InlineData(".png", false)]
+        [InlineData("png", false)]
+        [InlineData(".webp", false)]
+        [InlineData("", false)]
+        [InlineData(null, false)]
+        public void IsJpegExtension_ShouldWorkCorrectly(string? extension, bool expectJpeg)
+        {
+            var bytes = CreateDummyImageBytes(expectJpeg); // To match the logic in the class
+            var meta = CreateDummyMetadata();
+
+            var resultBytes = ImageMetadataEmbedder.Embed(bytes, meta, extension);
+
+            // If it's JPEG, there shouldn't be PNG text chunks
+            using var resultImage = SixLabors.ImageSharp.Image.Load(resultBytes);
+            var pngMeta = resultImage.Metadata.GetFormatMetadata(SixLabors.ImageSharp.Formats.Png.PngFormat.Instance);
+
+            if (expectJpeg)
+            {
+                pngMeta.TextData.Should().BeEmpty();
+            }
+            else
+            {
+                pngMeta.TextData.Should().NotBeEmpty();
+            }
+        }
     }
 }
