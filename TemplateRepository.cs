@@ -192,5 +192,44 @@ namespace ImageGeneratorApp
             var rowsAffected = await connection.ExecuteAsync(sql, new { Key = key, LastUsed = now, UpdatedAt = now });
             return rowsAffected > 0;
         }
+
+        /// <summary>
+        /// Increments the usage count of multiple templates by 1 and updates the last used timestamp to UTC now.
+        /// </summary>
+        /// <param name="keys">The collection of unique keys.</param>
+        /// <returns>True if the stats were successfully updated for at least one template; otherwise, false.</returns>
+        public async Task<bool> UpdateUsageStatsBulkAsync(IEnumerable<string> keys)
+        {
+            if (keys == null)
+            {
+                return false;
+            }
+
+            var keysList = new List<string>();
+            foreach (var key in keys)
+            {
+                if (!string.IsNullOrWhiteSpace(key))
+                {
+                    keysList.Add(key);
+                }
+            }
+
+            if (keysList.Count == 0)
+            {
+                return false;
+            }
+
+            const string sql = @"
+                UPDATE templates
+                SET usage_count = usage_count + 1,
+                    last_used = @LastUsed,
+                    updated_at = @UpdatedAt
+                WHERE key IN @Keys;";
+
+            var now = DateTime.UtcNow;
+            using var connection = _databaseHelper.GetConnection();
+            var rowsAffected = await connection.ExecuteAsync(sql, new { Keys = keysList, LastUsed = now, UpdatedAt = now });
+            return rowsAffected > 0;
+        }
     }
 }
