@@ -170,5 +170,39 @@ namespace ImageGeneratorApp.Tests
             // Assert
             result.Should().BeEmpty();
         }
+
+        [Fact]
+        public void SaveApiKey_CryptographicException_SilentlyFails()
+        {
+            // Note: It's hard to trigger CryptographicException from SaveApiKey without
+            // corrupting the DPAPI system or running in a different context.
+            // But we can test that passing null or whitespace key doesn't throw.
+            Action act1 = () => ApiKeyStorageHelper.SaveApiKey(_testProvider, null!);
+            Action act2 = () => ApiKeyStorageHelper.SaveApiKey(_testProvider, "   ");
+
+            act1.Should().NotThrow();
+            act2.Should().NotThrow();
+        }
+
+        [Fact]
+        public void LoadApiKey_WhenFileIsCorrupted_ReturnsEmptyString_CryptographicException()
+        {
+            // Arrange
+            string? directory = Path.GetDirectoryName(_filePath);
+            if (directory != null)
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            // Write invalid/corrupted bytes to trigger CryptographicException during Unprotect
+            byte[] corruptedBytes = new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05 };
+            File.WriteAllBytes(_filePath, corruptedBytes);
+
+            // Act
+            string result = ApiKeyStorageHelper.LoadApiKey(_testProvider);
+
+            // Assert
+            result.Should().BeEmpty();
+        }
     }
 }

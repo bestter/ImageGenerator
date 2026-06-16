@@ -1,3 +1,0 @@
-🎯 **What:** The `ImageMetadataEmbedder` class lacked comprehensive and isolated tests. Testing logic was previously nested inside `ImageGeneratorClientTests.cs`, which didn't test all scenarios.
-📊 **Coverage:** Created `ImageMetadataEmbedderTests.cs` and added comprehensive tests for the `Embed` and `ApplyMetadata` methods. The new tests verify both PNG and JPEG extensions, ensure correct exception throwing (e.g., for null bytes or metadata), and check proper EXIF/XMP profile application and truncation logic. We also test the `GetFriendlyGeneratorName` method mappings.
-✨ **Result:** Improved test organization, and significantly better test coverage for the metadata embedding utility, making future refactoring safer.
