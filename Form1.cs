@@ -144,7 +144,7 @@ namespace ImageGeneratorApp
             // Modèle
             var lblModel = new Label { Text = "Modèle :", Location = new Point(20, contentTop + 145), AutoSize = true };
             cmbModel = new ComboBox { Location = new Point(190, contentTop + 142), Width = 230, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
-            cmbModel.Items.AddRange(new[] { "grok-imagine-image", "grok-imagine-image-pro", "nano-banana-pro" });
+            cmbModel.Items.AddRange(new[] { "grok-imagine-image", "grok-imagine-image-quality", "nano-banana-pro" });
             cmbModel.SelectedIndex = 0;
             cmbModel.SelectedIndexChanged += CmbModel_SelectedIndexChanged;
 

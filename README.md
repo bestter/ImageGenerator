@@ -6,7 +6,7 @@ Application de bureau Windows Forms (.NET 10) pour la génération d'images par 
 
 | Provider | Modèle(s) | API | Édition multi-tour |
 |---|---|---|---|
-| **Grok Imagine (xAI)** | `grok-imagine-image`, `grok-imagine-image-pro` | `https://api.x.ai/v1/images/` | ✅ Oui (jusqu'à 3 images) |
+| **Grok Imagine (xAI)** | `grok-imagine-image`, `grok-imagine-image-quality` | `https://api.x.ai/v1/images/` | ✅ Oui (jusqu'à 3 images) |
 | **Nano Banana Pro (Google)** | `nano-banana-pro` | `https://generativelanguage.googleapis.com/v1beta/` | ❌ Non |
 
 ## Fonctionnalités

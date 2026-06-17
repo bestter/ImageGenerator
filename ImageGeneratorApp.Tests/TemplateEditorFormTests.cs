@@ -31,7 +31,8 @@ namespace ImageGeneratorApp.Tests
         public TemplateEditorFormTests()
         {
             _tempDbPath = Path.Combine(Path.GetTempPath(), $"test_db_{Guid.NewGuid()}.sqlite");
-            _dbHelper = new DatabaseHelper(_tempDbPath);
+            var connectionString = $"Data Source={_tempDbPath}";
+            _dbHelper = new DatabaseHelper(connectionString);
             _dbHelper.InitializeDatabase();
             _repository = new TemplateRepository(_dbHelper);
         }
