@@ -55,7 +55,7 @@ namespace ImageGeneratorApp
         private static readonly Dictionary<string, string> ModelToGenerator = new(StringComparer.OrdinalIgnoreCase)
         {
             ["grok-imagine-image"] = "Grok Imagine",
-            ["grok-imagine-image-pro"] = "Grok Imagine Pro",
+            ["grok-imagine-image-quality"] = "Grok Imagine Quality",
             ["nano-banana-pro"] = "Nano Banana Pro"
             // Future: add "dall-e-3" = "DALL-E 3", etc. Extensible without code changes in Form1.
         };

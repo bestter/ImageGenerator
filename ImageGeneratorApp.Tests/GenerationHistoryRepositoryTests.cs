@@ -54,7 +54,7 @@ namespace ImageGeneratorApp.Tests
             {
                 ImagePath = @"C:\Exports\image_123.png",
                 Prompt = "A modern abstract painting, oil on canvas, highly textured",
-                ModelName = "grok-imagine-image-pro",
+                ModelName = "grok-imagine-image-quality",
                 ModelVersion = "1.5.pro",
                 RawMetadata = "{\"seed\": 42, \"cfg_scale\": 7.5}",
                 CreatedAt = DateTime.UtcNow

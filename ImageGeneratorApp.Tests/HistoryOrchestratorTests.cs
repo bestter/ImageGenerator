@@ -64,7 +64,7 @@ namespace ImageGeneratorApp.Tests
         {
             // Arrange
             var prompt = "A futuristic cyberpunk city with neon lights";
-            var modelName = "grok-imagine-image-pro";
+            var modelName = "grok-imagine-image-quality";
             var modelVersion = "v2.0";
             var rawMetadata = "{\"steps\": 50, \"sampler\": \"euler_a\"}";
 
