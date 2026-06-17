@@ -45,5 +45,6 @@
     <Compile Include="..\HistoryOrchestrator.cs" />
     <Compile Include="..\Helpers\ApiKeyStorageHelper.cs" />
     <Compile Include="..\AboutForm.cs" />
+    <Compile Include="..\TemplateEditorForm.cs" />
   </ItemGroup>
 </Project>
