@@ -68,7 +68,7 @@ Pour toute modification de l’interface utilisateur, l’agent doit impérative
 - **Framework cible** : `net10.0-windows10.0.22621.0`
 - **Namespace** : `ImageGeneratorApp`
 - **Objectif** : Fournir une interface graphique utilisateur (GUI) multi-provider pour la génération d’images par IA, supportant actuellement :
-  - **Grok Imagine (xAI)** : modèles `grok-imagine-image` et `grok-imagine-image-pro` via l’API xAI (`https://api.x.ai/v1/images/`).
+  - **Grok Imagine (xAI)** : modèles `grok-imagine-image` et `grok-imagine-image-quality` via l’API xAI (`https://api.x.ai/v1/images/`).
   - **Nano Banana Pro (Google)** : modèle `nano-banana-pro` via l’API Gemini (`https://generativelanguage.googleapis.com/v1beta/`).
 
 ## 📁 Structure du Répertoire
