@@ -2,8 +2,8 @@
 
 Ce fichier fournit un contexte aux agents IA travaillant sur ce projet.
 
-**Version** : 2.0
-**Dernière mise à jour** : 10 juin 2026
+**Version** : 2.0.1
+**Dernière mise à jour** : 17 juin 2026
 **Propriétaire** : Martin Labelle (@bestter)
 
 ---
