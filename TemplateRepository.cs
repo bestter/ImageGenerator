@@ -40,7 +40,10 @@ namespace ImageGeneratorApp
         /// <returns>A collection of all template keys.</returns>
         public async Task<IEnumerable<string>> GetAllKeysAsync()
         {
-            const string sql = "SELECT key FROM templates;";
+            // ⚡ Bolt Optimization: Use ORDER BY to leverage the SQLite IX_templates_key index.
+            // This allows the database to return pre-sorted results, completely eliminating
+            // O(N log N) in-memory sorting and array allocation overhead on the UI thread.
+            const string sql = "SELECT key FROM templates ORDER BY key COLLATE NOCASE;";
             using var connection = _databaseHelper.GetConnection();
             return await connection.QueryAsync<string>(sql);
         }

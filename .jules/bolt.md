@@ -69,3 +69,6 @@
 ## 2026-06-26 - Pre-allocate MemoryStream for image re-encoding
 **Learning:** Re-encoding large images (e.g., adding metadata and saving as PNG/JPEG) into a default `MemoryStream` causes its internal buffer to double repeatedly, creating excessive Large Object Heap (LOH) garbage.
 **Action:** Always pre-allocate the `MemoryStream` capacity when re-encoding an existing image by using the original byte array's length as a baseline estimate (e.g., `sourceImageBytes.Length + 4096`).
+## 2026-06-18 - [SQLite Database Index Sorting]
+**Learning:** In-memory LINQ sorts (like `.OrderBy()`) cause unnecessary array allocations and UI thread CPU overhead, even for small lists.
+**Action:** Push sorting logic down to the database query by using `ORDER BY` and matching collation (e.g., `ORDER BY key COLLATE NOCASE`) to leverage existing SQLite indices. This completely eliminates the need for C# to sort the data.
