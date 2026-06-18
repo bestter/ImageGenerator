@@ -803,7 +803,9 @@ namespace ImageGeneratorApp
             try
             {
                 var templateKeys = await _templateRepo.GetAllKeysAsync();
-                _templateKeysCache = templateKeys.OrderBy(k => k).ToList();
+                // ⚡ Bolt Optimization: Keys are already returned pre-sorted via database index (GetAllKeysAsync),
+                // completely eliminating the O(N log N) in-memory OrderBy allocation on the UI thread.
+                _templateKeysCache = templateKeys.ToList();
             }
             catch
             {
