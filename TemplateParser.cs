@@ -98,7 +98,10 @@ namespace ImageGeneratorApp
             var initialMatches = TemplateRegex().Matches(inputPrompt);
             foreach (System.Text.RegularExpressions.Match match in initialMatches)
             {
-                var key = match.Value[1..^1].Split(':')[0].Trim();
+                // ⚡ Bolt Optimization: Avoid allocating string arrays via Split(':') just to get the key
+                var innerContent = match.Value[1..^1];
+                int colonIndex = innerContent.IndexOf(':');
+                var key = colonIndex == -1 ? innerContent.Trim() : innerContent.Substring(0, colonIndex).Trim();
                 keysToFetch.Add(key);
             }
 
@@ -117,7 +120,10 @@ namespace ImageGeneratorApp
                     var templateMatches = TemplateRegex().Matches(template.Value);
                     foreach (System.Text.RegularExpressions.Match match in templateMatches)
                     {
-                        var innerKey = match.Value[1..^1].Split(':')[0].Trim();
+                        // ⚡ Bolt Optimization: Avoid allocating string arrays via Split(':') just to get the key
+                        var innerContent = match.Value[1..^1];
+                        int colonIndex = innerContent.IndexOf(':');
+                        var innerKey = colonIndex == -1 ? innerContent.Trim() : innerContent.Substring(0, colonIndex).Trim();
                         if (!localCache.ContainsKey(innerKey))
                         {
                             keysToFetch.Add(innerKey);
@@ -168,10 +174,10 @@ namespace ImageGeneratorApp
                     // If parameters were supplied, format the placeholders ({0}, {1}, etc.) inside the template value
                     if (parts.Length > 1)
                     {
-                        var parameters = parts.Skip(1).Select(p => p.Trim()).ToArray();
-                        for (int i = 0; i < parameters.Length; i++)
+                        // ⚡ Bolt Optimization: Avoid LINQ and intermediate array allocations during template resolution
+                        for (int i = 1; i < parts.Length; i++)
                         {
-                            templateValue = templateValue.Replace($"{{{i}}}", parameters[i]);
+                            templateValue = templateValue.Replace($"{{{i - 1}}}", parts[i].Trim());
                         }
                     }
 
