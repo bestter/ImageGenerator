@@ -72,3 +72,6 @@
 ## 2026-06-18 - [SQLite Database Index Sorting]
 **Learning:** In-memory LINQ sorts (like `.OrderBy()`) cause unnecessary array allocations and UI thread CPU overhead, even for small lists.
 **Action:** Push sorting logic down to the database query by using `ORDER BY` and matching collation (e.g., `ORDER BY key COLLATE NOCASE`) to leverage existing SQLite indices. This completely eliminates the need for C# to sort the data.
+## 2026-06-27 - Avoid unnecessary array allocations in string parsing and loops
+**Learning:** Using `string.Split(':')[0]` to extract a substring before a delimiter allocates an array that is immediately thrown away. Similarly, using LINQ chains like `.Skip(1).Select(p => p.Trim()).ToArray()` inside a hot loop (like template resolution) causes intermediate array allocations and closure overhead.
+**Action:** Use `string.IndexOf` combined with `string.Substring` to extract substrings without array allocations. Replace LINQ chains with standard `for` loops that iterate over existing arrays.
