@@ -148,11 +148,13 @@ namespace ImageGeneratorApp
                     throw new InvalidOperationException("Une récursion infinie a été détectée dans les modèles (limite de 20 itérations atteinte).");
                 }
 
-                // Process unique tags in the current iteration to optimize database queries and string replacements
-                var uniqueTags = matches.Cast<System.Text.RegularExpressions.Match>()
-                    .Select(m => m.Value)
-                    .Distinct()
-                    .ToList();
+                // ⚡ Bolt Optimization: Avoid LINQ chains (.Cast().Select().Distinct().ToList()) in the parsing hot loop.
+                // Using a HashSet directly prevents intermediate array allocations, closures, and enumerator overhead.
+                var uniqueTags = new HashSet<string>(StringComparer.Ordinal);
+                for (int i = 0; i < matches.Count; i++)
+                {
+                    uniqueTags.Add(matches[i].Value);
+                }
 
                 foreach (var tag in uniqueTags)
                 {
