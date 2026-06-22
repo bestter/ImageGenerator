@@ -160,9 +160,9 @@ namespace ImageGeneratorApp
                     // Extract inner content without the curly braces
                     var innerContent = tag[1..^1];
 
-                    // Split key and parameters by colons
-                    var parts = innerContent.Split(':');
-                    var key = parts[0].Trim();
+                    // ⚡ Bolt Optimization: Avoid string array allocations via Split(':') for templates without parameters
+                    int colonIndex = innerContent.IndexOf(':');
+                    var key = colonIndex == -1 ? innerContent.Trim() : innerContent.Substring(0, colonIndex).Trim();
 
                     if (!localCache.TryGetValue(key, out var template))
                     {
@@ -172,12 +172,14 @@ namespace ImageGeneratorApp
                     var templateValue = template.Value;
 
                     // If parameters were supplied, format the placeholders ({0}, {1}, etc.) inside the template value
-                    if (parts.Length > 1)
+                    if (colonIndex != -1)
                     {
+                        var paramString = innerContent.Substring(colonIndex + 1);
+                        var paramParts = paramString.Split(':');
                         // ⚡ Bolt Optimization: Avoid LINQ and intermediate array allocations during template resolution
-                        for (int i = 1; i < parts.Length; i++)
+                        for (int i = 0; i < paramParts.Length; i++)
                         {
-                            templateValue = templateValue.Replace($"{{{i - 1}}}", parts[i].Trim());
+                            templateValue = templateValue.Replace($"{{{i}}}", paramParts[i].Trim());
                         }
                     }
 

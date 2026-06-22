@@ -75,3 +75,7 @@
 ## 2026-06-27 - Avoid unnecessary array allocations in string parsing and loops
 **Learning:** Using `string.Split(':')[0]` to extract a substring before a delimiter allocates an array that is immediately thrown away. Similarly, using LINQ chains like `.Skip(1).Select(p => p.Trim()).ToArray()` inside a hot loop (like template resolution) causes intermediate array allocations and closure overhead.
 **Action:** Use `string.IndexOf` combined with `string.Substring` to extract substrings without array allocations. Replace LINQ chains with standard `for` loops that iterate over existing arrays.
+
+## 2023-10-27 - Avoid string array allocations in hot loops
+**Learning:** Using `string.Split(':')` inside a hot loop (like template resolution parsing) when 99% of the templates do not contain colons (parameters) leads to unnecessary single-element string array allocations. In C# text parsing routines, avoiding these allocations drastically reduces garbage collection pressure.
+**Action:** Use `string.IndexOf(':')` to safely verify the existence of parameters before invoking `Substring` or `Split`, effectively bypassing array allocation entirely for simple cases.
