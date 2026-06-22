@@ -79,3 +79,11 @@
 ## 2023-10-27 - Avoid string array allocations in hot loops
 **Learning:** Using `string.Split(':')` inside a hot loop (like template resolution parsing) when 99% of the templates do not contain colons (parameters) leads to unnecessary single-element string array allocations. In C# text parsing routines, avoiding these allocations drastically reduces garbage collection pressure.
 **Action:** Use `string.IndexOf(':')` to safely verify the existence of parameters before invoking `Substring` or `Split`, effectively bypassing array allocation entirely for simple cases.
+
+## 2026-06-28 - Avoid unnecessary database queries when data is already cached
+**Learning:** Adding new database queries (e.g., `SELECT DISTINCT`) to filter or sort data that is already eagerly loaded into an in-memory application cache actually degrades performance, as the added database/network roundtrip overhead negates any processing offload.
+**Action:** When data is fully loaded into an active cache, perform filtering, sorting, or distinct operations in-memory rather than issuing new database queries.
+
+## 2026-06-28 - Use HashSet instead of LINQ chains in hot loops
+**Learning:** Using LINQ chains like `.Cast<Match>().Select(m => m.Value).Distinct().ToList()` inside a parsing loop allocates multiple intermediate enumerators, arrays, and closures per iteration. In a hot loop (like a recursive template parser), this creates massive garbage collection pressure.
+**Action:** Always replace LINQ collection extraction chains with a `HashSet<string>` populated via a simple `for` loop to eliminate intermediate allocations and enumerator overhead completely.
