@@ -118,3 +118,7 @@
 **Vulnerability:** The application used `Process.Start` with `UseShellExecute = true` to open local files (like `LICENSE.txt`). If an attacker could control or manipulate the target path or environment variables, `UseShellExecute = true` could allow executing unintended shell commands or opening malicious applications instead of just reading the text file.
 **Learning:** `UseShellExecute = true` inherently passes strings to the Windows shell (cmd.exe or similar), which applies its own parsing rules, making it dangerous for dynamic paths.
 **Prevention:** Always invoke the specific target executable (e.g., `notepad.exe`) with `UseShellExecute = false`, and securely pass file paths or arguments using the `ArgumentList` property instead of string concatenation.
+## 2026-06-25 - Prevent Path Traversal in DPAPI Key Storage
+**Vulnerability:** The API Key storage helper used `provider.Split(Path.GetInvalidFileNameChars())` to sanitize the provider name before writing the local file. While this strips `\` and `/`, it does not inherently guarantee safe extraction of the filename if a path is supplied, potentially leaving other traversal patterns or misinterpretations.
+**Learning:** `Path.GetInvalidFileNameChars()` is meant for invalidating characters, not extracting safe filenames from potentially malicious paths.
+**Prevention:** Always use `Path.GetFileName()` to definitively isolate the final file component from a user-provided or potentially tainted path before performing any further character sanitization or path combinations.
