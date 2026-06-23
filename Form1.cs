@@ -110,17 +110,17 @@ namespace ImageGeneratorApp
             this.MainMenuStrip = mainMenuStrip;
             this.Controls.Add(mainMenuStrip);
 
+            this.Text = "Générateur d'image Grok Imagine et Nano Banana Pro";
+            this.ClientSize = new Size(900, 700);
+            this.StartPosition = FormStartPosition.CenterScreen;
+            this.WindowState = FormWindowState.Maximized;
+
             // Force the MenuStrip to perform layout immediately so its Height is measured
             // and the client area top is correctly offset before we position the first controls.
             // This prevents the classic MenuStrip-overlapping-absolute-controls bug on Maximized + HighDPI forms.
             this.PerformLayout();
             int menuHeight = mainMenuStrip.Height;
             int contentTop = menuHeight + 6; // small breathing room under the menu
-
-            this.Text = "Générateur d'image Grok Imagine et Nano Banana Pro";
-            this.ClientSize = new Size(900, 700);
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.WindowState = FormWindowState.Maximized;
 
             // UI elements are offset relative to contentTop to avoid MenuStrip overlap on HighDPI/Maximized
             lblKey = new Label
