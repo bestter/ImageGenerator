@@ -97,6 +97,75 @@ namespace ImageGeneratorApp.Tests
             connection1.Should().NotBeSameAs(connection2, "because GetConnection should return a new instance each time");
         }
 
+        [Fact]
+        public void InitializeDatabase_CreatesRequiredTables()
+        {
+            // Arrange
+            var connectionString = $"Data Source={_customDbPath}";
+            var helper = new DatabaseHelper(connectionString);
+
+            // Act
+            helper.InitializeDatabase();
+
+            // Assert
+            using var connection = helper.GetConnection();
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText = "SELECT count(*) FROM sqlite_master WHERE type='table' AND name IN ('templates', 'GenerationHistory');";
+            var tableCount = (long)command.ExecuteScalar()!;
+            tableCount.Should().Be(2, "because InitializeDatabase should create both 'templates' and 'GenerationHistory' tables");
+        }
+
+        [Fact]
+        public void InitializeDatabase_CreatesRequiredIndexes()
+        {
+            // Arrange
+            var connectionString = $"Data Source={_customDbPath}";
+            var helper = new DatabaseHelper(connectionString);
+
+            // Act
+            helper.InitializeDatabase();
+
+            // Assert
+            using var connection = helper.GetConnection();
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText = "SELECT name FROM sqlite_master WHERE type='index' AND name IN ('IX_templates_key', 'IX_templates_category', 'IX_templates_created_at', 'IX_GenerationHistory_CreatedAt');";
+            using var reader = command.ExecuteReader();
+
+            var indexNames = new System.Collections.Generic.List<string>();
+            while (reader.Read())
+            {
+                indexNames.Add(reader.GetString(0));
+            }
+
+            indexNames.Should().Contain("IX_templates_key");
+            indexNames.Should().Contain("IX_templates_category");
+            indexNames.Should().Contain("IX_templates_created_at");
+            indexNames.Should().Contain("IX_GenerationHistory_CreatedAt");
+            indexNames.Count.Should().Be(4, "because 4 standard indexes should be created");
+        }
+
+        [Fact]
+        public void InitializeDatabase_IsIdempotent_CanBeCalledMultipleTimesWithoutError()
+        {
+            // Arrange
+            var connectionString = $"Data Source={_customDbPath}";
+            var helper = new DatabaseHelper(connectionString);
+
+            // Act
+            Action act = () =>
+            {
+                helper.InitializeDatabase();
+                helper.InitializeDatabase();
+                helper.InitializeDatabase();
+            };
+
+            // Assert
+            act.Should().NotThrow("because InitializeDatabase uses IF NOT EXISTS and should be safely idempotent");
+        }
         public void Dispose()
         {
             // Teardown: ensure the database connection is fully closed so the file is freed, then delete it
