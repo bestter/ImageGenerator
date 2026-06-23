@@ -64,6 +64,39 @@ namespace ImageGeneratorApp.Tests
             tableCount.Should().Be(2, "because InitializeDatabase should create both 'templates' and 'GenerationHistory' tables");
         }
 
+        [Fact]
+        public void GetConnection_ReturnsNewConnectionWithCorrectConnectionString()
+        {
+            // Arrange
+            var customConnectionString = $"Data Source={_customDbPath}";
+            var helper = new DatabaseHelper(customConnectionString);
+
+            // Act
+            using var connection = helper.GetConnection();
+
+            // Assert
+            connection.Should().NotBeNull();
+            connection.ConnectionString.Should().Be(customConnectionString);
+            connection.State.Should().Be(System.Data.ConnectionState.Closed, "because the connection should not be opened automatically");
+        }
+
+        [Fact]
+        public void GetConnection_CalledMultipleTimes_ReturnsDifferentInstances()
+        {
+            // Arrange
+            var customConnectionString = $"Data Source={_customDbPath}";
+            var helper = new DatabaseHelper(customConnectionString);
+
+            // Act
+            using var connection1 = helper.GetConnection();
+            using var connection2 = helper.GetConnection();
+
+            // Assert
+            connection1.Should().NotBeNull();
+            connection2.Should().NotBeNull();
+            connection1.Should().NotBeSameAs(connection2, "because GetConnection should return a new instance each time");
+        }
+
 
         [Fact]
         public void InitializeDatabase_CreatesRequiredTables()
