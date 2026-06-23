@@ -97,13 +97,11 @@ namespace ImageGeneratorApp.Tests
             connection1.Should().NotBeSameAs(connection2, "because GetConnection should return a new instance each time");
         }
 
-
         [Fact]
         public void InitializeDatabase_CreatesRequiredTables()
         {
             // Arrange
-            var dbPath = Path.Combine(Path.GetTempPath(), $"ImageGenerator_DbHelperTest_{Guid.NewGuid()}.db");
-            var connectionString = $"Data Source={dbPath}";
+            var connectionString = $"Data Source={_customDbPath}";
             var helper = new DatabaseHelper(connectionString);
 
             // Act
@@ -117,19 +115,13 @@ namespace ImageGeneratorApp.Tests
             command.CommandText = "SELECT count(*) FROM sqlite_master WHERE type='table' AND name IN ('templates', 'GenerationHistory');";
             var tableCount = (long)command.ExecuteScalar()!;
             tableCount.Should().Be(2, "because InitializeDatabase should create both 'templates' and 'GenerationHistory' tables");
-
-            // Cleanup for this test
-            connection.Close();
-            SqliteConnection.ClearPool(connection);
-            if (File.Exists(dbPath)) File.Delete(dbPath);
         }
 
         [Fact]
         public void InitializeDatabase_CreatesRequiredIndexes()
         {
             // Arrange
-            var dbPath = Path.Combine(Path.GetTempPath(), $"ImageGenerator_DbHelperTest_{Guid.NewGuid()}.db");
-            var connectionString = $"Data Source={dbPath}";
+            var connectionString = $"Data Source={_customDbPath}";
             var helper = new DatabaseHelper(connectionString);
 
             // Act
@@ -154,19 +146,13 @@ namespace ImageGeneratorApp.Tests
             indexNames.Should().Contain("IX_templates_created_at");
             indexNames.Should().Contain("IX_GenerationHistory_CreatedAt");
             indexNames.Count.Should().Be(4, "because 4 standard indexes should be created");
-
-            // Cleanup for this test
-            connection.Close();
-            SqliteConnection.ClearPool(connection);
-            if (File.Exists(dbPath)) File.Delete(dbPath);
         }
 
         [Fact]
         public void InitializeDatabase_IsIdempotent_CanBeCalledMultipleTimesWithoutError()
         {
             // Arrange
-            var dbPath = Path.Combine(Path.GetTempPath(), $"ImageGenerator_DbHelperTest_{Guid.NewGuid()}.db");
-            var connectionString = $"Data Source={dbPath}";
+            var connectionString = $"Data Source={_customDbPath}";
             var helper = new DatabaseHelper(connectionString);
 
             // Act
@@ -179,11 +165,6 @@ namespace ImageGeneratorApp.Tests
 
             // Assert
             act.Should().NotThrow("because InitializeDatabase uses IF NOT EXISTS and should be safely idempotent");
-
-            // Cleanup for this test
-            using var connection = helper.GetConnection();
-            SqliteConnection.ClearPool(connection);
-            if (File.Exists(dbPath)) File.Delete(dbPath);
         }
         public void Dispose()
         {
