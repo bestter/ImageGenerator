@@ -775,13 +775,6 @@ namespace ImageGeneratorApp
             }
         }
 
-        //[STAThread]
-        //static void Main()
-        //{
-        //    Application.EnableVisualStyles();
-        //    Application.SetCompatibleTextRenderingDefault(false);
-        //    Application.Run(new Form1());
-        //}
 
         // --- Prompt Template System Autocomplete Operations ---
 
