@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace ImageGeneratorApp
 {
@@ -19,7 +20,7 @@ namespace ImageGeneratorApp
             );
         }
 
-        public static void SaveApiKey(string provider, string apiKey)
+        public static async Task SaveApiKeyAsync(string provider, string apiKey)
         {
             if (string.IsNullOrWhiteSpace(apiKey))
                 return;
@@ -35,7 +36,7 @@ namespace ImageGeneratorApp
 
                 byte[] plainBytes = Encoding.UTF8.GetBytes(apiKey);
                 byte[] encryptedBytes = ProtectedData.Protect(plainBytes, null, DataProtectionScope.CurrentUser);
-                File.WriteAllBytes(filePath, encryptedBytes);
+                await File.WriteAllBytesAsync(filePath, encryptedBytes);
             }
             catch (IOException)
             {
