@@ -95,7 +95,7 @@ namespace ImageGeneratorApp
             _validationDebounceTimer.Tick += (s, ev) =>
             {
                 _validationDebounceTimer.Stop();
-                _ = UpdateGenerateButtonStateAsync();
+                UpdateGenerateButtonState();
             };
 
             // Create the menu FIRST (before ClientSize / WindowState / any other controls).
@@ -264,7 +264,7 @@ namespace ImageGeneratorApp
             this.Paint += Form1_Paint;
             this.Resize += Form1_Resize;
 
-            _ = UpdateGenerateButtonStateAsync();
+            UpdateGenerateButtonState();
         }
 
         private async void BtnManageTemplates_Click(object? sender, EventArgs e)
@@ -377,7 +377,7 @@ namespace ImageGeneratorApp
             byte[]? previousImageBytes = currentImageBytes;
 
             _isGenerating = true;
-            _ = UpdateGenerateButtonStateAsync();
+            UpdateGenerateButtonState();
             btnSave.Enabled = false;
             lblStatus.Text = "⏳ Génération en cours...";
             DisposeCurrentImage();
@@ -416,7 +416,7 @@ namespace ImageGeneratorApp
             finally
             {
                 _isGenerating = false;
-                _ = UpdateGenerateButtonStateAsync();
+                UpdateGenerateButtonState();
                 if (currentBase64Image == null && previousBase64Image != null)
                 {
                     currentBase64Image = previousBase64Image;
@@ -979,7 +979,7 @@ namespace ImageGeneratorApp
 
         private void TxtPrompt_LostFocus(object? sender, EventArgs e)
         {
-            _ = ValidatePromptAsync();
+            ValidatePrompt();
 
             // Give double-click actions some time to resolve before closing the window
             var timer = new System.Windows.Forms.Timer { Interval = 200 };
@@ -1015,9 +1015,9 @@ namespace ImageGeneratorApp
             _validationDebounceTimer.Start();
         }
 
-        private async Task ValidatePromptAsync()
+        private void ValidatePrompt()
         {
-            if (txtPrompt == null || _templateParser == null || chkEnableTemplates == null) return;
+            if (txtPrompt == null || chkEnableTemplates == null) return;
 
             bool hasError = false;
             if (chkEnableTemplates.Checked)
@@ -1027,8 +1027,22 @@ namespace ImageGeneratorApp
                 {
                     try
                     {
-                        // Dry-run process without usage count increments
-                        await _templateParser.ProcessPromptAsync(rawPrompt, incrementUsageStats: false);
+                        int braceCount = 0;
+                        for (int i = 0; i < rawPrompt.Length; i++)
+                        {
+                            char c = rawPrompt[i];
+                            if (c == '{')
+                            {
+                                braceCount++;
+                                if (braceCount > 1) throw new FormatException();
+                            }
+                            else if (c == '}')
+                            {
+                                braceCount--;
+                                if (braceCount < 0) throw new FormatException();
+                            }
+                        }
+                        if (braceCount != 0) throw new FormatException();
                     }
                     catch
                     {
@@ -1044,7 +1058,7 @@ namespace ImageGeneratorApp
             }
         }
 
-        private async Task UpdateGenerateButtonStateAsync()
+        private void UpdateGenerateButtonState()
         {
             if (txtApiKey == null || txtPrompt == null || btnGenerate == null || _templateParser == null) return;
 
@@ -1092,21 +1106,8 @@ namespace ImageGeneratorApp
                 }
             }
 
-            // Database key resolution check (async)
-            bool isValid = true;
-            if (chkEnableTemplates != null && chkEnableTemplates.Checked)
-            {
-                try
-                {
-                    await _templateParser.ProcessPromptAsync(prompt, incrementUsageStats: false);
-                }
-                catch
-                {
-                    isValid = false;
-                }
-            }
-
-            btnGenerate.Enabled = isValid;
+            // The prompt syntax is valid, enable the generate button
+            btnGenerate.Enabled = true;
         }
     }
 }

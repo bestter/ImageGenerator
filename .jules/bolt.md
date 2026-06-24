@@ -87,3 +87,7 @@
 ## 2026-06-28 - Use HashSet instead of LINQ chains in hot loops
 **Learning:** Using LINQ chains like `.Cast<Match>().Select(m => m.Value).Distinct().ToList()` inside a parsing loop allocates multiple intermediate enumerators, arrays, and closures per iteration. In a hot loop (like a recursive template parser), this creates massive garbage collection pressure.
 **Action:** Always replace LINQ collection extraction chains with a `HashSet<string>` populated via a simple `for` loop to eliminate intermediate allocations and enumerator overhead completely.
+
+## 2026-07-15 - Remove redundant database queries and Task allocations in UI validation
+**Learning:** Performing a heavy, asynchronous database query (`await ProcessPromptAsync`) inside a debounced UI text validation method (`UpdateGenerateButtonStateAsync`) causes massive I/O overhead on every keystroke. Furthermore, keeping an `async Task` signature when no `await` is actually needed forces the compiler to build a state machine and allocate a `Task` on the heap, causing GC pressure.
+**Action:** When UI validation only needs to check basic syntax, avoid making database calls if the downstream process already handles missing data gracefully. Ensure synchronous UI methods do not use the `async Task` signature to avoid unnecessary state machine and heap allocations.
