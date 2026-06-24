@@ -364,7 +364,7 @@ namespace ImageGeneratorApp
             string apiKey = txtApiKey.Text?.Trim() ?? string.Empty;
 
             string provider = cmbModel.Text == "nano-banana-pro" ? "Google" : "xAI";
-            ApiKeyStorageHelper.SaveApiKey(provider, apiKey);
+            await ApiKeyStorageHelper.SaveApiKeyAsync(provider, apiKey);
 
             string? imageToEditBase64 = null;
             if (chkMultiTurnEditing.Checked && !string.IsNullOrEmpty(currentBase64Image))
