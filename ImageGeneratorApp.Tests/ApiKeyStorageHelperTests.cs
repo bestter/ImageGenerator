@@ -20,6 +20,7 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace ImageGeneratorApp.Tests
@@ -76,7 +77,7 @@ namespace ImageGeneratorApp.Tests
             string originalKey = "my-secret-api-key-12345";
 
             // Act
-            ApiKeyStorageHelper.SaveApiKey(_testProvider, originalKey);
+            await ApiKeyStorageHelper.SaveApiKeyAsync(_testProvider, originalKey);
             string loadedKey = await ApiKeyStorageHelper.LoadApiKeyAsync(_testProvider);
 
             // Assert
@@ -106,7 +107,7 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
-        public void SaveApiKey_WhenFileIsLocked_SilentlyFails_IOException()
+        public async Task SaveApiKey_WhenFileIsLocked_SilentlyFails_IOException()
         {
             // Arrange
             string? directory = Path.GetDirectoryName(_filePath);
@@ -120,8 +121,8 @@ namespace ImageGeneratorApp.Tests
             using (var fs = new FileStream(_filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
             {
                 // Action should not throw
-                Action act = () => ApiKeyStorageHelper.SaveApiKey(_testProvider, "new key");
-                act.Should().NotThrow();
+                Func<Task> act = async () => await ApiKeyStorageHelper.SaveApiKeyAsync(_testProvider, "new key");
+                await act.Should().NotThrowAsync();
             }
         }
 
@@ -146,15 +147,15 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
-        public void SaveApiKey_WhenPathIsDirectory_SilentlyFails_UnauthorizedAccessException()
+        public async Task SaveApiKey_WhenPathIsDirectory_SilentlyFails_UnauthorizedAccessException()
         {
             // Arrange
             // Create a directory at the file path to trigger UnauthorizedAccessException
             Directory.CreateDirectory(_filePath);
 
             // Act & Assert
-            Action act = () => ApiKeyStorageHelper.SaveApiKey(_testProvider, "new key");
-            act.Should().NotThrow();
+            Func<Task> act = async () => await ApiKeyStorageHelper.SaveApiKeyAsync(_testProvider, "new key");
+            await act.Should().NotThrowAsync();
         }
 
         [Fact]
@@ -172,16 +173,16 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
-        public void SaveApiKey_CryptographicException_SilentlyFails()
+        public async Task SaveApiKey_CryptographicException_SilentlyFails()
         {
             // Note: It's hard to trigger CryptographicException from SaveApiKey without
             // corrupting the DPAPI system or running in a different context.
             // But we can test that passing null or whitespace key doesn't throw.
-            Action act1 = () => ApiKeyStorageHelper.SaveApiKey(_testProvider, null!);
-            Action act2 = () => ApiKeyStorageHelper.SaveApiKey(_testProvider, "   ");
+            Func<Task> act1 = async () => await ApiKeyStorageHelper.SaveApiKeyAsync(_testProvider, null!);
+            Func<Task> act2 = async () => await ApiKeyStorageHelper.SaveApiKeyAsync(_testProvider, "   ");
 
-            act1.Should().NotThrow();
-            act2.Should().NotThrow();
+            await act1.Should().NotThrowAsync();
+            await act2.Should().NotThrowAsync();
         }
 
         [Fact]
