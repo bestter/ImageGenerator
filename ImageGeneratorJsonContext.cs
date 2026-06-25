@@ -25,7 +25,20 @@ namespace ImageGeneratorApp
     [JsonSerializable(typeof(GeminiResponse))]
     [JsonSerializable(typeof(ImageUrlObject))]
     [JsonSerializable(typeof(ImageUrlObject[]))]
+    [JsonSerializable(typeof(RawMetadata))]
     internal partial class ImageGeneratorJsonContext : JsonSerializerContext
     {
+    }
+
+    /// <summary>
+    /// Represents the raw metadata structure to be serialized securely.
+    /// </summary>
+    public class RawMetadata
+    {
+        [JsonPropertyName("resolution")]
+        public string Resolution { get; set; } = string.Empty;
+
+        [JsonPropertyName("aspect_ratio")]
+        public string AspectRatio { get; set; } = string.Empty;
     }
 }

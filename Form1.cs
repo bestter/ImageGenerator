@@ -527,8 +527,9 @@ namespace ImageGeneratorApp
             {
                 try
                 {
-                    // Construct a rawMetadata JSON string to store in the DB
-                    var rawMetadataJson = $"{{\"resolution\":\"{resolution}\",\"aspect_ratio\":\"{aspectRatio}\"}}";
+                    // Construct a rawMetadata JSON string to store in the DB securely
+                    var metadata = new RawMetadata { Resolution = resolution, AspectRatio = aspectRatio };
+                    var rawMetadataJson = JsonSerializer.Serialize(metadata, ImageGeneratorJsonContext.Default.RawMetadata);
 
                     await _historyOrchestrator.LogGenerationAsync(
                         imageBytes,
