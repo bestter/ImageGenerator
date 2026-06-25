@@ -52,12 +52,12 @@ namespace ImageGeneratorApp
             }
         }
 
-        public static string LoadApiKey(string provider)
+        public static async Task<string> LoadApiKeyAsync(string provider)
         {
             try
             {
                 string filePath = GetStorageFilePath(provider);
-                using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
                 {
                     if (fs.Length > 4096)
                     {
@@ -69,7 +69,7 @@ namespace ImageGeneratorApp
                     int bytesRead = 0;
                     while (bytesRead < length)
                     {
-                        int read = fs.Read(encryptedBytes, bytesRead, length - bytesRead);
+                        int read = await fs.ReadAsync(encryptedBytes, bytesRead, length - bytesRead);
                         if (read == 0)
                         {
                             break;

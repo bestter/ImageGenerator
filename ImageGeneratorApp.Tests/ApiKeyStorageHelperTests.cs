@@ -61,10 +61,10 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
-        public void LoadApiKey_WhenFileDoesNotExist_ReturnsEmptyString()
+        public async Task LoadApiKey_WhenFileDoesNotExist_ReturnsEmptyString()
         {
             // Act
-            string result = ApiKeyStorageHelper.LoadApiKey(_testProvider);
+            string result = await ApiKeyStorageHelper.LoadApiKeyAsync(_testProvider);
 
             // Assert
             result.Should().BeEmpty();
@@ -78,14 +78,14 @@ namespace ImageGeneratorApp.Tests
 
             // Act
             await ApiKeyStorageHelper.SaveApiKeyAsync(_testProvider, originalKey);
-            string loadedKey = ApiKeyStorageHelper.LoadApiKey(_testProvider);
+            string loadedKey = await ApiKeyStorageHelper.LoadApiKeyAsync(_testProvider);
 
             // Assert
             loadedKey.Should().Be(originalKey);
         }
 
         [Fact]
-        public void LoadApiKey_WhenFileIsOversized_ReturnsEmptyString()
+        public async Task LoadApiKey_WhenFileIsOversized_ReturnsEmptyString()
         {
             // Arrange
             // Create a file larger than 4096 bytes (e.g. 4097 bytes)
@@ -100,7 +100,7 @@ namespace ImageGeneratorApp.Tests
             File.WriteAllBytes(_filePath, oversizedBytes);
 
             // Act
-            string result = ApiKeyStorageHelper.LoadApiKey(_testProvider);
+            string result = await ApiKeyStorageHelper.LoadApiKeyAsync(_testProvider);
 
             // Assert
             result.Should().BeEmpty();
@@ -127,7 +127,7 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
-        public void LoadApiKey_WhenFileIsLocked_ReturnsEmptyString_IOException()
+        public async Task LoadApiKey_WhenFileIsLocked_ReturnsEmptyString_IOException()
         {
             // Arrange
             string? directory = Path.GetDirectoryName(_filePath);
@@ -141,7 +141,7 @@ namespace ImageGeneratorApp.Tests
             using (var fs = new FileStream(_filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
             {
                 // Action should not throw and return empty string
-                string result = ApiKeyStorageHelper.LoadApiKey(_testProvider);
+                string result = await ApiKeyStorageHelper.LoadApiKeyAsync(_testProvider);
                 result.Should().BeEmpty();
             }
         }
@@ -159,14 +159,14 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
-        public void LoadApiKey_WhenPathIsDirectory_ReturnsEmptyString_UnauthorizedAccessException()
+        public async Task LoadApiKey_WhenPathIsDirectory_ReturnsEmptyString_UnauthorizedAccessException()
         {
             // Arrange
             // Create a directory at the file path to trigger UnauthorizedAccessException
             Directory.CreateDirectory(_filePath);
 
             // Act
-            string result = ApiKeyStorageHelper.LoadApiKey(_testProvider);
+            string result = await ApiKeyStorageHelper.LoadApiKeyAsync(_testProvider);
 
             // Assert
             result.Should().BeEmpty();
@@ -186,7 +186,7 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
-        public void LoadApiKey_WhenFileIsCorrupted_ReturnsEmptyString_CryptographicException()
+        public async Task LoadApiKey_WhenFileIsCorrupted_ReturnsEmptyString_CryptographicException()
         {
             // Arrange
             string? directory = Path.GetDirectoryName(_filePath);
@@ -200,7 +200,7 @@ namespace ImageGeneratorApp.Tests
             File.WriteAllBytes(_filePath, corruptedBytes);
 
             // Act
-            string result = ApiKeyStorageHelper.LoadApiKey(_testProvider);
+            string result = await ApiKeyStorageHelper.LoadApiKeyAsync(_testProvider);
 
             // Assert
             result.Should().BeEmpty();
