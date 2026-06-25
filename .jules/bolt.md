@@ -91,3 +91,7 @@
 ## 2026-07-15 - Remove redundant database queries and Task allocations in UI validation
 **Learning:** Performing a heavy, asynchronous database query (`await ProcessPromptAsync`) inside a debounced UI text validation method (`UpdateGenerateButtonStateAsync`) causes massive I/O overhead on every keystroke. Furthermore, keeping an `async Task` signature when no `await` is actually needed forces the compiler to build a state machine and allocate a `Task` on the heap, causing GC pressure.
 **Action:** When UI validation only needs to check basic syntax, avoid making database calls if the downstream process already handles missing data gracefully. Ensure synchronous UI methods do not use the `async Task` signature to avoid unnecessary state machine and heap allocations.
+
+## 2026-07-20 - Avoid exceptions for control flow in UI validation
+**Learning:** Throwing exceptions (like `FormatException`) for expected control flow during rapid UI text validation (e.g. checking syntax during user typing) causes massive CPU overhead, large stack trace allocations, and heavy GC pressure, severely degrading the real-time UI typing experience.
+**Action:** Always extract syntax validation into dedicated `bool`-returning helper methods (e.g., `IsPromptSyntaxValid`) and return `false` instead of throwing exceptions for fast-scan checks.
