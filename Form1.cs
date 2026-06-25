@@ -1009,6 +1009,30 @@ namespace ImageGeneratorApp
             _validationDebounceTimer.Start();
         }
 
+        // ⚡ Bolt Optimization: Use a bool-returning helper method instead of throwing exceptions for control flow.
+        // Throwing FormatException during UI text validation causes massive CPU and GC overhead on the UI thread.
+        private bool IsPromptSyntaxValid(string prompt)
+        {
+            if (string.IsNullOrEmpty(prompt)) return true;
+
+            int braceCount = 0;
+            for (int i = 0; i < prompt.Length; i++)
+            {
+                char c = prompt[i];
+                if (c == '{')
+                {
+                    braceCount++;
+                    if (braceCount > 1) return false;
+                }
+                else if (c == '}')
+                {
+                    braceCount--;
+                    if (braceCount < 0) return false;
+                }
+            }
+            return braceCount == 0;
+        }
+
         private void ValidatePrompt()
         {
             if (txtPrompt == null || chkEnableTemplates == null) return;
@@ -1017,32 +1041,7 @@ namespace ImageGeneratorApp
             if (chkEnableTemplates.Checked)
             {
                 string rawPrompt = txtPrompt.Text.Trim();
-                if (!string.IsNullOrEmpty(rawPrompt))
-                {
-                    try
-                    {
-                        int braceCount = 0;
-                        for (int i = 0; i < rawPrompt.Length; i++)
-                        {
-                            char c = rawPrompt[i];
-                            if (c == '{')
-                            {
-                                braceCount++;
-                                if (braceCount > 1) throw new FormatException();
-                            }
-                            else if (c == '}')
-                            {
-                                braceCount--;
-                                if (braceCount < 0) throw new FormatException();
-                            }
-                        }
-                        if (braceCount != 0) throw new FormatException();
-                    }
-                    catch
-                    {
-                        hasError = true;
-                    }
-                }
+                hasError = !IsPromptSyntaxValid(rawPrompt);
             }
 
             if (_hasPromptError != hasError)
@@ -1074,26 +1073,7 @@ namespace ImageGeneratorApp
             // Fast-scan syntax check (sync) to avoid async database queries for basic syntax issues
             if (chkEnableTemplates != null && chkEnableTemplates.Checked)
             {
-                try
-                {
-                    int braceCount = 0;
-                    for (int i = 0; i < prompt.Length; i++)
-                    {
-                        char c = prompt[i];
-                        if (c == '{')
-                        {
-                            braceCount++;
-                            if (braceCount > 1) throw new FormatException();
-                        }
-                        else if (c == '}')
-                        {
-                            braceCount--;
-                            if (braceCount < 0) throw new FormatException();
-                        }
-                    }
-                    if (braceCount != 0) throw new FormatException();
-                }
-                catch
+                if (!IsPromptSyntaxValid(prompt))
                 {
                     btnGenerate.Enabled = false;
                     return;
