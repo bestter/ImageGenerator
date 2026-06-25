@@ -752,7 +752,7 @@ namespace ImageGeneratorApp
             }
         }
 
-        private void CmbModel_SelectedIndexChanged(object? sender, EventArgs e)
+        private async void CmbModel_SelectedIndexChanged(object? sender, EventArgs e)
         {
             UpdateModelDependentControls();
 
@@ -761,7 +761,7 @@ namespace ImageGeneratorApp
                 lblKey.Text = "Clé Google Cloud :";
                 lblKey.ForeColor = Color.FromArgb(26, 115, 232); // Google Blue
 
-                string savedKey = ApiKeyStorageHelper.LoadApiKey("Google");
+                string savedKey = await ApiKeyStorageHelper.LoadApiKeyAsync("Google");
                 if (txtApiKey != null) txtApiKey.Text = savedKey ?? string.Empty;
             }
             else
@@ -769,7 +769,7 @@ namespace ImageGeneratorApp
                 lblKey.Text = "Clé API xAI :";
                 lblKey.ForeColor = Color.FromArgb(220, 76, 30); // xAI Orange-Red
 
-                string savedKey = ApiKeyStorageHelper.LoadApiKey("xAI");
+                string savedKey = await ApiKeyStorageHelper.LoadApiKeyAsync("xAI");
                 if (txtApiKey != null) txtApiKey.Text = savedKey ?? string.Empty;
             }
         }
@@ -789,7 +789,7 @@ namespace ImageGeneratorApp
             base.OnLoad(e);
 
             string initialProvider = cmbModel?.Text == "nano-banana-pro" ? "Google" : "xAI";
-            string savedKey = ApiKeyStorageHelper.LoadApiKey(initialProvider);
+            string savedKey = await ApiKeyStorageHelper.LoadApiKeyAsync(initialProvider);
             if (!string.IsNullOrEmpty(savedKey) && txtApiKey != null)
             {
                 txtApiKey.Text = savedKey;
