@@ -31,7 +31,12 @@ namespace ImageGeneratorApp
                 var directory = Path.GetDirectoryName(filePath);
                 if (directory != null)
                 {
-                    Directory.CreateDirectory(directory);
+                    // ⚡ Bolt Optimization: Offload synchronous I/O from the async hot path to prevent thread pool starvation.
+                    // Execute only in the rare fallback condition when the directory actually needs to be generated.
+                    if (!Directory.Exists(directory))
+                    {
+                        await Task.Run(() => Directory.CreateDirectory(directory));
+                    }
                 }
 
                 byte[] plainBytes = Encoding.UTF8.GetBytes(apiKey);
