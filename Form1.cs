@@ -942,9 +942,16 @@ namespace ImageGeneratorApp
             var (triggerIndex, query, active) = GetActiveTrigger();
             if (active)
             {
-                var matched = _templateKeysCache
-                    .Where(k => k.Contains(query, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
+                // ⚡ Bolt Optimization: Avoid LINQ and intermediate List/Cast array allocations during autocomplete filtering.
+                // Using a standard loop and a pre-sized array for the ListBox avoids garbage collection pressure on the UI thread.
+                var matched = new System.Collections.Generic.List<object>();
+                foreach (var k in _templateKeysCache)
+                {
+                    if (k.Contains(query, StringComparison.OrdinalIgnoreCase))
+                    {
+                        matched.Add(k);
+                    }
+                }
 
                 if (matched.Count > 0)
                 {
@@ -952,7 +959,7 @@ namespace ImageGeneratorApp
                     lstAutocomplete.Items.Clear();
                     // ⚡ Bolt Optimization: Batch insert autocomplete items using .AddRange() instead of a foreach loop
                     // This prevents repeated array resizing and layout recalculations, optimizing rendering performance
-                    lstAutocomplete.Items.AddRange(matched.Cast<object>().ToArray());
+                    lstAutocomplete.Items.AddRange(matched.ToArray());
                     lstAutocomplete.SelectedIndex = 0;
                     lstAutocomplete.EndUpdate();
 
