@@ -95,3 +95,7 @@
 ## 2026-07-20 - Avoid exceptions for control flow in UI validation
 **Learning:** Throwing exceptions (like `FormatException`) for expected control flow during rapid UI text validation (e.g. checking syntax during user typing) causes massive CPU overhead, large stack trace allocations, and heavy GC pressure, severely degrading the real-time UI typing experience.
 **Action:** Always extract syntax validation into dedicated `bool`-returning helper methods (e.g., `IsPromptSyntaxValid`) and return `false` instead of throwing exceptions for fast-scan checks.
+
+## 2026-06-27 - Optimize UI list filtering allocations
+**Learning:** Using LINQ chains like `.Where().ToList()` combined with `.Cast<object>().ToArray()` inside rapid UI events (like debounced autocomplete typing) creates multiple intermediate arrays and enumerators, causing heavy Garbage Collection pressure on the main UI thread.
+**Action:** Replace LINQ extraction chains on rapid UI paths with standard `foreach` loops and generic `List<T>` that can be converted directly with `.ToArray()` to eliminate intermediate allocations completely.
