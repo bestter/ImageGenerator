@@ -99,3 +99,7 @@
 ## 2026-06-27 - Optimize UI list filtering allocations
 **Learning:** Using LINQ chains like `.Where().ToList()` combined with `.Cast<object>().ToArray()` inside rapid UI events (like debounced autocomplete typing) creates multiple intermediate arrays and enumerators, causing heavy Garbage Collection pressure on the main UI thread.
 **Action:** Replace LINQ extraction chains on rapid UI paths with standard `foreach` loops and generic `List<T>` that can be converted directly with `.ToArray()` to eliminate intermediate allocations completely.
+
+## 2026-06-29 - Avoid LINQ on rapid UI paths
+**Learning:** Using LINQ chains like `.Where()` inside rapid UI events (like debounced search filtering) creates multiple intermediate enumerators and closure allocations, causing Garbage Collection pressure on the main UI thread.
+**Action:** Replace LINQ chains with standard `foreach` loops containing `if` conditions when modifying UI collections to completely eliminate intermediate allocations.
