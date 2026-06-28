@@ -321,30 +321,27 @@ namespace ImageGeneratorApp
             var searchText = txtSearch.Text.Trim();
             var selectedCategory = cmbCategory.SelectedItem?.ToString();
 
-            var filtered = _allTemplates.AsEnumerable();
-
-            // Text search (case-insensitive key and tags matching)
-            if (!string.IsNullOrEmpty(searchText))
-            {
-                filtered = filtered.Where(t =>
-                    t.Key.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                    (t.Tags != null && t.Tags.Contains(searchText, StringComparison.OrdinalIgnoreCase))
-                );
-            }
-
-            // Category filter
-            if (!string.IsNullOrEmpty(selectedCategory) && selectedCategory != "Toutes les catégories")
-            {
-                filtered = filtered.Where(t => string.Equals(t.Category, selectedCategory, StringComparison.OrdinalIgnoreCase));
-            }
+            bool hasSearchText = !string.IsNullOrEmpty(searchText);
+            bool hasCategoryFilter = !string.IsNullOrEmpty(selectedCategory) && selectedCategory != "Toutes les catégories";
 
             // Temporarily suspend events to prevent excessive DataGridView repaints
             _filteredTemplates.RaiseListChangedEvents = false;
             _filteredTemplates.Clear();
 
-            foreach (var template in filtered)
+            // ⚡ Bolt Optimization: Replace LINQ extraction chains on rapid UI paths with standard foreach loops to eliminate intermediate array and enumerator allocations, reducing GC pressure.
+            foreach (var template in _allTemplates)
             {
-                _filteredTemplates.Add(template);
+                bool matchesSearch = !hasSearchText ||
+                                     template.Key.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                                     (template.Tags != null && template.Tags.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+
+                bool matchesCategory = !hasCategoryFilter ||
+                                       string.Equals(template.Category, selectedCategory, StringComparison.OrdinalIgnoreCase);
+
+                if (matchesSearch && matchesCategory)
+                {
+                    _filteredTemplates.Add(template);
+                }
             }
 
             _filteredTemplates.RaiseListChangedEvents = true;
