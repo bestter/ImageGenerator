@@ -103,3 +103,6 @@
 ## 2026-06-29 - Avoid LINQ on rapid UI paths
 **Learning:** Using LINQ chains like `.Where()` inside rapid UI events (like debounced search filtering) creates multiple intermediate enumerators and closure allocations, causing Garbage Collection pressure on the main UI thread.
 **Action:** Replace LINQ chains with standard `foreach` loops containing `if` conditions when modifying UI collections to completely eliminate intermediate allocations.
+## 2026-07-22 - Avoid string array allocations when parsing simple combo box values
+**Learning:** Using `string.Split(' ')[0]` to extract a substring before a delimiter (like extracting "16:9" from "16:9 (Landscape)") allocates an array that is immediately thrown away. On the UI thread, this causes unnecessary intermediate array allocations and Garbage Collection pressure.
+**Action:** Use `string.IndexOf` combined with `string.Substring` to extract substrings without array allocations. Handle the case where the delimiter isn't found by checking if `IndexOf` returns `-1`.
