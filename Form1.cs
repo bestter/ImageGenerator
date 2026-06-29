@@ -387,7 +387,10 @@ namespace ImageGeneratorApp
             try
             {
                 string selectedRatioText = cmbAspectRatio.SelectedItem?.ToString() ?? "16:9";
-                string aspectRatioValue = selectedRatioText.Split(' ')[0];
+                // ⚡ Bolt Optimization: Use IndexOf and Substring instead of Split()[0] to extract the aspect ratio value.
+                // This eliminates an unnecessary string array allocation on the UI thread when reading the aspect ratio.
+                int spaceIndex = selectedRatioText.IndexOf(' ');
+                string aspectRatioValue = spaceIndex == -1 ? selectedRatioText : selectedRatioText.Substring(0, spaceIndex);
                 string opaqueUserId = await UserIdHelper.GetOpaqueUserIdAsync();
 
                 List<ImageUrlObject> imagesList = await PrepareReferenceImagesAsync(imageToEditBase64);
