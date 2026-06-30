@@ -106,3 +106,6 @@
 ## 2026-07-22 - Avoid string array allocations when parsing simple combo box values
 **Learning:** Using `string.Split(' ')[0]` to extract a substring before a delimiter (like extracting "16:9" from "16:9 (Landscape)") allocates an array that is immediately thrown away. On the UI thread, this causes unnecessary intermediate array allocations and Garbage Collection pressure.
 **Action:** Use `string.IndexOf` combined with `string.Substring` to extract substrings without array allocations. Handle the case where the delimiter isn't found by checking if `IndexOf` returns `-1`.
+## 2026-06-30 - In-memory filtering instead of database queries for loaded collections
+**Learning:** If a UI form completely loads all records into memory at startup (e.g. `LoadHistoryAsync`), firing an asynchronous SQLite database query (`SearchAsync` with `LIKE`) on every debounced keystroke introduces massive, redundant I/O overhead and negates the value of loading the data in the first place.
+**Action:** Always maintain a local `List<T>` cache of the fully-loaded dataset in the Form. When the user searches, loop over the local list using `string.Contains` and a `foreach` loop instead of making any database calls. This guarantees instant, stutter-free list filtering and eliminates DB thread bottlenecks.
