@@ -270,12 +270,22 @@ namespace ImageGeneratorApp
             if (string.IsNullOrEmpty(value))
                 return string.Empty;
 
-            return value
-                .Replace("&", "&amp;")
-                .Replace("<", "&lt;")
-                .Replace(">", "&gt;")
-                .Replace("\"", "&quot;")
-                .Replace("'", "&apos;");
+            // ⚡ Bolt Optimization: Use a single StringBuilder to avoid multiple string allocations
+            // from chaining string.Replace() for character escaping.
+            var sb = new StringBuilder(value.Length + 10);
+            foreach (char c in value)
+            {
+                switch (c)
+                {
+                    case '&': sb.Append("&amp;"); break;
+                    case '<': sb.Append("&lt;"); break;
+                    case '>': sb.Append("&gt;"); break;
+                    case '"': sb.Append("&quot;"); break;
+                    case '\'': sb.Append("&apos;"); break;
+                    default: sb.Append(c); break;
+                }
+            }
+            return sb.ToString();
         }
     }
 }
