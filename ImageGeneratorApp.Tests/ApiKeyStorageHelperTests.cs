@@ -205,5 +205,29 @@ namespace ImageGeneratorApp.Tests
             // Assert
             result.Should().BeEmpty();
         }
+
+        [Fact]
+        public async Task SaveApiKey_WhenDirectoryIsReadOnly_SilentlyFails_UnauthorizedAccessException()
+        {
+            // Arrange
+            string? directory = Path.GetDirectoryName(_filePath);
+            if (directory != null)
+            {
+                Directory.CreateDirectory(directory);
+                var dirInfo = new DirectoryInfo(directory);
+                dirInfo.Attributes |= FileAttributes.ReadOnly;
+
+                try
+                {
+                    // Act & Assert
+                    Func<Task> act = async () => await ApiKeyStorageHelper.SaveApiKeyAsync(_testProvider, "new key");
+                    await act.Should().NotThrowAsync();
+                }
+                finally
+                {
+                    dirInfo.Attributes &= ~FileAttributes.ReadOnly;
+                }
+            }
+        }
     }
 }
