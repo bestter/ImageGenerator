@@ -17,6 +17,9 @@
 namespace ImageGeneratorApp;
 
 
+/// <summary>
+///  The main entry point for the application.
+/// </summary>
 static class Program
 {
     [STAThread]
