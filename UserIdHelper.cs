@@ -41,7 +41,8 @@ namespace ImageGeneratorApp
 
                 try
                 {
-                    using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    // ⚡ Bolt: pass useAsync: true to avoid blocking the thread pool during async read
+                    using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
                     {
                         if (fs.Length <= 1024)
                         {
