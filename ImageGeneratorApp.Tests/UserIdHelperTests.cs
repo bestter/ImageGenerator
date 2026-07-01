@@ -78,5 +78,31 @@ namespace ImageGeneratorApp.Tests
                 Guid.TryParseExact(result, "N", out Guid parsed).Should().BeTrue();
             }
         }
+
+        [Fact]
+        public async Task GetOpaqueUserIdAsync_OnDirectoryNotFound_CreatesDirectoryAndReturnsNewId()
+        {
+            // Arrange
+            // Ensure the directory does not exist to trigger DirectoryNotFoundException when opening the file stream
+            if (Directory.Exists(_testFolderPath))
+            {
+                Directory.Delete(_testFolderPath, true);
+            }
+
+            // Act
+            string result = await UserIdHelper.GetOpaqueUserIdAsync();
+
+            // Assert
+            result.Should().NotBeNullOrWhiteSpace();
+            result.Length.Should().Be(32); // GUID "N" format length
+            Guid.TryParseExact(result, "N", out _).Should().BeTrue();
+
+            // Verify that the directory and file were created, and the file contains the returned ID
+            Directory.Exists(_testFolderPath).Should().BeTrue();
+            File.Exists(_testFilePath).Should().BeTrue();
+
+            string fileContent = await File.ReadAllTextAsync(_testFilePath, TestContext.Current.CancellationToken);
+            fileContent.Should().Be(result);
+        }
     }
 }
