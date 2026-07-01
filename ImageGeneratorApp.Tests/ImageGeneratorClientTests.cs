@@ -524,6 +524,36 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
+        public async Task GenerateImageAsync_ApiReturnsMalformedErrorJson_ThrowsImageGeneratorExceptionWithGenericMessage()
+        {
+            // Arrange
+            var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+            handlerMock
+               .Protected()
+               .Setup<Task<HttpResponseMessage>>(
+                  "SendAsync",
+                  ItExpr.IsAny<HttpRequestMessage>(),
+                  ItExpr.IsAny<CancellationToken>()
+               )
+               .ReturnsAsync(new HttpResponseMessage()
+               {
+                   StatusCode = HttpStatusCode.InternalServerError,
+                   Content = new StringContent("{ malformed_json: "),
+               });
+
+            var httpClient = new HttpClient(handlerMock.Object);
+            var client = new ImageGeneratorClient(httpClient);
+
+            // Act
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "model", "1k", "16:9", "user", new List<ImageUrlObject>());
+
+            // Assert
+            var exception = await act.Should().ThrowAsync<ImageGeneratorException>()
+                .WithMessage("Une erreur est survenue lors de la communication avec l'API.");
+            exception.Which.StatusCode.Should().Be(500);
+        }
+
+        [Fact]
         public async Task GenerateImageAsync_SendAsyncThrowsHttpRequestException_ThrowsImageGeneratorException()
         {
             // Arrange
