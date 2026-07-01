@@ -779,7 +779,6 @@ namespace ImageGeneratorApp
             }
         }
 
-
         // --- Prompt Template System Autocomplete Operations ---
 
         protected override async void OnLoad(EventArgs e)
