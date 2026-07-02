@@ -109,3 +109,7 @@
 ## 2026-06-30 - In-memory filtering instead of database queries for loaded collections
 **Learning:** If a UI form completely loads all records into memory at startup (e.g. `LoadHistoryAsync`), firing an asynchronous SQLite database query (`SearchAsync` with `LIKE`) on every debounced keystroke introduces massive, redundant I/O overhead and negates the value of loading the data in the first place.
 **Action:** Always maintain a local `List<T>` cache of the fully-loaded dataset in the Form. When the user searches, loop over the local list using `string.Contains` and a `foreach` loop instead of making any database calls. This guarantees instant, stutter-free list filtering and eliminates DB thread bottlenecks.
+
+## 2026-07-23 - Avoid chaining string.Replace() for multiple character replacements
+**Learning:** Chaining multiple `string.Replace()` calls (e.g., for XML or HTML escaping) allocates a new string for each replace operation, which creates significant intermediate garbage, leading to GC pressure when run frequently or on large strings.
+**Action:** Use a single `StringBuilder` initialized with a slightly larger capacity (e.g., `length + 10`) and a `switch` statement inside a `foreach` loop to perform multi-character escaping in a single pass without intermediate string allocations.
