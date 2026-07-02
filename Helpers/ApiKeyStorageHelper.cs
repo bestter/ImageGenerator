@@ -29,19 +29,23 @@ namespace ImageGeneratorApp
             {
                 string filePath = GetStorageFilePath(provider);
                 var directory = Path.GetDirectoryName(filePath);
-                if (directory != null)
-                {
-                    // ⚡ Bolt Optimization: Offload synchronous I/O from the async hot path to prevent thread pool starvation.
-                    // Execute only in the rare fallback condition when the directory actually needs to be generated.
-                    if (!Directory.Exists(directory))
-                    {
-                        await Task.Run(() => Directory.CreateDirectory(directory));
-                    }
-                }
-
                 byte[] plainBytes = Encoding.UTF8.GetBytes(apiKey);
                 byte[] encryptedBytes = ProtectedData.Protect(plainBytes, null, DataProtectionScope.CurrentUser);
-                await File.WriteAllBytesAsync(filePath, encryptedBytes);
+                try
+                {
+                    await File.WriteAllBytesAsync(filePath, encryptedBytes);
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    if (directory != null)
+                    {
+                        // ⚡ Bolt Optimization: Offload synchronous I/O from the async hot path to prevent thread pool starvation.
+                        // Execute only in the rare fallback condition when the directory actually needs to be generated.
+                        // 🛡️ Sentinel: Removed Directory.Exists check before CreateDirectory to prevent TOCTOU race conditions.
+                        await Task.Run(() => Directory.CreateDirectory(directory));
+                        await File.WriteAllBytesAsync(filePath, encryptedBytes);
+                    }
+                }
             }
             catch (IOException)
             {
