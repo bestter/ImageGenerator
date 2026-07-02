@@ -49,13 +49,6 @@ namespace ImageGeneratorApp
             // Offload CPU-heavy image loading, encoding, and IO-heavy saving to a background thread to prevent UI freezing
             await Task.Run(() =>
             {
-                // ⚡ Bolt Optimization: Offload synchronous I/O from the async hot path to prevent thread pool starvation.
-                // Execute only in the rare fallback condition when the directory actually needs to be generated.
-                if (!Directory.Exists(historyFolder))
-                {
-                    Directory.CreateDirectory(historyFolder);
-                }
-
                 // Fully qualified name to prevent any ambiguity with System.Drawing.Image in WinForms
                 using var image = SixLabors.ImageSharp.Image.Load(sourceImageBytes);
 
@@ -69,7 +62,18 @@ namespace ImageGeneratorApp
                     Quality = 80
                 };
 
-                image.Save(fullPath, encoder);
+                try
+                {
+                    image.Save(fullPath, encoder);
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    // ⚡ Bolt Optimization: Offload synchronous I/O from the async hot path to prevent thread pool starvation.
+                    // Execute only in the rare fallback condition when the directory actually needs to be generated.
+                    // 🛡️ Sentinel: Removed Directory.Exists check before CreateDirectory to prevent TOCTOU race conditions.
+                    Directory.CreateDirectory(historyFolder);
+                    image.Save(fullPath, encoder);
+                }
             });
 
             return fullPath;
