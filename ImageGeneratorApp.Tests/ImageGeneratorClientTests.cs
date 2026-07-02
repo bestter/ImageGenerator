@@ -608,6 +608,37 @@ namespace ImageGeneratorApp.Tests
             exception.Which.StatusCode.Should().Be(0);
         }
 
+
+        [Fact]
+        public async Task ParseErrorResponseAsync_JsonException_FallbackToGenericMessage()
+        {
+            // Arrange
+            var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+            handlerMock
+               .Protected()
+               .Setup<Task<HttpResponseMessage>>(
+                  "SendAsync",
+                  ItExpr.IsAny<HttpRequestMessage>(),
+                  ItExpr.IsAny<CancellationToken>()
+               )
+               .ReturnsAsync(new HttpResponseMessage()
+               {
+                   StatusCode = HttpStatusCode.BadRequest,
+                   Content = new StringContent("{ not_a_valid_json: "),
+               });
+
+            var httpClient = new HttpClient(handlerMock.Object);
+            var client = new ImageGeneratorClient(httpClient);
+
+            // Act
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "model", "1k", "16:9", "user", new List<ImageUrlObject>());
+
+            // Assert
+            var exception = await act.Should().ThrowAsync<ImageGeneratorException>()
+                .WithMessage("Une erreur est survenue lors de la communication avec l'API.");
+            exception.Which.StatusCode.Should().Be(400);
+        }
+
         [Fact]
         public async Task GenerateImageAsync_OversizedGeneratedImage_ThrowsImageGeneratorException_WithSafeMessage()
         {
