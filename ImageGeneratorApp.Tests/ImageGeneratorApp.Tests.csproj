@@ -22,7 +22,7 @@
     <PackageReference Include="Moq" Version="*" />
     <PackageReference Include="FluentAssertions" Version="*" />
     <PackageReference Include="Dapper" Version="2.1.79" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.2" />
   </ItemGroup>
 
   <ItemGroup>
