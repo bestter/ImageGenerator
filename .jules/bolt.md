@@ -116,3 +116,6 @@
 ## 2024-08-05 - Avoid LINQ collection extraction chains on the UI thread for ComboBox population
 **Learning:** Using chained LINQ methods (`.Select().Where().Distinct().OrderBy()`) on the UI thread to prepare data for `ComboBox.Items.AddRange()` creates multiple intermediate enumerators, closures, and arrays. This leads to heavy Garbage Collection pressure, especially when the underlying master collection is large.
 **Action:** Always replace LINQ collection extraction chains with a `HashSet<string>` populated via a standard `foreach` loop, followed by an explicit `List<T>.Sort()`. This eliminates all intermediate allocations and ensures smooth UI responsiveness.
+## 2026-07-25 - Use array instead of HashSet for small distinct collections
+**Learning:** Using a `HashSet` inside a hot loop (like a recursive template parser) to extract unique matches from a Regex collection causes unnecessary allocations, as the number of matches is typically very small.
+**Action:** Always replace `HashSet` with a simple array and a standard `for` loop to eliminate the memory allocation and hashing overhead completely.
