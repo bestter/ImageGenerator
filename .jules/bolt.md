@@ -116,3 +116,7 @@
 ## 2024-08-05 - Avoid LINQ collection extraction chains on the UI thread for ComboBox population
 **Learning:** Using chained LINQ methods (`.Select().Where().Distinct().OrderBy()`) on the UI thread to prepare data for `ComboBox.Items.AddRange()` creates multiple intermediate enumerators, closures, and arrays. This leads to heavy Garbage Collection pressure, especially when the underlying master collection is large.
 **Action:** Always replace LINQ collection extraction chains with a `HashSet<string>` populated via a standard `foreach` loop, followed by an explicit `List<T>.Sort()`. This eliminates all intermediate allocations and ensures smooth UI responsiveness.
+
+## 2026-10-27 - Avoid string array allocations when parsing template parameters
+**Learning:** Using `string.Split(':')` inside the `TemplateParser.cs` parameter processing loop to extract arguments from placeholders like `{tag:arg1:arg2}` allocates string arrays. Inside a recursive hot loop, these intermediate array allocations cause severe garbage collection pressure and affect performance.
+**Action:** Always replace `.Split()` inside hot loops with an iterative parsing approach using `string.IndexOf()` and `string.Substring()` to process delimited parts without allocating intermediate arrays.
