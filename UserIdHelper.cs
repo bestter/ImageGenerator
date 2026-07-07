@@ -64,9 +64,18 @@ namespace ImageGeneratorApp
 
                 if (string.IsNullOrEmpty(_cachedDefaultUserId))
                 {
-                    await Task.Run(() => Directory.CreateDirectory(folder));
                     _cachedDefaultUserId = Guid.NewGuid().ToString("N");
-                    await File.WriteAllTextAsync(filePath, _cachedDefaultUserId);
+
+                    // ⚡ Bolt: EAFP pattern to prevent thread-pool starvation from synchronous I/O operations in async methods
+                    try
+                    {
+                        await File.WriteAllTextAsync(filePath, _cachedDefaultUserId);
+                    }
+                    catch (DirectoryNotFoundException)
+                    {
+                        await Task.Run(() => Directory.CreateDirectory(folder));
+                        await File.WriteAllTextAsync(filePath, _cachedDefaultUserId);
+                    }
                 }
             }
             catch
