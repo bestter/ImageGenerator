@@ -434,11 +434,14 @@ namespace ImageGeneratorApp
                 string newKey;
                 int suffix = 1;
 
+                // ⚡ Optimize O(N^2) duplicate key lookup by caching existing keys in a HashSet
+                var existingKeys = new HashSet<string>(_allTemplates.Select(t => t.Key), StringComparer.OrdinalIgnoreCase);
+
                 do
                 {
                     newKey = $"{baseKey}_copy{suffix}";
                     suffix++;
-                } while (_allTemplates.Any(t => string.Equals(t.Key, newKey, StringComparison.OrdinalIgnoreCase)));
+                } while (existingKeys.Contains(newKey));
 
                 var duplicate = new TemplateModel
                 {
