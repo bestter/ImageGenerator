@@ -194,12 +194,30 @@ namespace ImageGeneratorApp
                     if (colonIndex != -1)
                     {
                         var paramString = innerContent.Substring(colonIndex + 1);
-                        var paramParts = paramString.Split(':');
-                        // ⚡ Bolt Optimization: Avoid LINQ and intermediate array allocations during template resolution
-                        for (int i = 0; i < paramParts.Length; i++)
+
+                        // ⚡ Bolt Optimization: Avoid intermediate array allocations via Split(':') during template resolution.
+                        // Iterate through the parameter string using IndexOf to extract parameters without array creation.
+                        int paramIndex = 0;
+                        int currentIndex = 0;
+
+                        do
                         {
-                            templateValue = templateValue.Replace($"{{{i}}}", paramParts[i].Trim());
-                        }
+                            int nextColon = paramString.IndexOf(':', currentIndex);
+                            string paramValue;
+                            if (nextColon == -1)
+                            {
+                                paramValue = paramString.Substring(currentIndex);
+                                currentIndex = paramString.Length + 1; // force exit
+                            }
+                            else
+                            {
+                                paramValue = paramString.Substring(currentIndex, nextColon - currentIndex);
+                                currentIndex = nextColon + 1;
+                            }
+
+                            templateValue = templateValue.Replace($"{{{paramIndex}}}", paramValue.Trim());
+                            paramIndex++;
+                        } while (currentIndex <= paramString.Length);
                     }
 
                     // Update the prompt replacing all occurrences of this specific tag expression

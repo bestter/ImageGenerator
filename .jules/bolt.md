@@ -119,3 +119,7 @@
 ## 2026-07-25 - Use array instead of HashSet for small distinct collections
 **Learning:** Using a `HashSet` inside a hot loop (like a recursive template parser) to extract unique matches from a Regex collection causes unnecessary allocations, as the number of matches is typically very small.
 **Action:** Always replace `HashSet` with a simple array and a standard `for` loop to eliminate the memory allocation and hashing overhead completely.
+
+## 2026-10-27 - Avoid string array allocations when parsing template parameters
+**Learning:** Using `string.Split(':')` inside the `TemplateParser.cs` parameter processing loop to extract arguments from placeholders like `{tag:arg1:arg2}` allocates string arrays. Inside a recursive hot loop, these intermediate array allocations cause severe garbage collection pressure and affect performance.
+**Action:** Always replace `.Split()` inside hot loops with an iterative parsing approach using `string.IndexOf()` and `string.Substring()` to process delimited parts without allocating intermediate arrays.
