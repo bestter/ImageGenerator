@@ -150,14 +150,31 @@ namespace ImageGeneratorApp
 
                 // ⚡ Bolt Optimization: Avoid LINQ chains (.Cast().Select().Distinct().ToList()) in the parsing hot loop.
                 // Using a HashSet directly prevents intermediate array allocations, closures, and enumerator overhead.
-                var uniqueTags = new HashSet<string>(StringComparer.Ordinal);
+                // ⚡ Bolt Optimization: Use a string array instead of HashSet since the number of matches is typically very small.
+                // This completely avoids the memory allocation and hashing overhead of a HashSet on the hot path.
+                var uniqueTags = new string[matches.Count];
+                int uniqueCount = 0;
                 for (int i = 0; i < matches.Count; i++)
                 {
-                    uniqueTags.Add(matches[i].Value);
+                    string matchVal = matches[i].Value;
+                    bool exists = false;
+                    for (int j = 0; j < uniqueCount; j++)
+                    {
+                        if (uniqueTags[j] == matchVal)
+                        {
+                            exists = true;
+                            break;
+                        }
+                    }
+                    if (!exists)
+                    {
+                        uniqueTags[uniqueCount++] = matchVal;
+                    }
                 }
 
-                foreach (var tag in uniqueTags)
+                for (int u = 0; u < uniqueCount; u++)
                 {
+                    var tag = uniqueTags[u];
                     // tag is e.g. "{subject:dog:red}"
                     // Extract inner content without the curly braces
                     var innerContent = tag[1..^1];
