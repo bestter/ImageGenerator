@@ -1049,6 +1049,7 @@ namespace ImageGeneratorApp
             bool hasError = false;
             if (chkEnableTemplates.Checked)
             {
+                // ⚡ Bolt Optimization: Avoid calling .Trim() here; IsPromptSyntaxValid handles the raw string.
                 hasError = !IsPromptSyntaxValid(txtPrompt.Text);
             }
 
@@ -1069,10 +1070,15 @@ namespace ImageGeneratorApp
                 return;
             }
 
-            string key = txtApiKey.Text.Trim();
-            string prompt = txtPrompt.Text.Trim();
+            // ⚡ Bolt: [performance improvement]
+            // 💡 What: Replaced `.Trim()` and `string.IsNullOrEmpty` with `string.IsNullOrWhiteSpace` for the Text properties.
+            // 🎯 Why: Calling `.Trim()` on a large `TextBox.Text` property (e.g., up to 4000 characters) inside a frequently fired UI event (like `TextChanged` or debounced validation) creates a new string allocation on every keystroke, causing Garbage Collection pressure and UI thread overhead.
+            // 📊 Impact: Eliminates unnecessary string allocations during text validation on every keystroke.
+            // 🔬 Measurement: Observe lower GC pressure and memory allocations when repeatedly modifying text in the prompt or API key boxes.
+            string keyText = txtApiKey.Text;
+            string promptText = txtPrompt.Text;
 
-            if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(prompt))
+            if (string.IsNullOrWhiteSpace(keyText) || string.IsNullOrWhiteSpace(promptText))
             {
                 btnGenerate.Enabled = false;
                 return;
@@ -1081,7 +1087,7 @@ namespace ImageGeneratorApp
             // Fast-scan syntax check (sync) to avoid async database queries for basic syntax issues
             if (chkEnableTemplates != null && chkEnableTemplates.Checked)
             {
-                if (!IsPromptSyntaxValid(prompt))
+                if (!IsPromptSyntaxValid(promptText))
                 {
                     btnGenerate.Enabled = false;
                     return;
