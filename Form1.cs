@@ -946,7 +946,7 @@ namespace ImageGeneratorApp
             {
                 // ⚡ Bolt Optimization: Avoid LINQ and intermediate List/Cast array allocations during autocomplete filtering.
                 // Using a standard loop and a pre-sized array for the ListBox avoids garbage collection pressure on the UI thread.
-                var matched = new System.Collections.Generic.List<object>();
+                var matched = new System.Collections.Generic.List<object>(_templateKeysCache.Count);
                 foreach (var k in _templateKeysCache)
                 {
                     if (k.Contains(query, StringComparison.OrdinalIgnoreCase))
@@ -1049,8 +1049,7 @@ namespace ImageGeneratorApp
             bool hasError = false;
             if (chkEnableTemplates.Checked)
             {
-                string rawPrompt = txtPrompt.Text.Trim();
-                hasError = !IsPromptSyntaxValid(rawPrompt);
+                hasError = !IsPromptSyntaxValid(txtPrompt.Text);
             }
 
             if (_hasPromptError != hasError)
