@@ -21,7 +21,7 @@ namespace ImageGeneratorApp
 
         private readonly GenerationHistoryRepository _historyRepository;
         private readonly ImageProcessingService _imageProcessingService;
-        private readonly BindingList<GenerationHistoryModel> _historyList = new();
+        private BindingList<GenerationHistoryModel> _historyList = new();
         private List<GenerationHistoryModel> _allHistory = new();
 
         // UI Controls
@@ -446,23 +446,10 @@ namespace ImageGeneratorApp
                 // Cache all records locally to prevent redundant database queries during search filtering
                 _allHistory = records.ToList();
 
-                try
-                {
-                    // ⚡ Bolt Optimization: Suspend DataGridView BindingList events during bulk inserts
-                    // This avoids expensive UI layout and redraw operations on every single addition,
-                    // heavily improving performance and preventing the UI from freezing.
-                    _historyList.RaiseListChangedEvents = false;
-                    _historyList.Clear();
-                    foreach (var record in records)
-                    {
-                        _historyList.Add(record);
-                    }
-                }
-                finally
-                {
-                    _historyList.RaiseListChangedEvents = true;
-                    _historyList.ResetBindings();
-                }
+                // ⚡ Bolt Optimization: Use a pre-allocated List to instantiate the BindingList in one shot,
+                // completely bypassing the need to suspend events or add items sequentially, drastically
+                // improving UI performance on initial load.
+                _historyList = new BindingList<GenerationHistoryModel>(new List<GenerationHistoryModel>(_allHistory));
 
                 dataGridViewHistory.DataSource = _historyList;
                 UpdateSelectionDetails();
@@ -499,30 +486,26 @@ namespace ImageGeneratorApp
             // 📊 Impact: Eliminates database IPC latency entirely during searches, providing instant, stutter-free list filtering and preventing DB thread bottlenecks.
             // 🔬 Measurement: O(N) memory scan takes <1ms locally vs 20-50ms+ for SQLite query execution.
 
-            try
+            // ⚡ Bolt Optimization: Use a pre-allocated List to collect the filtered results, then assign
+            // it directly to a new BindingList to avoid sequential UI additions and event suppression overhead.
+            var filteredList = new List<GenerationHistoryModel>(_allHistory.Count);
+
+            bool hasSearchText = !string.IsNullOrWhiteSpace(searchTerm);
+
+            foreach (var record in _allHistory)
             {
-                _historyList.RaiseListChangedEvents = false;
-                _historyList.Clear();
+                bool matchesSearch = !hasSearchText ||
+                                     (record.Prompt != null && record.Prompt.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                                     (record.ModelName != null && record.ModelName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
 
-                bool hasSearchText = !string.IsNullOrWhiteSpace(searchTerm);
-
-                foreach (var record in _allHistory)
+                if (matchesSearch)
                 {
-                    bool matchesSearch = !hasSearchText ||
-                                         (record.Prompt != null && record.Prompt.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
-                                         (record.ModelName != null && record.ModelName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
-
-                    if (matchesSearch)
-                    {
-                        _historyList.Add(record);
-                    }
+                    filteredList.Add(record);
                 }
             }
-            finally
-            {
-                _historyList.RaiseListChangedEvents = true;
-                _historyList.ResetBindings();
-            }
+
+            _historyList = new BindingList<GenerationHistoryModel>(filteredList);
+            dataGridViewHistory.DataSource = _historyList;
 
             UpdateSelectionDetails();
         }
