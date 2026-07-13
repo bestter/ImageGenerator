@@ -130,3 +130,7 @@
 ## 2026-07-28 - Optimize DataGridView bulk updates with BindingList reassignment
 **Learning:** Using `BindingList.Add()` sequentially in a loop (even after setting `RaiseListChangedEvents = false`) inside UI filtering operations incurs per-item virtual method and event-checking overhead. Furthermore, starting with an empty `BindingList` and adding items causes its internal array to resize repeatedly, leading to Garbage Collection pressure on the UI thread.
 **Action:** When filtering or bulk loading data into a `DataGridView`, always collect the results into a pre-allocated `List<T>` (e.g., `new List<T>(totalCount)`). Once populated, instantiate a new `BindingList<T>` around this list and assign it directly to the `DataGridView.DataSource`. This completely eliminates sequential overhead, intermediate reallocations, and manual event suspension logic.
+
+## 2026-11-20 - Use array covariance to avoid LINQ Cast on ComboBox population
+**Learning:** Using `.Cast<object>().ToArray()` to convert a `List<string>` to an `object[]` for `ComboBox.Items.AddRange()` creates an unnecessary enumerator and intermediate array. Because C# supports array covariance, a `string[]` can be implicitly passed as an `object[]`.
+**Action:** Always use `.ToArray()` directly on the generic list (e.g. `categoriesList.ToArray()`) and rely on array covariance instead of using `.Cast<object>()` when populating UI collections that expect `object[]`.
