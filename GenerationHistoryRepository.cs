@@ -13,6 +13,8 @@ namespace ImageGeneratorApp
     {
         private readonly DatabaseHelper _databaseHelper;
 
+        private static readonly char[] _sqlSpecialChars = { '\\', '%', '_', '[' };
+
         /// <summary>
         /// Initializes a new instance of the <see cref="GenerationHistoryRepository"/> class.
         /// </summary>
@@ -84,16 +86,21 @@ namespace ImageGeneratorApp
             // SÉCURITÉ : Échappe les caractères joker SQL (%, _, [, et le caractère d'échappement lui-même)
             // pour prévenir les attaques par injection de wildcards (qui peuvent causer des lenteurs DoS).
             var trimmedTerm = searchTerm.Trim();
-            var sb = new System.Text.StringBuilder(trimmedTerm.Length + 10);
-            foreach (var c in trimmedTerm)
+            var escapedTerm = trimmedTerm;
+
+            if (trimmedTerm.IndexOfAny(_sqlSpecialChars) >= 0)
             {
-                if (c == '\\' || c == '%' || c == '_' || c == '[')
+                var sb = new System.Text.StringBuilder(trimmedTerm.Length + 10);
+                foreach (var c in trimmedTerm)
                 {
-                    sb.Append('\\');
+                    if (c == '\\' || c == '%' || c == '_' || c == '[')
+                    {
+                        sb.Append('\\');
+                    }
+                    sb.Append(c);
                 }
-                sb.Append(c);
+                escapedTerm = sb.ToString();
             }
-            var escapedTerm = sb.ToString();
 
             using var connection = _databaseHelper.GetConnection();
             return await connection.QueryAsync<GenerationHistoryModel>(sql, new { Query = escapedTerm });
