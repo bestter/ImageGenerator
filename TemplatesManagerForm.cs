@@ -258,7 +258,8 @@ namespace ImageGeneratorApp
 
             // ⚡ Bolt Optimization: Batch insert categories using .AddRange() instead of a foreach loop
             // This reduces internal recalculations within the ComboBox collection when filtering the master list
-            cmbCategory.Items.AddRange(categoriesList.Cast<object>().ToArray());
+            // ⚡ Bolt Optimization: Use array covariance (string[] to object[]) to completely avoid .Cast<object>() enumerator allocations.
+            cmbCategory.Items.AddRange(categoriesList.ToArray());
 
             if (previousSelection != null && cmbCategory.Items.Contains(previousSelection))
             {
