@@ -65,6 +65,26 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
+        public async Task InsertAsync_WithNullTemplate_ShouldThrowArgumentNullException()
+        {
+            // Act
+            Func<Task> act = async () => await _repository.InsertAsync(null!);
+
+            // Assert
+            await act.Should().ThrowAsync<ArgumentNullException>().WithMessage("*template*");
+        }
+
+        [Fact]
+        public async Task UpdateAsync_WithNullTemplate_ShouldThrowArgumentNullException()
+        {
+            // Act
+            Func<Task> act = async () => await _repository.UpdateAsync(null!);
+
+            // Assert
+            await act.Should().ThrowAsync<ArgumentNullException>().WithMessage("*template*");
+        }
+
+        [Fact]
         public async Task InsertAsync_ShouldSaveTemplateAndSetId()
         {
             // Arrange
