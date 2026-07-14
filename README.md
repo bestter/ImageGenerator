@@ -78,15 +78,19 @@ dotnet test ImageGeneratorApp.Tests/ImageGeneratorApp.Tests.csproj --verbosity n
 ├── ImageGeneratorApp.slnx        # Fichier de solution
 ├── ImageGeneratorApp.Tests/      # Tests unitaires et d'intégration (xUnit + Moq + FluentAssertions)
 │   ├── GlobalUsings.cs
+│   ├── AboutFormTests.cs
+│   ├── ApiKeyStorageHelperTests.cs
+│   ├── DatabaseHelperTests.cs
+│   ├── GenerationHistoryRepositoryTests.cs
+│   ├── HistoryOrchestratorTests.cs
 │   ├── ImageGeneratorClientTests.cs
-│   ├── ApiKeyStorageHelperTests.cs # Tests de stockage et chargement sécurisé des clés API
-│   ├── UserIdHelperTests.cs
-│   ├── DatabaseHelperTests.cs      # Tests de configuration et initialisation SQLite
-│   ├── TemplateRepositoryTests.cs  # Tests de persistance et CRUD SQLite
-│   ├── TemplateParserTests.cs      # Tests du moteur d'analyse et de récursion
-│   ├── GenerationHistoryRepositoryTests.cs # Tests de persistance et recherche d'historique
-│   └── HistoryOrchestratorTests.cs # Tests d'intégration du flux WEBP et de persistance
-│   (inclut les tests pour ImageMetadataEmbedder)
+│   ├── ImageGeneratorExceptionTests.cs
+│   ├── ImageMetadataEmbedderTests.cs
+│   ├── ImageProcessingServiceTests.cs
+│   ├── TemplateEditorFormTests.cs
+│   ├── TemplateParserTests.cs
+│   ├── TemplateRepositoryTests.cs
+│   └── UserIdHelperTests.cs
 └── content/
     └── Grok_Logomark_Dark.png    # Logo Grok
 ```
@@ -96,8 +100,8 @@ dotnet test ImageGeneratorApp.Tests/ImageGeneratorApp.Tests.csproj --verbosity n
 - Les clés API saisies sont sauvegardées localement de manière chiffrée sur le disque via l'API DPAPI de Windows (`ProtectedData`), restreignant l'accès à l'utilisateur Windows courant.
 - Le chargement des clés sur le disque est protégé contre les attaques de type TOCTOU (*Time-of-Check to Time-of-Use*) et DoS par épuisement mémoire (avec limite de taille stricte à 4096 octets).
 - L'ouverture du fichier de licence dans le dialogue « À propos » est protégée contre le TOCTOU par un verrouillage via `FileStream` et exclut les chemins système absolus des dialogues d'erreur pour éviter la fuite d'informations (Path Disclosure).
-- L'identifiant utilisateur envoyé à l'API est un hash opaque (SHA-256) pour protéger les PII.
-- Un `device_id` aléatoire est stocké localement dans `%LOCALAPPDATA%\GrokImagineApp\device_id.txt` comme identifiant stable.
+- L'identifiant utilisateur envoyé à l'API est un GUID opaque (format `"N"`, 32 caractères hexadécimaux) pour éviter toute fuite de PII (pas de nom d'utilisateur Windows ni de hash dérivé).
+- Un `device_id` stable est stocké localement dans `%LOCALAPPDATA%\ImageGeneratorApp\device_id.txt` et réutilisé entre les sessions.
 
 ## Licence
 

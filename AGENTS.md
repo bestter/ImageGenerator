@@ -3,7 +3,7 @@
 Ce fichier fournit un contexte aux agents IA travaillant sur ce projet.
 
 **Version** : 2.0.1
-**Dernière mise à jour** : 17 juin 2026
+**Dernière mise à jour** : 14 juillet 2026
 **Propriétaire** : Martin Labelle (@bestter)
 
 ---
@@ -86,7 +86,7 @@ L'application suit une structure modulaire séparant l'UI de la logique réseau 
 - **`ImageGeneratorClient.cs`** : Implémente la communication HTTP (via `HttpClient`) avec les endpoints des différents providers et gère le parsing JSON.
   - **xAI (Grok Imagine)** : `https://api.x.ai/v1/images/generations` (génération) et `https://api.x.ai/v1/images/edits` (édition multi-tour).
   - **Google (Nano Banana Pro)** : `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent`.
-  - **Refactorisation propre** : La méthode principale `GenerateImageAsync` fait moins de 40 lignes et délègue les tâches à des helpers dédiés (`PrepareRequest`, `ParseErrorResponseAsync`, `ParseSuccessResponseAsync`) assurant modularité et performance.
+  - **Refactorisation propre** : La méthode principale `GenerateImageAsync` reste courte et délègue les tâches à des helpers dédiés (`PrepareRequest`, `ParseErrorResponseAsync`, `ParseSuccessResponseAsync`) assurant modularité et performance.
 - **`ImageGeneratorRequest.cs`** : Modèle de requête pour l'API xAI (le modèle Nano Banana utilise un format de requête distinct construit directement dans le client).
 - **`ImageGeneratorResponse.cs`** : Modèle de réponse pour l'API xAI.
 - **`ImageGeneratorException.cs`** : Exception personnalisée pour les erreurs API (tous providers).
@@ -94,7 +94,7 @@ L'application suit une structure modulaire séparant l'UI de la logique réseau 
 - **`GeminiModels.cs`** : Modèles de requête/réponse spécifiques au provider Google Gemini (`GeminiRequest`, `GeminiResponse`, `GeminiContent`, `GeminiPart`, `GeminiInlineData`, `GeminiGenerationConfig`, `GeminiImageConfig`, `GeminiCandidate`).
 - **`ImageUrlObject.cs`** : Modèle d'objet image de référence utilisé pour les éditions d'images (contient type et URL).
 - **`ImageMetadataEmbedder.cs`** : Service responsable de l'intégration automatique des métadonnées de génération (EXIF, XMP, chunks PNG) lors de l'export des images.
-- **`UserIdHelper.cs`** : Utilitaire asynchrone pour la gestion des identifiants (notamment pour la protection PII) avec lectures/écritures non bloquantes de fichiers (`GetOpaqueUserIdAsync`).
+- **`UserIdHelper.cs`** : Utilitaire asynchrone pour la gestion des identifiants (`GetOpaqueUserIdAsync`). Stocke un GUID stable (format `"N"`) dans `%LocalAppData%\ImageGeneratorApp\device_id.txt` pour éviter toute fuite de PII. I/O fichier non bloquante ; création du dossier en mode EAFP (`DirectoryNotFoundException` puis `CreateDirectory` hors chemin chaud). Propriété interne `AppFolderOverride` réservée aux tests unitaires pour isoler le chemin sans toucher au LocalApplicationData partagé.
 - **`Helpers/ApiKeyStorageHelper.cs`** : Service de gestion et de stockage sécurisé des clés API avec chiffrement local DPAPI (Windows). Protégé contre les vulnérabilités TOCTOU et DoS par épuisement mémoire via un flux de taille limitée (4096 octets max).
 - **`DatabaseHelper.cs`** : Gère la création et l'initialisation de la base SQLite `templates.db` et configure Dapper avec un mapping global snake_case vers PascalCase (gère également la table `GenerationHistory`).
 - **`TemplateModel.cs`** : Modèle entité représentant un gabarit de prompt stocké en base de données.
@@ -116,20 +116,18 @@ L'application suit une structure modulaire séparant l'UI de la logique réseau 
 ## ⚙️ Fonctionnalités Clés Implémentées
 
 1. **Génération d'images multi-provider** : Envoi de requêtes structurées (modèle, résolution, format) à l'API xAI (Grok Imagine) ou Google (Nano Banana Pro).
-**2. Support de l'édition d'images (Multi-références et Multi-turn)**
-
-L’édition d’images est disponible exclusivement via le endpoint `POST /v1/images/edits` et n’est supportée que par les modèles Grok Imagine (`grok-imagine-image` et `grok-imagine-image-pro`).
+2. **Support de l'édition d'images (Multi-références et Multi-turn)** : L’édition d’images est disponible exclusivement via le endpoint `POST /v1/images/edits` et n’est supportée que par les modèles Grok Imagine (`grok-imagine-image` et `grok-imagine-image-quality`).
 
 - **Édition avec références multiples** : Une même requête peut accepter **jusqu’à 3 images de référence**. Cela permet de combiner des sujets, transférer des styles ou composer des scènes complexes à partir de plusieurs sources visuelles.
 - **Format d’entrée des images** : Les images de référence doivent être fournies soit via une **URL publique**, soit sous forme de **data URI base64** (ex. : `data:image/png;base64,...`). Selon le mode d’appel (SDK ou HTTP direct), cela se fait via le paramètre `image_url` ou via un objet `image` de type `image_url`.
 - **Édition multi-turn (itérative)** : L’API supporte un flux d’édition itératif. L’image générée par une requête d’édition peut être réutilisée directement comme image d’entrée pour une requête suivante. Ce mécanisme permet un raffinement progressif (ajout de détails, corrections, changements de style, ajustements compositionnels, etc.).
 - **Limitation importante** : L’édition d’images **n’est pas supportée** par le provider Google (Nano Banana Pro). Seuls les modèles Grok Imagine peuvent utiliser le endpoint `/v1/images/edits`.
 
-1. **Paramétrage de l'API** : L'utilisateur fournit sa propre clé API au runtime. Le label du champ s'adapte au provider sélectionné (« Clé API xAI » pour Grok, « Clé Google Cloud » pour Nano Banana).
-2. **Enregistrement des résultats** : L'image générée (reçue en base64) peut être téléchargée au format PNG ou JPEG sur la machine de l'utilisateur.
-3. **Intégration automatique de métadonnées AI** : Lors de l'export, les métadonnées de génération (prompt, modèle, date/heure, etc.) sont automatiquement intégrées dans l'image via EXIF, XMP et chunks PNG. Cette fonctionnalité est implémentée dans `ImageMetadataEmbedder.cs` et utilise la dépendance validée SixLabors.ImageSharp.
+3. **Paramétrage de l'API** : L'utilisateur fournit sa propre clé API au runtime. Le label du champ s'adapte au provider sélectionné (« Clé API xAI » pour Grok, « Clé Google Cloud » pour Nano Banana).
+4. **Enregistrement des résultats** : L'image générée (reçue en base64) peut être téléchargée au format PNG ou JPEG sur la machine de l'utilisateur.
+5. **Intégration automatique de métadonnées AI** : Lors de l'export, les métadonnées de génération (prompt, modèle, date/heure, etc.) sont automatiquement intégrées dans l'image via EXIF, XMP et chunks PNG. Cette fonctionnalité est implémentée dans `ImageMetadataEmbedder.cs` et utilise la dépendance validée SixLabors.ImageSharp.
    - **Exportation asynchrone non bloquante** : La sauvegarde et l'exportation des images s'effectuent de façon asynchrone (`BtnSave_Click` utilise `File.WriteAllBytesAsync`). De plus, le décodage Base64, l'encodage d'image ImageSharp et l'injection de métadonnées sont entièrement déportés dans un thread d'arrière-plan (`Task.Run`), garantissant une interface fluide à 100%, sans aucun gel de l'affichage.
-4. **Système de Gabarits (Templates) & Autocomplétion UX** :
+6. **Système de Gabarits (Templates) & Autocomplétion UX** :
    - **Stockage SQLite & Dapper** : Base de données locale `templates.db` gérant l'intégrité, l'indexation et la rapidité des gabarits.
    - **Analyse Récursive Paramétrée** : Parser mid-string supportant les balises récursives `{key}` ou `{key:param1:param2}` pour injecter des variables, avec une limite de sécurité à 20 boucles.
    - **Moteur de validation syntaxique & exceptions structurées** : Le parser effectue un contrôle syntaxique rigoureux (accolades mal appairées, imbriquées ou manquantes) levant des `FormatException`. Il interdit les boucles de récursions infinies en limitant la profondeur à 20 itérations (`InvalidOperationException`) et lève des `KeyNotFoundException` en cas de clés absentes de la base SQLite.
@@ -139,7 +137,7 @@ L’édition d’images est disponible exclusivement via le endpoint `POST /v1/i
    - **UI responsive sans Designer** : Dialogues de gestion et d'édition entièrement programmés en C#, avec validation stricte de formulaires.
    - **Autocomplétion Contextuelle (UX)** : Apparition au caret d'un `ListBox` d'autocomplétion mid-string lors de la saisie de `{` avec navigation au clavier et insertion avec accolades auto-fermées.
    - **Aperçu Info-bulle (Hover)** : Info-bulle dynamique sur le bouton de génération pour prévisualiser le prompt entièrement résolu avant envoi.
-5. **Système d'Historique de Génération (Local)** :
+7. **Système d'Historique de Génération (Local)** :
    - **Enregistrement Automatique Silencieux** : Chaque génération d'image réussie déclenche une tâche d'arrière-plan asynchrone non bloquante qui compresse, injecte les métadonnées et journalise la génération dans SQLite.
    - **Compression WEBP (Qualité 80)** : Conversion automatique des octets bruts (PNG/JPEG) reçus des API en format WEBP compressé dans le dossier `%LocalAppData%/ImageGeneratorApp/HistoryImages/` pour préserver l'espace disque.
    - **Injection de Métadonnées Standards** : Préservation complète de la traçabilité de l'image d'historique en appliquant le profil de métadonnées EXIF et XMP standardisé (prompt, modèle, date de création, etc.) via ImageSharp.
@@ -156,7 +154,7 @@ L’édition d’images est disponible exclusivement via le endpoint `POST /v1/i
 - **Architecture** : L'interface graphique est codée manuellement dans `InitializeControls()` (dans `Form1.cs`) plutôt que de s'appuyer exclusivement sur le Designer. Toute modification de l'UI doit idéalement se faire dans cette méthode. La logique réseau doit être maintenue séparée dans la couche client (`ImageGeneratorClient.cs` et associés).
 - **Multi-provider** : Le client `ImageGeneratorClient` gère le routage vers le bon endpoint selon le modèle sélectionné. Pour ajouter un nouveau provider, étendre la logique conditionnelle dans `GenerateImageAsync()`.
 - **Sécurité** : Les clés API sont stockées temporairement dans le champ de texte `txtApiKey`, passées via l'en-tête HTTP approprié (`Bearer` pour xAI, `x-goog-api-key` pour Google), et persistées de manière sécurisée (chiffrement DPAPI utilisateur via `ProtectedData`) dans LocalApplicationData via `ApiKeyStorageHelper`. Le chargement applique une protection stricte contre le TOCTOU et les fichiers malicieux surdimensionnés (limite de 4096 octets).
-- **Dépendances** : Le projet utilise les bibliothèques standards `System.Net.Http` pour les appels d'API et `System.Text.Json` pour la manipulation des données JSON. Une dépendance externe validée a été ajoutée : `SixLabors.ImageSharp` (version 3.1.12) pour la gestion robuste des métadonnées EXIF/XMP/PNG. Toute nouvelle dépendance doit faire l'objet d'une validation explicite.
+- **Dépendances** : Le projet utilise les bibliothèques standards `System.Net.Http` pour les appels d'API et `System.Text.Json` pour la manipulation des données JSON. Dépendances NuGet validées : `SixLabors.ImageSharp` (3.1.12) pour les métadonnées EXIF/XMP/PNG et le WEBP ; `Dapper` (2.1.79) pour l'accès SQLite ; `Microsoft.Data.Sqlite` (10.0.9) et `SQLitePCLRaw.lib.e_sqlite3` (3.53.3) pour le moteur SQLite embarqué. Toute nouvelle dépendance doit faire l'objet d'une validation explicite.
 - **Tests** : Le projet inclut des tests unitaires basés sur xUnit v3 dans le dossier `ImageGeneratorApp.Tests` (ex: `ImageGeneratorClientTests.cs`). Toute modification d’une méthode publique existante ou ajout de fonctionnalité doit être accompagnée de tests unitaires couvrant les cas nominaux + erreurs (API key invalide, rate limit, JSON mal formé, etc.). Objectif : 100 % des tests verts en local avant tout commit.
 - **Design** : L'application doit être visuellement attrayante et moderne.
 - **Extensibilité** : Pour ajouter un nouveau provider, étendre uniquement ImageGeneratorClient.GenerateImageAsync() et ajouter les tests correspondants. Pas de nouvelle dépendance sans validation explicite.
