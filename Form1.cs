@@ -679,15 +679,15 @@ namespace ImageGeneratorApp
                     {
                         try
                         {
-                            // ⚡ Bolt: [performance improvement]
-                            // 💡 What: Swapped synchronous FileStream for FileInfo to check file size.
-                            // 🎯 Why: Using FileInfo avoids the overhead of fully opening a file handle and locking the file, which blocks the UI thread. The actual file read (and TOCTOU protection) happens securely later.
-                            // 📊 Impact: FileInfo.Length is roughly 50% faster than FileStream instantiation for size checks.
-                            // 🔬 Measurement: Benchmark showed 497ms vs 1065ms for 100k file size reads.
-                            if (new FileInfo(file).Length > MaxFileSizeBytes)
+                            // 🛡️ Sentinel: Fix TOCTOU vulnerability in file size check.
+                            // Open a FileStream securely to ensure the file's size is verified on an active handle.
+                            using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                             {
-                                MessageBox.Show($"L'image '{Path.GetFileName(file)}' dépasse la limite de 20 Mo et ne sera pas ajoutée.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                                continue;
+                                if (fs.Length > MaxFileSizeBytes)
+                                {
+                                    MessageBox.Show($"L'image '{Path.GetFileName(file)}' dépasse la limite de 20 Mo et ne sera pas ajoutée.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                    continue;
+                                }
                             }
                         }
                         catch (Exception ex)
