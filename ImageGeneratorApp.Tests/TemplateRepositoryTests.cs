@@ -284,6 +284,20 @@ namespace ImageGeneratorApp.Tests
             result.Should().BeFalse();
         }
 
+
+        [Theory]
+        [InlineData("")]
+        [InlineData(" ")]
+        [InlineData(null)]
+        public async Task UpdateUsageStatsAsync_ShouldReturnFalse_WhenKeyIsEmptyOrNull(string? invalidKey)
+        {
+            // Act
+            bool result = await _repository.UpdateUsageStatsAsync(invalidKey!); // Suppress null warning as we are explicitly testing null input
+
+            // Assert
+            result.Should().BeFalse();
+        }
+
         [Fact]
         public async Task UpdateUsageStatsAsync_ShouldIncrementUsageCountAndSetLastUsed()
         {

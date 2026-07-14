@@ -1,11 +1,8 @@
-💡 **What:**
-Replaced an O(N^2) complexity logic (an O(N) `.Any()` check inside a `do-while` loop) by pre-computing existing keys into a `HashSet<string>(StringComparer.OrdinalIgnoreCase)`. Then a fast O(1) `.Contains(newKey)` check inside the `do-while` loop finds an available duplicate name key.
+🎯 **What:**
+Added a missing test case for `UpdateUsageStatsAsync` when it is called with invalid input (null, empty, or whitespace string). The method returns early with `false` in these conditions.
 
-🎯 **Why:**
-When the user duplicated many templates, the application would loop through the whole dataset over and over `_allTemplates.Any(...)`. The `.Any(...)` method has a complexity of O(N), and since it was inside a loop running K times, the total operations had a complexity of O(N * K) resulting in a CPU spike. Pre-calculating a `HashSet` provides O(1) access inside the iteration block which speeds up the loop computation substantially.
+📊 **Coverage:**
+The test suite now covers the early return `if (string.IsNullOrWhiteSpace(key))` path inside `TemplateRepository.UpdateUsageStatsAsync()`. Three invalid string cases are tested: `""`, `" "`, and `null`.
 
-📊 **Measured Improvement:**
-In a local benchmark to find the 5000th copy within a list of 10000 records:
-* **Baseline** -> 851 ms
-* **Improvement** -> 10 ms
-* **Difference** -> Over 98% faster
+✨ **Result:**
+Improved overall robustness and branch coverage for the `TemplateRepository` class, explicitly preventing potential future regressions if the validation logic is accidentally removed.
