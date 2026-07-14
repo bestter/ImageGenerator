@@ -264,6 +264,20 @@ namespace ImageGeneratorApp.Tests
             result.Should().BeFalse();
         }
 
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public async Task UpdateUsageStatsAsync_NullOrWhiteSpaceKey_ReturnsFalse(string? invalidKey)
+        {
+            // Act
+            bool result = await _repository.UpdateUsageStatsAsync(invalidKey!);
+
+            // Assert
+            result.Should().BeFalse();
+        }
+
         [Fact]
         public async Task UpdateUsageStatsAsync_ShouldIncrementUsageCountAndSetLastUsed()
         {
