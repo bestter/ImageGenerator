@@ -93,6 +93,16 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
+        public async Task InsertAsync_ShouldThrowArgumentNullException_WhenTemplateIsNull()
+        {
+            // Act
+            Func<Task> act = async () => await _repository.InsertAsync(null!);
+
+            // Assert
+            await act.Should().ThrowAsync<ArgumentNullException>().WithMessage("*template*");
+        }
+
+        [Fact]
         public async Task GetByKeyAsync_ShouldBeCaseInsensitive()
         {
             // Arrange
