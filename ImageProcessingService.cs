@@ -109,6 +109,8 @@ namespace ImageGeneratorApp
                 // ⚡ Bolt Optimization: Use FileOptions.Asynchronous for true asynchronous I/O to prevent thread pool starvation
                 using var fs = new FileStream(webpFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous);
 
+                if (fs.Length > 20 * 1024 * 1024) throw new ArgumentException("File exceeds the maximum allowed size of 20 MB.", nameof(webpFilePath));
+
                 if (fs.Length == 0)
                 {
                     throw new ArgumentException("File is empty.", nameof(webpFilePath));
