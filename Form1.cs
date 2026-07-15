@@ -443,51 +443,15 @@ namespace ImageGeneratorApp
                     imagesList.Add(new ImageUrlObject { Type = "image_url", Url = $"data:image/png;base64,{imageToEditBase64}" });
                 }
 
-                var tasks = selectedImages.Select(async imgPath =>
+                // ⚡ Bolt Optimization: Replace LINQ Select chains when building asynchronous tasks.
+                // Iterating and adding manually to a pre-allocated List prevents intermediate enumerator and closure allocations
+                // on the UI thread when resolving multiple files concurrently.
+                var tasks = new List<Task<ImageUrlObject?>>(selectedImages.Count);
+                foreach (var imgPath in selectedImages)
                 {
-                    var rawExt = Path.GetExtension(imgPath);
-                    string ext;
-                    if (string.Equals(rawExt, ".jpg", StringComparison.OrdinalIgnoreCase) || string.Equals(rawExt, ".jpeg", StringComparison.OrdinalIgnoreCase))
-                    {
-                        ext = "jpeg";
-                    }
-                    else
-                    {
-                        ext = rawExt.StartsWith(".") ? rawExt.Substring(1).ToLowerInvariant() : rawExt.ToLowerInvariant();
-                    }
-
-                        byte[] b64Bytes;
-                        using (var fs = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
-                        {
-                            // 🛡️ Sentinel: Prevent TOCTOU race condition by checking length on the opened handle
-                            if (fs.Length > MaxFileSizeBytes)
-                            {
-                                this.Invoke(() =>
-                                {
-                                    lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(imgPath)}";
-                                    MessageBox.Show($"L'image '{Path.GetFileName(imgPath)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                });
-                                return null;
-                            }
-
-                            // ⚡ Bolt Optimization: Pre-allocate and read directly to avoid MemoryStream chunking
-                            b64Bytes = new byte[(int)fs.Length];
-                            await fs.ReadExactlyAsync(b64Bytes, 0, b64Bytes.Length);
-                        }
-
-                        // ⚡ Bolt Optimization: Use string.Create to build the data URI directly into a pre-allocated string.
-                        // This eliminates the intermediate base64 string allocation (~26MB chars for a 20MB file),
-                        // significantly reducing Large Object Heap (LOH) fragmentation and memory pressure.
-                        string prefix = $"data:image/{ext};base64,";
-                        int b64Length = ((b64Bytes.Length + 2) / 3) * 4;
-                        string url = string.Create(prefix.Length + b64Length, (prefix, b64Bytes), (span, state) =>
-                        {
-                            state.prefix.AsSpan().CopyTo(span);
-                            Convert.TryToBase64Chars(state.b64Bytes, span.Slice(state.prefix.Length), out _);
-                        });
-
-                        return new ImageUrlObject { Type = "image_url", Url = url };
-                    }));
+                    // Define a local async function inside the foreach loop
+                    // This creates a single delegate without capturing the loop variable `imgPath` per iteration
+                    tasks.Add(ProcessImageAsync(imgPath));
                 }
 
                 var results = await Task.WhenAll(tasks);
@@ -500,6 +464,52 @@ namespace ImageGeneratorApp
             return imagesList;
         }
 
+        // Local helper method extracted from the LINQ Select projection to avoid closure allocations in the foreach loop
+        private async Task<ImageUrlObject?> ProcessImageAsync(string path)
+        {
+            var rawExt = Path.GetExtension(path);
+            string ext;
+            if (string.Equals(rawExt, ".jpg", StringComparison.OrdinalIgnoreCase) || string.Equals(rawExt, ".jpeg", StringComparison.OrdinalIgnoreCase))
+            {
+                ext = "jpeg";
+            }
+            else
+            {
+                ext = rawExt.StartsWith(".") ? rawExt.Substring(1).ToLowerInvariant() : rawExt.ToLowerInvariant();
+            }
+
+            byte[] b64Bytes;
+            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
+            {
+                // 🛡️ Sentinel: Prevent TOCTOU race condition by checking length on the opened handle
+                if (fs.Length > MaxFileSizeBytes)
+                {
+                    this.Invoke(() =>
+                    {
+                        lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(path)}";
+                        MessageBox.Show($"L'image '{Path.GetFileName(path)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    });
+                    return null;
+                }
+
+                // ⚡ Bolt Optimization: Pre-allocate and read directly to avoid MemoryStream chunking
+                b64Bytes = new byte[(int)fs.Length];
+                await fs.ReadExactlyAsync(b64Bytes, 0, b64Bytes.Length);
+            }
+
+            // ⚡ Bolt Optimization: Use string.Create to build the data URI directly into a pre-allocated string.
+            // This eliminates the intermediate base64 string allocation (~26MB chars for a 20MB file),
+            // significantly reducing Large Object Heap (LOH) fragmentation and memory pressure.
+            string prefix = $"data:image/{ext};base64,";
+            int b64Length = ((b64Bytes.Length + 2) / 3) * 4;
+            string url = string.Create(prefix.Length + b64Length, (prefix, b64Bytes), (span, state) =>
+            {
+                state.prefix.AsSpan().CopyTo(span);
+                Convert.TryToBase64Chars(state.b64Bytes, span.Slice(state.prefix.Length), out _);
+            });
+
+            return new ImageUrlObject { Type = "image_url", Url = url };
+        }
         private void UpdateUIWithGeneratedImage(string base64Image, string processedPrompt, string model, string resolution, string aspectRatio)
         {
             currentBase64Image = base64Image;
