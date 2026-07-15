@@ -126,3 +126,6 @@
 ## 2026-11-15 - Avoid unnecessary string.Trim() allocations in rapid UI validation events
 **Learning:** Calling `.Trim()` on a large `TextBox.Text` property (e.g., up to 4000 characters) inside a frequently fired UI event (like `TextChanged` or debounced validation) creates a new string allocation on every keystroke, causing significant Garbage Collection pressure and UI thread overhead.
 **Action:** Instead of trimming large strings just to check if they are empty or valid, use `string.IsNullOrWhiteSpace()` and pass the raw untrimmed text to validation helpers that can handle leading/trailing spaces (like `IsPromptSyntaxValid` which only checks brace balance).
+## 2023-10-27 - Avoid string allocation when checking file extensions
+**Learning:** Using chained methods like `.ToLowerInvariant().TrimStart('.')` on strings (e.g., file extensions) creates multiple intermediate string allocations. When done frequently or inside data-mapping tasks, this unnecessarily adds to Garbage Collection (GC) pressure.
+**Action:** Avoid allocating new strings when checking extensions by directly comparing the raw extension using `string.Equals(rawExt, ".ext", StringComparison.OrdinalIgnoreCase)`. Handle variants or fallback dynamically without allocating intermediate trimmed strings.

@@ -445,8 +445,16 @@ namespace ImageGeneratorApp
 
                 var tasks = selectedImages.Select(async imgPath =>
                 {
-                    var ext = Path.GetExtension(imgPath).ToLower().TrimStart('.');
-                    if (ext == "jpg") ext = "jpeg";
+                    var rawExt = Path.GetExtension(imgPath);
+                    string ext;
+                    if (string.Equals(rawExt, ".jpg", StringComparison.OrdinalIgnoreCase) || string.Equals(rawExt, ".jpeg", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ext = "jpeg";
+                    }
+                    else
+                    {
+                        ext = rawExt.StartsWith(".") ? rawExt.Substring(1).ToLowerInvariant() : rawExt.ToLowerInvariant();
+                    }
 
                     byte[] b64Bytes;
                     using (var fs = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))

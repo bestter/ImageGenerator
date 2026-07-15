@@ -189,8 +189,10 @@ namespace ImageGeneratorApp
             if (string.IsNullOrEmpty(ext))
                 return false;
 
-            ext = ext.TrimStart('.').ToLowerInvariant();
-            return ext is "jpg" or "jpeg";
+            return string.Equals(ext, ".jpg", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(ext, ".jpeg", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(ext, "jpg", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(ext, "jpeg", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
