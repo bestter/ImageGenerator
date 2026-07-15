@@ -13,6 +13,8 @@ namespace ImageGeneratorApp
     {
         private readonly DatabaseHelper _databaseHelper;
 
+        private static readonly char[] _sqlSpecialChars = { '\\', '%', '_', '[' };
+
         /// <summary>
         /// Initializes a new instance of the <see cref="GenerationHistoryRepository"/> class.
         /// </summary>
