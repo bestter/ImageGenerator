@@ -1,8 +1,0 @@
-🎯 **What:**
-Added a missing test case for `UpdateUsageStatsAsync` when it is called with invalid input (null, empty, or whitespace string). The method returns early with `false` in these conditions.
-
-📊 **Coverage:**
-The test suite now covers the early return `if (string.IsNullOrWhiteSpace(key))` path inside `TemplateRepository.UpdateUsageStatsAsync()`. Three invalid string cases are tested: `""`, `" "`, and `null`.
-
-✨ **Result:**
-Improved overall robustness and branch coverage for the `TemplateRepository` class, explicitly preventing potential future regressions if the validation logic is accidentally removed.
