@@ -443,16 +443,18 @@ namespace ImageGeneratorApp
                     imagesList.Add(new ImageUrlObject { Type = "image_url", Url = $"data:image/png;base64,{imageToEditBase64}" });
                 }
 
-                // ⚡ Bolt Optimization: Replaced LINQ extraction chains (.Select().ToArray()) with a standard foreach loop
-                // over a pre-allocated list of Tasks to completely eliminate intermediate array and enumerator allocations,
-                // reducing GC pressure on the UI thread when generating images.
-                var tasks = new List<Task<ImageUrlObject?>>(selectedImages.Count);
-                foreach (var imgPath in selectedImages)
+                var tasks = selectedImages.Select(async imgPath =>
                 {
-                    tasks.Add(Task.Run(async () =>
+                    var rawExt = Path.GetExtension(imgPath);
+                    string ext;
+                    if (string.Equals(rawExt, ".jpg", StringComparison.OrdinalIgnoreCase) || string.Equals(rawExt, ".jpeg", StringComparison.OrdinalIgnoreCase))
                     {
-                        var ext = Path.GetExtension(imgPath).ToLower().TrimStart('.');
-                        if (ext == "jpg") ext = "jpeg";
+                        ext = "jpeg";
+                    }
+                    else
+                    {
+                        ext = rawExt.StartsWith(".") ? rawExt.Substring(1).ToLowerInvariant() : rawExt.ToLowerInvariant();
+                    }
 
                         byte[] b64Bytes;
                         using (var fs = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
