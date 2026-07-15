@@ -65,6 +65,26 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
+        public async Task InsertAsync_WithNullTemplate_ShouldThrowArgumentNullException()
+        {
+            // Act
+            Func<Task> act = async () => await _repository.InsertAsync(null!);
+
+            // Assert
+            await act.Should().ThrowAsync<ArgumentNullException>().WithMessage("*template*");
+        }
+
+        [Fact]
+        public async Task UpdateAsync_WithNullTemplate_ShouldThrowArgumentNullException()
+        {
+            // Act
+            Func<Task> act = async () => await _repository.UpdateAsync(null!);
+
+            // Assert
+            await act.Should().ThrowAsync<ArgumentNullException>().WithMessage("*template*");
+        }
+
+        [Fact]
         public async Task InsertAsync_ShouldSaveTemplateAndSetId()
         {
             // Arrange
@@ -90,6 +110,16 @@ namespace ImageGeneratorApp.Tests
             retrieved.Tags.Should().Be(template.Tags);
             retrieved.UsageCount.Should().Be(0);
             retrieved.LastUsed.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task InsertAsync_ShouldThrowArgumentNullException_WhenTemplateIsNull()
+        {
+            // Act
+            Func<Task> act = async () => await _repository.InsertAsync(null!);
+
+            // Assert
+            await act.Should().ThrowAsync<ArgumentNullException>().WithMessage("*template*");
         }
 
         [Fact]
@@ -261,6 +291,34 @@ namespace ImageGeneratorApp.Tests
         public async Task DeleteAsync_NullString_ReturnsFalse()
         {
             bool result = await _repository.DeleteAsync(null!);
+            result.Should().BeFalse();
+        }
+
+
+        [Theory]
+        [InlineData("")]
+        [InlineData(" ")]
+        [InlineData(null)]
+        public async Task UpdateUsageStatsAsync_ShouldReturnFalse_WhenKeyIsEmptyOrNull(string? invalidKey)
+        {
+            // Act
+            bool result = await _repository.UpdateUsageStatsAsync(invalidKey!); // Suppress null warning as we are explicitly testing null input
+
+            // Assert
+            result.Should().BeFalse();
+        }
+
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public async Task UpdateUsageStatsAsync_NullOrWhiteSpaceKey_ReturnsFalse(string? invalidKey)
+        {
+            // Act
+            bool result = await _repository.UpdateUsageStatsAsync(invalidKey!);
+
+            // Assert
             result.Should().BeFalse();
         }
 

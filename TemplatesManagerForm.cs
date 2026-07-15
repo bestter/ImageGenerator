@@ -32,7 +32,7 @@ namespace ImageGeneratorApp
     {
         private readonly TemplateRepository _repository;
         private List<TemplateModel> _allTemplates = new();
-        private readonly BindingList<TemplateModel> _filteredTemplates = new();
+        private BindingList<TemplateModel> _filteredTemplates = new();
 
         // UI Controls
         private TextBox txtSearch = null!;
@@ -258,7 +258,8 @@ namespace ImageGeneratorApp
 
             // ⚡ Bolt Optimization: Batch insert categories using .AddRange() instead of a foreach loop
             // This reduces internal recalculations within the ComboBox collection when filtering the master list
-            cmbCategory.Items.AddRange(categoriesList.Cast<object>().ToArray());
+            // ⚡ Bolt Optimization: Use array covariance (string[] to object[]) to completely avoid .Cast<object>() enumerator allocations.
+            cmbCategory.Items.AddRange(categoriesList.ToArray());
 
             if (previousSelection != null && cmbCategory.Items.Contains(previousSelection))
             {
@@ -332,11 +333,9 @@ namespace ImageGeneratorApp
             bool hasSearchText = !string.IsNullOrEmpty(searchText);
             bool hasCategoryFilter = !string.IsNullOrEmpty(selectedCategory) && selectedCategory != "Toutes les catégories";
 
-            // Temporarily suspend events to prevent excessive DataGridView repaints
-            _filteredTemplates.RaiseListChangedEvents = false;
-            _filteredTemplates.Clear();
-
             // ⚡ Bolt Optimization: Replace LINQ extraction chains on rapid UI paths with standard foreach loops to eliminate intermediate array and enumerator allocations, reducing GC pressure.
+            // ⚡ Bolt Optimization: Build the filtered list into a pre-allocated List<T> instead of raising BindingList additions.
+            var filteredList = new List<TemplateModel>(_allTemplates.Count);
             foreach (var template in _allTemplates)
             {
                 bool matchesSearch = !hasSearchText ||
@@ -348,12 +347,13 @@ namespace ImageGeneratorApp
 
                 if (matchesSearch && matchesCategory)
                 {
-                    _filteredTemplates.Add(template);
+                    filteredList.Add(template);
                 }
             }
 
-            _filteredTemplates.RaiseListChangedEvents = true;
-            _filteredTemplates.ResetBindings();
+            // ⚡ Bolt Optimization: Replace the entire BindingList with the new filtered List to avoid O(N) event raising and re-allocations
+            _filteredTemplates = new BindingList<TemplateModel>(filteredList);
+            dataGridViewTemplates.DataSource = _filteredTemplates;
 
             ConfigureGridColumns();
         }

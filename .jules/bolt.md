@@ -126,6 +126,18 @@
 ## 2026-11-15 - Avoid unnecessary string.Trim() allocations in rapid UI validation events
 **Learning:** Calling `.Trim()` on a large `TextBox.Text` property (e.g., up to 4000 characters) inside a frequently fired UI event (like `TextChanged` or debounced validation) creates a new string allocation on every keystroke, causing significant Garbage Collection pressure and UI thread overhead.
 **Action:** Instead of trimming large strings just to check if they are empty or valid, use `string.IsNullOrWhiteSpace()` and pass the raw untrimmed text to validation helpers that can handle leading/trailing spaces (like `IsPromptSyntaxValid` which only checks brace balance).
+
+## 2026-07-28 - Optimize DataGridView bulk updates with BindingList reassignment
+**Learning:** Using `BindingList.Add()` sequentially in a loop (even after setting `RaiseListChangedEvents = false`) inside UI filtering operations incurs per-item virtual method and event-checking overhead. Furthermore, starting with an empty `BindingList` and adding items causes its internal array to resize repeatedly, leading to Garbage Collection pressure on the UI thread.
+**Action:** When filtering or bulk loading data into a `DataGridView`, always collect the results into a pre-allocated `List<T>` (e.g., `new List<T>(totalCount)`). Once populated, instantiate a new `BindingList<T>` around this list and assign it directly to the `DataGridView.DataSource`. This completely eliminates sequential overhead, intermediate reallocations, and manual event suspension logic.
+
+## 2026-11-20 - Use array covariance to avoid LINQ Cast on ComboBox population
+**Learning:** Using `.Cast<object>().ToArray()` to convert a `List<string>` to an `object[]` for `ComboBox.Items.AddRange()` creates an unnecessary enumerator and intermediate array. Because C# supports array covariance, a `string[]` can be implicitly passed as an `object[]`.
+**Action:** Always use `.ToArray()` directly on the generic list (e.g. `categoriesList.ToArray()`) and rely on array covariance instead of using `.Cast<object>()` when populating UI collections that expect `object[]`.
+
+## 2026-11-20 - Avoid LINQ Select and ToArray chains when scheduling asynchronous tasks
+**Learning:** Using `LINQ .Select().ToArray()` or similar methods to construct and dispatch asynchronous tasks (e.g. `Task.Run` over a collection of items) allocates intermediate enumerators and arrays, introducing closure overhead. On rapid UI events or operations processing multiple items simultaneously, this causes unnecessary Garbage Collection pressure and performance degradation.
+**Action:** Always replace `LINQ .Select().ToArray()` when projecting lists of Tasks with a standard `foreach` loop iterating over the source collection, combined with an explicitly pre-allocated `List<Task<T>>` to track and await the executions.
 ## 2023-10-27 - Avoid string allocation when checking file extensions
 **Learning:** Using chained methods like `.ToLowerInvariant().TrimStart('.')` on strings (e.g., file extensions) creates multiple intermediate string allocations. When done frequently or inside data-mapping tasks, this unnecessarily adds to Garbage Collection (GC) pressure.
 **Action:** Avoid allocating new strings when checking extensions by directly comparing the raw extension using `string.Equals(rawExt, ".ext", StringComparison.OrdinalIgnoreCase)`. Handle variants or fallback dynamically without allocating intermediate trimmed strings.

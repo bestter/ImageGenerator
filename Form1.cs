@@ -456,38 +456,39 @@ namespace ImageGeneratorApp
                         ext = rawExt.StartsWith(".") ? rawExt.Substring(1).ToLowerInvariant() : rawExt.ToLowerInvariant();
                     }
 
-                    byte[] b64Bytes;
-                    using (var fs = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
-                    {
-                        // 🛡️ Sentinel: Prevent TOCTOU race condition by checking length on the opened handle
-                        if (fs.Length > MaxFileSizeBytes)
+                        byte[] b64Bytes;
+                        using (var fs = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
                         {
-                            this.Invoke(() =>
+                            // 🛡️ Sentinel: Prevent TOCTOU race condition by checking length on the opened handle
+                            if (fs.Length > MaxFileSizeBytes)
                             {
-                                lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(imgPath)}";
-                                MessageBox.Show($"L'image '{Path.GetFileName(imgPath)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            });
-                            return null;
+                                this.Invoke(() =>
+                                {
+                                    lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(imgPath)}";
+                                    MessageBox.Show($"L'image '{Path.GetFileName(imgPath)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                });
+                                return null;
+                            }
+
+                            // ⚡ Bolt Optimization: Pre-allocate and read directly to avoid MemoryStream chunking
+                            b64Bytes = new byte[(int)fs.Length];
+                            await fs.ReadExactlyAsync(b64Bytes, 0, b64Bytes.Length);
                         }
 
-                        // ⚡ Bolt Optimization: Pre-allocate and read directly to avoid MemoryStream chunking
-                        b64Bytes = new byte[(int)fs.Length];
-                        await fs.ReadExactlyAsync(b64Bytes, 0, b64Bytes.Length);
-                    }
+                        // ⚡ Bolt Optimization: Use string.Create to build the data URI directly into a pre-allocated string.
+                        // This eliminates the intermediate base64 string allocation (~26MB chars for a 20MB file),
+                        // significantly reducing Large Object Heap (LOH) fragmentation and memory pressure.
+                        string prefix = $"data:image/{ext};base64,";
+                        int b64Length = ((b64Bytes.Length + 2) / 3) * 4;
+                        string url = string.Create(prefix.Length + b64Length, (prefix, b64Bytes), (span, state) =>
+                        {
+                            state.prefix.AsSpan().CopyTo(span);
+                            Convert.TryToBase64Chars(state.b64Bytes, span.Slice(state.prefix.Length), out _);
+                        });
 
-                    // ⚡ Bolt Optimization: Use string.Create to build the data URI directly into a pre-allocated string.
-                    // This eliminates the intermediate base64 string allocation (~26MB chars for a 20MB file),
-                    // significantly reducing Large Object Heap (LOH) fragmentation and memory pressure.
-                    string prefix = $"data:image/{ext};base64,";
-                    int b64Length = ((b64Bytes.Length + 2) / 3) * 4;
-                    string url = string.Create(prefix.Length + b64Length, (prefix, b64Bytes), (span, state) =>
-                    {
-                        state.prefix.AsSpan().CopyTo(span);
-                        Convert.TryToBase64Chars(state.b64Bytes, span.Slice(state.prefix.Length), out _);
-                    });
-
-                    return new ImageUrlObject { Type = "image_url", Url = url };
-                }).ToArray();
+                        return new ImageUrlObject { Type = "image_url", Url = url };
+                    }));
+                }
 
                 var results = await Task.WhenAll(tasks);
                 foreach (var res in results)
@@ -680,15 +681,15 @@ namespace ImageGeneratorApp
                     {
                         try
                         {
-                            // ⚡ Bolt: [performance improvement]
-                            // 💡 What: Swapped synchronous FileStream for FileInfo to check file size.
-                            // 🎯 Why: Using FileInfo avoids the overhead of fully opening a file handle and locking the file, which blocks the UI thread. The actual file read (and TOCTOU protection) happens securely later.
-                            // 📊 Impact: FileInfo.Length is roughly 50% faster than FileStream instantiation for size checks.
-                            // 🔬 Measurement: Benchmark showed 497ms vs 1065ms for 100k file size reads.
-                            if (new FileInfo(file).Length > MaxFileSizeBytes)
+                            // 🛡️ Sentinel: Fix TOCTOU vulnerability in file size check.
+                            // Open a FileStream securely to ensure the file's size is verified on an active handle.
+                            using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                             {
-                                MessageBox.Show($"L'image '{Path.GetFileName(file)}' dépasse la limite de 20 Mo et ne sera pas ajoutée.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                                continue;
+                                if (fs.Length > MaxFileSizeBytes)
+                                {
+                                    MessageBox.Show($"L'image '{Path.GetFileName(file)}' dépasse la limite de 20 Mo et ne sera pas ajoutée.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                    continue;
+                                }
                             }
                         }
                         catch (Exception ex)

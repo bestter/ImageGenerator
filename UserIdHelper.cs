@@ -26,6 +26,11 @@ namespace ImageGeneratorApp
     {
         private static string? _cachedDefaultUserId;
 
+        /// <summary>
+        /// Optional folder override used by unit tests to avoid touching the real LocalApplicationData path.
+        /// </summary>
+        internal static string? AppFolderOverride { get; set; }
+
         public static async Task<string> GetOpaqueUserIdAsync()
         {
             if (_cachedDefaultUserId != null)
@@ -36,7 +41,8 @@ namespace ImageGeneratorApp
             try
             {
                 // 🛡️ Sentinel: Prevent PII leakage by using a stable GUID instead of Environment.UserName
-                string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ImageGeneratorApp");
+                string folder = AppFolderOverride
+                    ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ImageGeneratorApp");
                 string filePath = Path.Combine(folder, "device_id.txt");
 
                 try
