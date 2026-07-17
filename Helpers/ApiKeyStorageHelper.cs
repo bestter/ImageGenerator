@@ -30,7 +30,16 @@ namespace ImageGeneratorApp
                 string filePath = GetStorageFilePath(provider);
                 var directory = Path.GetDirectoryName(filePath);
                 byte[] plainBytes = Encoding.UTF8.GetBytes(apiKey);
-                byte[] encryptedBytes = ProtectedData.Protect(plainBytes, null, DataProtectionScope.CurrentUser);
+                byte[] encryptedBytes;
+                try
+                {
+                    encryptedBytes = ProtectedData.Protect(plainBytes, null, DataProtectionScope.CurrentUser);
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(plainBytes);
+                }
+
                 try
                 {
                     await File.WriteAllBytesAsync(filePath, encryptedBytes);
@@ -92,7 +101,14 @@ namespace ImageGeneratorApp
                     }
 
                     byte[] plainBytes = ProtectedData.Unprotect(encryptedBytes, null, DataProtectionScope.CurrentUser);
-                    return Encoding.UTF8.GetString(plainBytes);
+                    try
+                    {
+                        return Encoding.UTF8.GetString(plainBytes);
+                    }
+                    finally
+                    {
+                        CryptographicOperations.ZeroMemory(plainBytes);
+                    }
                 }
             }
             catch (IOException ex)
