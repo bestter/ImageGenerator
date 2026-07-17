@@ -126,3 +126,7 @@
 **Vulnerability:** Checking `Directory.Exists` before attempting to create a directory or save a file creates a TOCTOU race condition.
 **Learning:** In async file writing methods where you also want to avoid blocking the thread-pool with synchronous `Directory.CreateDirectory` checks, relying on `Directory.Exists` is insecure.
 **Prevention:** Use the EAFP (Easier to Ask for Forgiveness than Permission) pattern: try to write the file first, catch `DirectoryNotFoundException`, and only then execute `Directory.CreateDirectory` before retrying.
+## 2026-07-08 - Prevent Memory Scraping of Sensitive Secrets
+**Vulnerability:** The `ApiKeyStorageHelper` successfully encrypted API keys using `ProtectedData`, but it left the intermediate `plainBytes` array holding the unencrypted key in memory until garbage collected. This increases the risk of the secret being extracted via memory scraping, crash dumps, or side-channel attacks.
+**Learning:** Secrets loaded into byte arrays should be explicitly destroyed as soon as they are no longer needed to minimize their exposure window in memory.
+**Prevention:** Always wrap cryptographic operations involving plaintext secrets in a `try...finally` block and use `CryptographicOperations.ZeroMemory()` to explicitly clear the sensitive byte array from memory before the method returns.
