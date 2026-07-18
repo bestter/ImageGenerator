@@ -965,7 +965,8 @@ namespace ImageGeneratorApp
             {
                 // ⚡ Bolt Optimization: Avoid LINQ and intermediate List/Cast array allocations during autocomplete filtering.
                 // Using a standard loop and a pre-sized array for the ListBox avoids garbage collection pressure on the UI thread.
-                var matched = new System.Collections.Generic.List<object>(_templateKeysCache.Count);
+                // ⚡ Bolt Optimization: Use List<string> to leverage array covariance for ComboBox/ListBox.Items.AddRange(object[]).
+                var matched = new System.Collections.Generic.List<string>(_templateKeysCache.Count);
                 foreach (var k in _templateKeysCache)
                 {
                     if (k.Contains(query, StringComparison.OrdinalIgnoreCase))
