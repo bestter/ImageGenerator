@@ -130,3 +130,7 @@
 **Vulnerability:** The `ApiKeyStorageHelper` successfully encrypted API keys using `ProtectedData`, but it left the intermediate `plainBytes` array holding the unencrypted key in memory until garbage collected. This increases the risk of the secret being extracted via memory scraping, crash dumps, or side-channel attacks.
 **Learning:** Secrets loaded into byte arrays should be explicitly destroyed as soon as they are no longer needed to minimize their exposure window in memory.
 **Prevention:** Always wrap cryptographic operations involving plaintext secrets in a `try...finally` block and use `CryptographicOperations.ZeroMemory()` to explicitly clear the sensitive byte array from memory before the method returns.
+## 2026-07-21 - Prevent Shoulder Surfing of Secrets in UI
+**Vulnerability:** The API key `TextBox` (`txtApiKey`) was manually masked using `PasswordChar = '•'`. While this obfuscates the text, relying on `UseSystemPasswordChar = true` is the recommended, more robust standard in Windows Forms to defer to OS-level secure credential masking.
+**Learning:** Hardcoding password characters can be visually inconsistent or lead to edge cases across different environments compared to native OS-level masking.
+**Prevention:** To securely mask sensitive input (like API keys) in Windows Forms and prevent shoulder surfing, use `TextBox.UseSystemPasswordChar = true` rather than manually setting a `PasswordChar`. This defers to the OS's default masking character for a secure and consistent UI.
