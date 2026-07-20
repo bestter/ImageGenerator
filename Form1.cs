@@ -131,7 +131,8 @@ namespace ImageGeneratorApp
                 ForeColor = Color.FromArgb(220, 76, 30)
             };
             // ⚡ Bolt Optimization: Enforce MaxLength to prevent UI thread freezing and memory exhaustion from pasting massive strings
-            txtApiKey = new TextBox { Location = new Point(190, contentTop - 3), Width = 580, PasswordChar = '•', Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, MaxLength = 1024 };
+            // 🛡️ Sentinel: Use SystemPasswordChar to prevent shoulder surfing of API keys
+            txtApiKey = new TextBox { Location = new Point(190, contentTop - 3), Width = 580, UseSystemPasswordChar = true, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, MaxLength = 1024 };
             txtApiKey.TextChanged += TxtApiKey_TextChanged;
 
             // Prompt - also protected from menu overlap using the same measured offset
