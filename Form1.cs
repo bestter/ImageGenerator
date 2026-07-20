@@ -473,8 +473,22 @@ namespace ImageGeneratorApp
             {
                 ext = "jpeg";
             }
+            // ⚡ Bolt: [performance improvement]
+            // 💡 What: Replaced `.ToLowerInvariant()` with `string.Equals` for extension parsing.
+            // 🎯 Why: Using chained methods like `.ToLowerInvariant().TrimStart('.')` on strings (e.g., file extensions) creates multiple intermediate string allocations. Avoiding these allocations reduces Garbage Collection (GC) pressure.
+            // 📊 Impact: Eliminates unnecessary string allocations on the UI thread when resolving files.
+            // 🔬 Measurement: Observe lower GC pressure and memory allocations when adding images.
+            else if (string.Equals(rawExt, ".png", StringComparison.OrdinalIgnoreCase))
+            {
+                ext = "png";
+            }
+            else if (string.Equals(rawExt, ".webp", StringComparison.OrdinalIgnoreCase))
+            {
+                ext = "webp";
+            }
             else
             {
+                // Fallback for unknown extensions, still need to remove the dot if present
                 ext = rawExt.StartsWith(".") ? rawExt.Substring(1).ToLowerInvariant() : rawExt.ToLowerInvariant();
             }
 
