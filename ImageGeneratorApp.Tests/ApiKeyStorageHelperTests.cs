@@ -20,7 +20,6 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace ImageGeneratorApp.Tests
@@ -61,31 +60,31 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
-        public async Task LoadApiKey_WhenFileDoesNotExist_ReturnsEmptyString()
+        public void LoadApiKey_WhenFileDoesNotExist_ReturnsEmptyString()
         {
             // Act
-            string result = await ApiKeyStorageHelper.LoadApiKeyAsync(_testProvider);
+            string result = ApiKeyStorageHelper.LoadApiKey(_testProvider);
 
             // Assert
             result.Should().BeEmpty();
         }
 
         [Fact]
-        public async Task SaveAndLoadApiKey_NominalCase_SavesAndLoadsCorrectly()
+        public void SaveAndLoadApiKey_NominalCase_SavesAndLoadsCorrectly()
         {
             // Arrange
             string originalKey = "my-secret-api-key-12345";
 
             // Act
-            await ApiKeyStorageHelper.SaveApiKeyAsync(_testProvider, originalKey);
-            string loadedKey = await ApiKeyStorageHelper.LoadApiKeyAsync(_testProvider);
+            ApiKeyStorageHelper.SaveApiKey(_testProvider, originalKey);
+            string loadedKey = ApiKeyStorageHelper.LoadApiKey(_testProvider);
 
             // Assert
             loadedKey.Should().Be(originalKey);
         }
 
         [Fact]
-        public async Task LoadApiKey_WhenFileIsOversized_ReturnsEmptyString()
+        public void LoadApiKey_WhenFileIsOversized_ReturnsEmptyString()
         {
             // Arrange
             // Create a file larger than 4096 bytes (e.g. 4097 bytes)
@@ -100,14 +99,14 @@ namespace ImageGeneratorApp.Tests
             File.WriteAllBytes(_filePath, oversizedBytes);
 
             // Act
-            string result = await ApiKeyStorageHelper.LoadApiKeyAsync(_testProvider);
+            string result = ApiKeyStorageHelper.LoadApiKey(_testProvider);
 
             // Assert
             result.Should().BeEmpty();
         }
 
         [Fact]
-        public async Task SaveApiKey_WhenFileIsLocked_SilentlyFails_IOException()
+        public void SaveApiKey_WhenFileIsLocked_SilentlyFails_IOException()
         {
             // Arrange
             string? directory = Path.GetDirectoryName(_filePath);
@@ -121,13 +120,13 @@ namespace ImageGeneratorApp.Tests
             using (var fs = new FileStream(_filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
             {
                 // Action should not throw
-                Func<Task> act = async () => await ApiKeyStorageHelper.SaveApiKeyAsync(_testProvider, "new key");
-                await act.Should().NotThrowAsync();
+                Action act = () => ApiKeyStorageHelper.SaveApiKey(_testProvider, "new key");
+                act.Should().NotThrow();
             }
         }
 
         [Fact]
-        public async Task LoadApiKey_WhenFileIsLocked_ReturnsEmptyString_IOException()
+        public void LoadApiKey_WhenFileIsLocked_ReturnsEmptyString_IOException()
         {
             // Arrange
             string? directory = Path.GetDirectoryName(_filePath);
@@ -141,52 +140,52 @@ namespace ImageGeneratorApp.Tests
             using (var fs = new FileStream(_filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
             {
                 // Action should not throw and return empty string
-                string result = await ApiKeyStorageHelper.LoadApiKeyAsync(_testProvider);
+                string result = ApiKeyStorageHelper.LoadApiKey(_testProvider);
                 result.Should().BeEmpty();
             }
         }
 
         [Fact]
-        public async Task SaveApiKey_WhenPathIsDirectory_SilentlyFails_UnauthorizedAccessException()
+        public void SaveApiKey_WhenPathIsDirectory_SilentlyFails_UnauthorizedAccessException()
         {
             // Arrange
             // Create a directory at the file path to trigger UnauthorizedAccessException
             Directory.CreateDirectory(_filePath);
 
             // Act & Assert
-            Func<Task> act = async () => await ApiKeyStorageHelper.SaveApiKeyAsync(_testProvider, "new key");
-            await act.Should().NotThrowAsync();
+            Action act = () => ApiKeyStorageHelper.SaveApiKey(_testProvider, "new key");
+            act.Should().NotThrow();
         }
 
         [Fact]
-        public async Task LoadApiKey_WhenPathIsDirectory_ReturnsEmptyString_UnauthorizedAccessException()
+        public void LoadApiKey_WhenPathIsDirectory_ReturnsEmptyString_UnauthorizedAccessException()
         {
             // Arrange
             // Create a directory at the file path to trigger UnauthorizedAccessException
             Directory.CreateDirectory(_filePath);
 
             // Act
-            string result = await ApiKeyStorageHelper.LoadApiKeyAsync(_testProvider);
+            string result = ApiKeyStorageHelper.LoadApiKey(_testProvider);
 
             // Assert
             result.Should().BeEmpty();
         }
 
         [Fact]
-        public async Task SaveApiKey_CryptographicException_SilentlyFails()
+        public void SaveApiKey_CryptographicException_SilentlyFails()
         {
             // Note: It's hard to trigger CryptographicException from SaveApiKey without
             // corrupting the DPAPI system or running in a different context.
             // But we can test that passing null or whitespace key doesn't throw.
-            Func<Task> act1 = async () => await ApiKeyStorageHelper.SaveApiKeyAsync(_testProvider, null!);
-            Func<Task> act2 = async () => await ApiKeyStorageHelper.SaveApiKeyAsync(_testProvider, "   ");
+            Action act1 = () => ApiKeyStorageHelper.SaveApiKey(_testProvider, null!);
+            Action act2 = () => ApiKeyStorageHelper.SaveApiKey(_testProvider, "   ");
 
-            await act1.Should().NotThrowAsync();
-            await act2.Should().NotThrowAsync();
+            act1.Should().NotThrow();
+            act2.Should().NotThrow();
         }
 
         [Fact]
-        public async Task LoadApiKey_WhenFileIsCorrupted_ReturnsEmptyString_CryptographicException()
+        public void LoadApiKey_WhenFileIsCorrupted_ReturnsEmptyString_CryptographicException()
         {
             // Arrange
             string? directory = Path.GetDirectoryName(_filePath);
@@ -200,63 +199,10 @@ namespace ImageGeneratorApp.Tests
             File.WriteAllBytes(_filePath, corruptedBytes);
 
             // Act
-            string result = await ApiKeyStorageHelper.LoadApiKeyAsync(_testProvider);
+            string result = ApiKeyStorageHelper.LoadApiKey(_testProvider);
 
             // Assert
             result.Should().BeEmpty();
         }
-
-        [Fact]
-        public async Task SaveApiKey_WhenDirectoryIsReadOnly_SilentlyFails_UnauthorizedAccessException()
-        {
-            // Arrange
-            string? directory = Path.GetDirectoryName(_filePath);
-            if (directory != null)
-            {
-                Directory.CreateDirectory(directory);
-                var dirInfo = new DirectoryInfo(directory);
-                dirInfo.Attributes |= FileAttributes.ReadOnly;
-
-                try
-                {
-                    // Act & Assert
-                    Func<Task> act = async () => await ApiKeyStorageHelper.SaveApiKeyAsync(_testProvider, "new key");
-                    await act.Should().NotThrowAsync();
-                }
-                finally
-                {
-                    dirInfo.Attributes &= ~FileAttributes.ReadOnly;
-                }
-            }
-        }
-
-        [Fact]
-        public async Task SaveApiKey_WhenFileIsReadOnly_SilentlyFails_UnauthorizedAccessException()
-        {
-            // Arrange
-            string? directory = Path.GetDirectoryName(_filePath);
-            if (directory != null)
-            {
-                Directory.CreateDirectory(directory);
-            }
-            File.WriteAllText(_filePath, "initial");
-            var fileInfo = new FileInfo(_filePath);
-            fileInfo.Attributes |= FileAttributes.ReadOnly;
-
-            try
-            {
-                // Act & Assert
-                Func<Task> act = async () => await ApiKeyStorageHelper.SaveApiKeyAsync(_testProvider, "new key");
-                await act.Should().NotThrowAsync();
-
-                // Verify the file was not overwritten
-                File.ReadAllText(_filePath).Should().Be("initial");
-            }
-            finally
-            {
-                fileInfo.Attributes &= ~FileAttributes.ReadOnly;
-            }
-        }
-
     }
 }

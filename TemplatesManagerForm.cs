@@ -32,7 +32,7 @@ namespace ImageGeneratorApp
     {
         private readonly TemplateRepository _repository;
         private List<TemplateModel> _allTemplates = new();
-        private BindingList<TemplateModel> _filteredTemplates = new();
+        private readonly BindingList<TemplateModel> _filteredTemplates = new();
 
         // UI Controls
         private TextBox txtSearch = null!;
@@ -242,24 +242,15 @@ namespace ImageGeneratorApp
             cmbCategory.Items.Clear();
             cmbCategory.Items.Add("Toutes les catégories");
 
-            // ⚡ Bolt Optimization: Replace LINQ extraction chains (.Select().Where().Distinct().OrderBy()) with a HashSet and a standard loop.
-            // This prevents intermediate enumerator allocations, closures, and multiple array passes on the UI thread, significantly reducing GC pressure.
-            var uniqueCategories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var t in _allTemplates)
-            {
-                if (!string.IsNullOrWhiteSpace(t.Category))
-                {
-                    uniqueCategories.Add(t.Category);
-                }
-            }
-
-            var categoriesList = new List<string>(uniqueCategories);
-            categoriesList.Sort(StringComparer.OrdinalIgnoreCase);
+            var categories = _allTemplates
+                .Select(t => t.Category)
+                .Where(c => !string.IsNullOrWhiteSpace(c))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(c => c);
 
             // ⚡ Bolt Optimization: Batch insert categories using .AddRange() instead of a foreach loop
             // This reduces internal recalculations within the ComboBox collection when filtering the master list
-            // ⚡ Bolt Optimization: Use array covariance (string[] to object[]) to completely avoid .Cast<object>() enumerator allocations.
-            cmbCategory.Items.AddRange(categoriesList.ToArray());
+            cmbCategory.Items.AddRange(categories.Cast<object>().ToArray());
 
             if (previousSelection != null && cmbCategory.Items.Contains(previousSelection))
             {
@@ -330,30 +321,34 @@ namespace ImageGeneratorApp
             var searchText = txtSearch.Text.Trim();
             var selectedCategory = cmbCategory.SelectedItem?.ToString();
 
-            bool hasSearchText = !string.IsNullOrEmpty(searchText);
-            bool hasCategoryFilter = !string.IsNullOrEmpty(selectedCategory) && selectedCategory != "Toutes les catégories";
+            var filtered = _allTemplates.AsEnumerable();
 
-            // ⚡ Bolt Optimization: Replace LINQ extraction chains on rapid UI paths with standard foreach loops to eliminate intermediate array and enumerator allocations, reducing GC pressure.
-            // ⚡ Bolt Optimization: Build the filtered list into a pre-allocated List<T> instead of raising BindingList additions.
-            var filteredList = new List<TemplateModel>(_allTemplates.Count);
-            foreach (var template in _allTemplates)
+            // Text search (case-insensitive key and tags matching)
+            if (!string.IsNullOrEmpty(searchText))
             {
-                bool matchesSearch = !hasSearchText ||
-                                     template.Key.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                                     (template.Tags != null && template.Tags.Contains(searchText, StringComparison.OrdinalIgnoreCase));
-
-                bool matchesCategory = !hasCategoryFilter ||
-                                       string.Equals(template.Category, selectedCategory, StringComparison.OrdinalIgnoreCase);
-
-                if (matchesSearch && matchesCategory)
-                {
-                    filteredList.Add(template);
-                }
+                filtered = filtered.Where(t =>
+                    t.Key.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    (t.Tags != null && t.Tags.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                );
             }
 
-            // ⚡ Bolt Optimization: Replace the entire BindingList with the new filtered List to avoid O(N) event raising and re-allocations
-            _filteredTemplates = new BindingList<TemplateModel>(filteredList);
-            dataGridViewTemplates.DataSource = _filteredTemplates;
+            // Category filter
+            if (!string.IsNullOrEmpty(selectedCategory) && selectedCategory != "Toutes les catégories")
+            {
+                filtered = filtered.Where(t => string.Equals(t.Category, selectedCategory, StringComparison.OrdinalIgnoreCase));
+            }
+
+            // Temporarily suspend events to prevent excessive DataGridView repaints
+            _filteredTemplates.RaiseListChangedEvents = false;
+            _filteredTemplates.Clear();
+
+            foreach (var template in filtered)
+            {
+                _filteredTemplates.Add(template);
+            }
+
+            _filteredTemplates.RaiseListChangedEvents = true;
+            _filteredTemplates.ResetBindings();
 
             ConfigureGridColumns();
         }
@@ -434,14 +429,11 @@ namespace ImageGeneratorApp
                 string newKey;
                 int suffix = 1;
 
-                // ⚡ Optimize O(N^2) duplicate key lookup by caching existing keys in a HashSet
-                var existingKeys = new HashSet<string>(_allTemplates.Select(t => t.Key), StringComparer.OrdinalIgnoreCase);
-
                 do
                 {
                     newKey = $"{baseKey}_copy{suffix}";
                     suffix++;
-                } while (existingKeys.Contains(newKey));
+                } while (_allTemplates.Any(t => string.Equals(t.Key, newKey, StringComparison.OrdinalIgnoreCase)));
 
                 var duplicate = new TemplateModel
                 {

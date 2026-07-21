@@ -189,10 +189,8 @@ namespace ImageGeneratorApp
             if (string.IsNullOrEmpty(ext))
                 return false;
 
-            return string.Equals(ext, ".jpg", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(ext, ".jpeg", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(ext, "jpg", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(ext, "jpeg", StringComparison.OrdinalIgnoreCase);
+            ext = ext.TrimStart('.').ToLowerInvariant();
+            return ext is "jpg" or "jpeg";
         }
 
         /// <summary>
@@ -272,22 +270,12 @@ namespace ImageGeneratorApp
             if (string.IsNullOrEmpty(value))
                 return string.Empty;
 
-            // ⚡ Bolt Optimization: Use a single StringBuilder to avoid multiple string allocations
-            // from chaining string.Replace() for character escaping.
-            var sb = new StringBuilder(value.Length + 10);
-            foreach (char c in value)
-            {
-                switch (c)
-                {
-                    case '&': sb.Append("&amp;"); break;
-                    case '<': sb.Append("&lt;"); break;
-                    case '>': sb.Append("&gt;"); break;
-                    case '"': sb.Append("&quot;"); break;
-                    case '\'': sb.Append("&apos;"); break;
-                    default: sb.Append(c); break;
-                }
-            }
-            return sb.ToString();
+            return value
+                .Replace("&", "&amp;")
+                .Replace("<", "&lt;")
+                .Replace(">", "&gt;")
+                .Replace("\"", "&quot;")
+                .Replace("'", "&apos;");
         }
     }
 }

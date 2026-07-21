@@ -150,31 +150,14 @@ namespace ImageGeneratorApp
 
                 // ⚡ Bolt Optimization: Avoid LINQ chains (.Cast().Select().Distinct().ToList()) in the parsing hot loop.
                 // Using a HashSet directly prevents intermediate array allocations, closures, and enumerator overhead.
-                // ⚡ Bolt Optimization: Use a string array instead of HashSet since the number of matches is typically very small.
-                // This completely avoids the memory allocation and hashing overhead of a HashSet on the hot path.
-                var uniqueTags = new string[matches.Count];
-                int uniqueCount = 0;
+                var uniqueTags = new HashSet<string>(StringComparer.Ordinal);
                 for (int i = 0; i < matches.Count; i++)
                 {
-                    string matchVal = matches[i].Value;
-                    bool exists = false;
-                    for (int j = 0; j < uniqueCount; j++)
-                    {
-                        if (uniqueTags[j] == matchVal)
-                        {
-                            exists = true;
-                            break;
-                        }
-                    }
-                    if (!exists)
-                    {
-                        uniqueTags[uniqueCount++] = matchVal;
-                    }
+                    uniqueTags.Add(matches[i].Value);
                 }
 
-                for (int u = 0; u < uniqueCount; u++)
+                foreach (var tag in uniqueTags)
                 {
-                    var tag = uniqueTags[u];
                     // tag is e.g. "{subject:dog:red}"
                     // Extract inner content without the curly braces
                     var innerContent = tag[1..^1];
@@ -194,36 +177,12 @@ namespace ImageGeneratorApp
                     if (colonIndex != -1)
                     {
                         var paramString = innerContent.Substring(colonIndex + 1);
-
-                        // ⚡ Bolt Optimization: Avoid intermediate array allocations via Split(':') during template resolution.
-                        // Iterate through the parameter string using IndexOf to extract parameters without array creation.
-                        int paramIndex = 0;
-                        int currentIndex = 0;
-
-                        // ⚡ Bolt Optimization: Use a single StringBuilder to apply all parameter replacements
-                        // without creating a new string instance on every loop iteration, reducing GC pressure.
-                        var sb = new System.Text.StringBuilder(templateValue, templateValue.Length + paramString.Length);
-
-                        do
+                        var paramParts = paramString.Split(':');
+                        // ⚡ Bolt Optimization: Avoid LINQ and intermediate array allocations during template resolution
+                        for (int i = 0; i < paramParts.Length; i++)
                         {
-                            int nextColon = paramString.IndexOf(':', currentIndex);
-                            string paramValue;
-                            if (nextColon == -1)
-                            {
-                                paramValue = paramString.Substring(currentIndex);
-                                currentIndex = paramString.Length + 1; // force exit
-                            }
-                            else
-                            {
-                                paramValue = paramString.Substring(currentIndex, nextColon - currentIndex);
-                                currentIndex = nextColon + 1;
-                            }
-
-                            sb.Replace($"{{{paramIndex}}}", paramValue.Trim());
-                            paramIndex++;
-                        } while (currentIndex <= paramString.Length);
-
-                        templateValue = sb.ToString();
+                            templateValue = templateValue.Replace($"{{{i}}}", paramParts[i].Trim());
+                        }
                     }
 
                     // Update the prompt replacing all occurrences of this specific tag expression
