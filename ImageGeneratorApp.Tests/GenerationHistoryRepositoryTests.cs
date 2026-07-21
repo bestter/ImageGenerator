@@ -196,5 +196,26 @@ namespace ImageGeneratorApp.Tests
             // Assert
             metadata.Should().BeNull();
         }
+
+        [Fact]
+        public async Task SearchAsync_ShouldEscapeSqlSpecialCharacters_AndReturnExactMatches()
+        {
+            // Arrange
+            var r1 = new GenerationHistoryModel { ImagePath = "p1.webp", Prompt = "Prompt with 100% discount", ModelName = "model1" };
+            var r2 = new GenerationHistoryModel { ImagePath = "p2.webp", Prompt = "Prompt with 100_percent discount", ModelName = "model2" };
+
+            await _repository.InsertAsync(r1);
+            await _repository.InsertAsync(r2);
+
+            // Act & Assert for '%' character
+            var searchPercent = await _repository.SearchAsync("100%");
+            var listPercent = System.Linq.Enumerable.ToList(searchPercent);
+            listPercent.Should().ContainSingle().Which.ImagePath.Should().Be("p1.webp");
+
+            // Act & Assert for '_' character
+            var searchUnderscore = await _repository.SearchAsync("100_");
+            var listUnderscore = System.Linq.Enumerable.ToList(searchUnderscore);
+            listUnderscore.Should().ContainSingle().Which.ImagePath.Should().Be("p2.webp");
+        }
     }
-}
+}

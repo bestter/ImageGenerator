@@ -64,7 +64,15 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
+        public void Constructor_NullRepository_ThrowsArgumentNullException()
+        {
+            Action act = () => new TemplateParser(null!);
+            act.Should().Throw<ArgumentNullException>().WithParameterName("repository");
+        }
+
+        [Fact]
         public async Task ProcessPromptAsync_ShouldReplaceSimpleTemplates()
+
         {
             // Arrange
             await _repository.InsertAsync(new TemplateModel { Key = "style", Value = "photorealistic oil painting" });
