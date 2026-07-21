@@ -102,6 +102,46 @@ namespace ImageGeneratorApp.Tests
             handlerMock.Verify();
         }
 
+        [Fact]
+        public async Task GenerateImageAsync_ValidRequestWithMultipleImages_CallsEditsEndpointWithImagesArrayAndReturnsBase64()
+        {
+            // Arrange
+            var expectedBase64 = "dummy_multi_base64";
+            var responseJson = new { data = new[] { new { b64_json = expectedBase64 } } };
+
+            var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+            handlerMock
+               .Protected()
+               .Setup<Task<HttpResponseMessage>>(
+                  "SendAsync",
+                  ItExpr.Is<HttpRequestMessage>(req =>
+                      req.Method == HttpMethod.Post &&
+                      req.RequestUri!.ToString() == "https://api.x.ai/v1/images/edits"),
+                  ItExpr.IsAny<CancellationToken>()
+               )
+               .ReturnsAsync(new HttpResponseMessage()
+               {
+                   StatusCode = HttpStatusCode.OK,
+                   Content = new StringContent(JsonSerializer.Serialize(responseJson)),
+               })
+               .Verifiable();
+
+            var httpClient = new HttpClient(handlerMock.Object);
+            var client = new ImageGeneratorClient(httpClient);
+            var images = new List<ImageUrlObject>
+            {
+                new ImageUrlObject { Type = "image_url", Url = "data:image/png;base64,ref1" },
+                new ImageUrlObject { Type = "image_url", Url = "data:image/png;base64,ref2" }
+            };
+
+            // Act
+            var result = await client.GenerateImageAsync("dummy_key", "A cute cat", "grok-imagine-image", "1k", "16:9", "dummy_user", images);
+
+            // Assert
+            result.Should().Be(expectedBase64);
+            handlerMock.Verify();
+        }
+
         [Theory]
         [InlineData(null)]
         [InlineData("")]
@@ -674,6 +714,29 @@ namespace ImageGeneratorApp.Tests
             // Status code 200 in this path (we surface before real HTTP error semantics for oversized)
             exception.Which.StatusCode.Should().Be(200);
         }
-    }
 
-}
+        [Fact]
+        public async Task GenerateImageAsync_SendAsyncThrowsOperationCanceledException_RethrowsOperationCanceledException()
+        {
+            // Arrange
+            var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+            handlerMock
+               .Protected()
+               .Setup<Task<HttpResponseMessage>>(
+                  "SendAsync",
+                  ItExpr.IsAny<HttpRequestMessage>(),
+                  ItExpr.IsAny<CancellationToken>()
+               )
+               .ThrowsAsync(new OperationCanceledException("Request timed out"));
+
+            var httpClient = new HttpClient(handlerMock.Object);
+            var client = new ImageGeneratorClient(httpClient);
+
+            // Act
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "grok-imagine-image", "1k", "16:9", "user", new List<ImageUrlObject>());
+
+            // Assert
+            await act.Should().ThrowAsync<OperationCanceledException>().WithMessage("*Request timed out*");
+        }
+    }
+}

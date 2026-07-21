@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
@@ -47,5 +47,8 @@
     <Compile Include="..\Helpers\ApiKeyStorageHelper.cs" />
     <Compile Include="..\AboutForm.cs" />
     <Compile Include="..\TemplateEditorForm.cs" />
+    <Compile Include="..\TemplatesManagerForm.cs" />
+    <Compile Include="..\HistoryViewerForm.cs" />
   </ItemGroup>
 </Project>
+
