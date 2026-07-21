@@ -147,6 +147,25 @@ namespace ImageGeneratorApp.Tests
                 .WithMessage("*récursion infinie*");
         }
 
+        [Fact]
+        public async Task ProcessPromptAsync_ShouldThrowInvalidOperationException_OnExcessiveLength()
+        {
+            // Arrange
+            // Create a template that expands massively
+            string massiveString = new string('A', 55000);
+            await _repository.InsertAsync(new TemplateModel { Key = "massive", Value = massiveString });
+
+            // 55000 * 2 = 110,000 characters > 100,000
+            string prompt = "{massive} {massive}";
+
+            // Act
+            Func<Task> act = async () => await _parser.ProcessPromptAsync(prompt);
+
+            // Assert
+            await act.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage("*dépasse la taille maximale autorisée*");
+        }
+
         [Theory]
         [InlineData("Some text {unclosed", "Accolade ouvrante '{' non fermée.")]
         [InlineData("Some text } premature", "Accolade fermante '}' inattendue ou non ouverte.")]
