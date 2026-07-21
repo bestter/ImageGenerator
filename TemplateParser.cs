@@ -200,6 +200,10 @@ namespace ImageGeneratorApp
                         int paramIndex = 0;
                         int currentIndex = 0;
 
+                        // ⚡ Bolt Optimization: Use a single StringBuilder to apply all parameter replacements
+                        // without creating a new string instance on every loop iteration, reducing GC pressure.
+                        var sb = new System.Text.StringBuilder(templateValue, templateValue.Length + paramString.Length);
+
                         do
                         {
                             int nextColon = paramString.IndexOf(':', currentIndex);
@@ -215,9 +219,11 @@ namespace ImageGeneratorApp
                                 currentIndex = nextColon + 1;
                             }
 
-                            templateValue = templateValue.Replace($"{{{paramIndex}}}", paramValue.Trim());
+                            sb.Replace($"{{{paramIndex}}}", paramValue.Trim());
                             paramIndex++;
                         } while (currentIndex <= paramString.Length);
+
+                        templateValue = sb.ToString();
                     }
 
                     // Update the prompt replacing all occurrences of this specific tag expression

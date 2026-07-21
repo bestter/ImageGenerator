@@ -147,3 +147,6 @@
 ## 2026-11-20 - Use array covariance to avoid List<object> on UI collections
 **Learning:** Using `List<object>` and calling `.ToArray()` to convert a string list to an `object[]` for `ComboBox.Items.AddRange()` or `ListBox.Items.AddRange()` allocates an `object[]` and obscures intent. Because C# supports array covariance, a `string[]` generated from `List<string>` can be implicitly passed as an `object[]`.
 **Action:** Always use `List<string>` and its `.ToArray()` directly (e.g. `matched.ToArray()`) to rely on array covariance instead of using `List<object>` when populating UI collections that expect `object[]`.
+## 2026-11-20 - Avoid immutable string.Replace allocations in template resolution loops
+**Learning:** Chaining `string.Replace()` calls on a base string inside a `while` loop (like sequentially replacing `{0}`, `{1}` parameters in template processing) creates a new string instance on every single iteration. This leads to heavy Garbage Collection pressure and performance degradation.
+**Action:** Always wrap the base string in a `StringBuilder` (initialized with a sufficient capacity) before the loop, and use `StringBuilder.Replace()` to apply all the substitutions in-place before converting it back to a string at the end.
