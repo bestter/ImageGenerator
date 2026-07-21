@@ -128,7 +128,14 @@ namespace ImageGeneratorApp
             splitContainer.Panel1.Padding = new Padding(15, 15, 5, 15);
             splitContainer.Panel2.Padding = new Padding(5, 15, 15, 15);
 
-            // === LEFT SIDE PANEL (Search & List) ===
+            SetupLeftPanel(mainFont, titleFont);
+            SetupRightPanel(mainFont, titleFont);
+
+            this.Controls.Add(splitContainer);
+        }
+
+        private void SetupLeftPanel(Font mainFont, Font titleFont)
+        {
             var leftPanel = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -242,8 +249,10 @@ namespace ImageGeneratorApp
             leftPanel.Controls.Add(txtSearch);
             leftPanel.Controls.Add(lblSearch);
             splitContainer.Panel1.Controls.Add(leftPanel);
+        }
 
-            // === RIGHT SIDE PANEL (Details & Preview) ===
+        private void SetupRightPanel(Font mainFont, Font titleFont)
+        {
             var rightPanel = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -401,8 +410,6 @@ namespace ImageGeneratorApp
             rightPanel.Controls.Add(pictureCard);
             rightPanel.Controls.Add(detailsContainer);
             splitContainer.Panel2.Controls.Add(rightPanel);
-
-            this.Controls.Add(splitContainer);
         }
 
         // Draw an elegant thin anti-aliased border around container panels
