@@ -69,3 +69,22 @@
 ## 2026-06-26 - Pre-allocate MemoryStream for image re-encoding
 **Learning:** Re-encoding large images (e.g., adding metadata and saving as PNG/JPEG) into a default `MemoryStream` causes its internal buffer to double repeatedly, creating excessive Large Object Heap (LOH) garbage.
 **Action:** Always pre-allocate the `MemoryStream` capacity when re-encoding an existing image by using the original byte array's length as a baseline estimate (e.g., `sourceImageBytes.Length + 4096`).
+## 2026-06-18 - [SQLite Database Index Sorting]
+**Learning:** In-memory LINQ sorts (like `.OrderBy()`) cause unnecessary array allocations and UI thread CPU overhead, even for small lists.
+**Action:** Push sorting logic down to the database query by using `ORDER BY` and matching collation (e.g., `ORDER BY key COLLATE NOCASE`) to leverage existing SQLite indices. This completely eliminates the need for C# to sort the data.
+## 2026-06-27 - Avoid unnecessary array allocations in string parsing and loops
+**Learning:** Using `string.Split(':')[0]` to extract a substring before a delimiter allocates an array that is immediately thrown away. Similarly, using LINQ chains like `.Skip(1).Select(p => p.Trim()).ToArray()` inside a hot loop (like template resolution) causes intermediate array allocations and closure overhead.
+**Action:** Use `string.IndexOf` combined with `string.Substring` to extract substrings without array allocations. Replace LINQ chains with standard `for` loops that iterate over existing arrays.
+
+## 2023-10-27 - Avoid string array allocations in hot loops
+**Learning:** Using `string.Split(':')` inside a hot loop (like template resolution parsing) when 99% of the templates do not contain colons (parameters) leads to unnecessary single-element string array allocations. In C# text parsing routines, avoiding these allocations drastically reduces garbage collection pressure.
+**Action:** Use `string.IndexOf(':')` to safely verify the existence of parameters before invoking `Substring` or `Split`, effectively bypassing array allocation entirely for simple cases.
+
+## 2026-06-28 - Avoid unnecessary database queries when data is already cached
+**Learning:** Adding new database queries (e.g., `SELECT DISTINCT`) to filter or sort data that is already eagerly loaded into an in-memory application cache actually degrades performance, as the added database/network roundtrip overhead negates any processing offload.
+**Action:** When data is fully loaded into an active cache, perform filtering, sorting, or distinct operations in-memory rather than issuing new database queries.
+
+## 2026-06-28 - Use HashSet instead of LINQ chains in hot loops
+**Learning:** Using LINQ chains like `.Cast<Match>().Select(m => m.Value).Distinct().ToList()` inside a parsing loop allocates multiple intermediate enumerators, arrays, and closures per iteration. In a hot loop (like a recursive template parser), this creates massive garbage collection pressure.
+**Action:** Always replace LINQ collection extraction chains with a `HashSet<string>` populated via a simple `for` loop to eliminate intermediate allocations and enumerator overhead completely.
+

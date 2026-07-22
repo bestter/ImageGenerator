@@ -456,14 +456,11 @@ namespace ImageGeneratorApp
                 ApplyFilters();
 
                 // Scroll to and select the newly duplicated item in the grid
-                foreach (DataGridViewRow row in dataGridViewTemplates.Rows)
+                int index = _filteredTemplates.IndexOf(duplicate);
+                if (index >= 0 && index < dataGridViewTemplates.Rows.Count)
                 {
-                    if (row.DataBoundItem is TemplateModel tm && tm.Id == duplicate.Id)
-                    {
-                        row.Selected = true;
-                        dataGridViewTemplates.FirstDisplayedScrollingRowIndex = row.Index;
-                        break;
-                    }
+                    dataGridViewTemplates.Rows[index].Selected = true;
+                    dataGridViewTemplates.FirstDisplayedScrollingRowIndex = index;
                 }
 
                 MessageBox.Show($"Gabarit dupliqué avec succès sous le nom '{newKey}' !", "Duplication réussie", MessageBoxButtons.OK, MessageBoxIcon.Information);

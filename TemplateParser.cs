@@ -142,11 +142,13 @@ namespace ImageGeneratorApp
                     throw new InvalidOperationException("Une récursion infinie a été détectée dans les modèles (limite de 20 itérations atteinte).");
                 }
 
-                // Process unique tags in the current iteration to optimize database queries and string replacements
-                var uniqueTags = matches.Cast<System.Text.RegularExpressions.Match>()
-                    .Select(m => m.Value)
-                    .Distinct()
-                    .ToList();
+                // ⚡ Bolt Optimization: Avoid LINQ chains (.Cast().Select().Distinct().ToList()) in the parsing hot loop.
+                // Using a HashSet directly prevents intermediate array allocations, closures, and enumerator overhead.
+                var uniqueTags = new HashSet<string>(StringComparer.Ordinal);
+                for (int i = 0; i < matches.Count; i++)
+                {
+                    uniqueTags.Add(matches[i].Value);
+                }
 
                 foreach (var tag in uniqueTags)
                 {
@@ -154,9 +156,9 @@ namespace ImageGeneratorApp
                     // Extract inner content without the curly braces
                     var innerContent = tag[1..^1];
 
-                    // Split key and parameters by colons
-                    var parts = innerContent.Split(':');
-                    var key = parts[0].Trim();
+                    // ⚡ Bolt Optimization: Avoid string array allocations via Split(':') for templates without parameters
+                    int colonIndex = innerContent.IndexOf(':');
+                    var key = colonIndex == -1 ? innerContent.Trim() : innerContent.Substring(0, colonIndex).Trim();
 
                     if (!localCache.TryGetValue(key, out var template))
                     {
@@ -166,18 +168,27 @@ namespace ImageGeneratorApp
                     var templateValue = template.Value;
 
                     // If parameters were supplied, format the placeholders ({0}, {1}, etc.) inside the template value
-                    if (parts.Length > 1)
+                    if (colonIndex != -1)
                     {
-                        var parameters = parts.Skip(1).Select(p => p.Trim()).ToArray();
-                        for (int i = 0; i < parameters.Length; i++)
+                        var paramString = innerContent.Substring(colonIndex + 1);
+                        var paramParts = paramString.Split(':');
+                        // ⚡ Bolt Optimization: Avoid LINQ and intermediate array allocations during template resolution
+                        for (int i = 0; i < paramParts.Length; i++)
                         {
-                            templateValue = templateValue.Replace($"{{{i}}}", parameters[i]);
+                            templateValue = templateValue.Replace($"{{{i}}}", paramParts[i].Trim());
                         }
                     }
 
                     // Update the prompt replacing all occurrences of this specific tag expression
                     currentPrompt = currentPrompt.Replace(tag, templateValue);
                     replacedAny = true;
+
+                    // 🛡️ Sentinel: Enforce maximum length on resolved prompt to prevent memory exhaustion (DoS)
+                    // from exponential template expansion (similar to a Billion Laughs attack).
+                    if (currentPrompt.Length > 100000)
+                    {
+                        throw new InvalidOperationException("Le prompt résolu dépasse la taille maximale autorisée (100000 caractères).");
+                    }
 
                     // If requested, asynchronously increment usage stats for this key in the database
                     if (incrementUsageStats)

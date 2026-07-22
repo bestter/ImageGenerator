@@ -123,5 +123,32 @@ namespace ImageGeneratorApp.Tests
             Func<Task> act2 = async () => await _imageProcessingService.SaveImageAsWebpAsync(ValidPngBytes, "   ");
             await act2.Should().ThrowAsync<ArgumentException>().WithMessage("*Base file name cannot be null or whitespace.*");
         }
+
+        [Fact]
+        public async Task SaveImageAsWebpAsync_WithMetadata_EmbedsMetadataInWebpImage()
+        {
+            // Arrange
+            var baseFileName = $"test_meta_{Guid.NewGuid():N}";
+            var metadata = new ImageGenerationMetadata(
+                Generator: "Grok Imagine",
+                Prompt: "A futuristic skyline",
+                ModelId: "grok-imagine-image",
+                GeneratedAtUtc: DateTime.UtcNow,
+                Resolution: "1024x1024",
+                AspectRatio: "1:1",
+                AppCreator: "GrokImagineApp"
+            );
+
+            // Act
+            var savedPath = await _imageProcessingService.SaveImageAsWebpAsync(ValidPngBytes, baseFileName, metadata);
+            _createdWebpPath = savedPath;
+
+            // Assert
+            File.Exists(savedPath).Should().BeTrue();
+            using var loadedImage = SixLabors.ImageSharp.Image.Load(savedPath);
+            loadedImage.Metadata.ExifProfile.Should().NotBeNull();
+            loadedImage.Metadata.XmpProfile.Should().NotBeNull();
+        }
     }
 }
+
