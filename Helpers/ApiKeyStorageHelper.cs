@@ -34,8 +34,15 @@ namespace ImageGeneratorApp
                 }
 
                 byte[] plainBytes = Encoding.UTF8.GetBytes(apiKey);
-                byte[] encryptedBytes = ProtectedData.Protect(plainBytes, null, DataProtectionScope.CurrentUser);
-                File.WriteAllBytes(filePath, encryptedBytes);
+                try
+                {
+                    byte[] encryptedBytes = ProtectedData.Protect(plainBytes, null, DataProtectionScope.CurrentUser);
+                    File.WriteAllBytes(filePath, encryptedBytes);
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(plainBytes);
+                }
             }
             catch (IOException)
             {
@@ -82,7 +89,14 @@ namespace ImageGeneratorApp
                     }
 
                     byte[] plainBytes = ProtectedData.Unprotect(encryptedBytes, null, DataProtectionScope.CurrentUser);
-                    return Encoding.UTF8.GetString(plainBytes);
+                    try
+                    {
+                        return Encoding.UTF8.GetString(plainBytes);
+                    }
+                    finally
+                    {
+                        CryptographicOperations.ZeroMemory(plainBytes);
+                    }
                 }
             }
             catch (IOException ex)
