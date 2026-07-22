@@ -77,13 +77,16 @@ namespace ImageGeneratorApp
             this.Size = new Size(900, 550);
             this.StartPosition = FormStartPosition.CenterParent;
             this.MinimumSize = new Size(700, 400);
+            this.BackColor = Color.FromArgb(18, 19, 22);
+            this.ForeColor = Color.FromArgb(240, 242, 248);
+            this.Font = new Font("Segoe UI", 9.5F);
 
             // 1. Top Panel (Filters & Search)
             var topPanel = new Panel
             {
                 Dock = DockStyle.Top,
                 Height = 60,
-                BackColor = SystemColors.Control,
+                BackColor = Color.FromArgb(25, 27, 34),
                 Padding = new Padding(15, 12, 15, 12)
             };
 
@@ -92,32 +95,42 @@ namespace ImageGeneratorApp
                 Text = "Rechercher (Nom/Tag) :",
                 Location = new Point(15, 20),
                 AutoSize = true,
-                Font = new Font(this.Font, FontStyle.Bold)
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(220, 225, 235)
             };
 
             txtSearch = new TextBox
             {
-                Location = new Point(135, 17),
+                Location = new Point(185, 17),
                 Width = 200,
                 Anchor = AnchorStyles.Left | AnchorStyles.Top,
-                MaxLength = 200
+                MaxLength = 200,
+                BackColor = Color.FromArgb(18, 19, 24),
+                ForeColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                Font = new Font("Segoe UI", 9.5F)
             };
             txtSearch.TextChanged += TxtSearch_TextChanged;
 
             var lblCategory = new Label
             {
                 Text = "Catégorie :",
-                Location = new Point(365, 20),
+                Location = new Point(415, 20),
                 AutoSize = true,
-                Font = new Font(this.Font, FontStyle.Bold)
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(220, 225, 235)
             };
 
             cmbCategory = new ComboBox
             {
-                Location = new Point(445, 17),
+                Location = new Point(495, 17),
                 Width = 180,
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Anchor = AnchorStyles.Left | AnchorStyles.Top
+                FlatStyle = FlatStyle.Flat,
+                Anchor = AnchorStyles.Left | AnchorStyles.Top,
+                BackColor = Color.FromArgb(18, 19, 24),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9.5F)
             };
             cmbCategory.SelectedIndexChanged += CmbCategory_SelectedIndexChanged;
 
@@ -127,56 +140,75 @@ namespace ImageGeneratorApp
             var rightPanel = new Panel
             {
                 Dock = DockStyle.Right,
-                Width = 145,
-                BackColor = SystemColors.Control,
+                Width = 150,
+                BackColor = Color.FromArgb(25, 27, 34),
                 Padding = new Padding(10, 10, 10, 10)
             };
 
             btnAdd = new Button
             {
-                Text = "Ajouter",
-                Location = new Point(10, 15),
+                Text = "+ Ajouter",
+                Location = new Point(12, 15),
                 Width = 125,
-                Height = 35,
+                Height = 36,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                UseVisualStyleBackColor = true
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(217, 56, 30), // Bauhaus Vermilion Red
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Cursor = Cursors.Hand
             };
+            btnAdd.FlatAppearance.BorderSize = 0;
             btnAdd.Click += BtnAdd_Click;
 
             btnEdit = new Button
             {
-                Text = "Modifier",
-                Location = new Point(10, 60),
+                Text = "✏️ Modifier",
+                Location = new Point(12, 60),
                 Width = 125,
-                Height = 35,
+                Height = 36,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                UseVisualStyleBackColor = true
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(37, 40, 50),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Cursor = Cursors.Hand
             };
+            btnEdit.FlatAppearance.BorderColor = Color.FromArgb(60, 65, 80);
+            btnEdit.FlatAppearance.BorderSize = 1;
             btnEdit.Click += BtnEdit_Click;
 
             btnDuplicate = new Button
             {
-                Text = "Dupliquer",
-                Location = new Point(10, 105),
+                Text = "📋 Dupliquer",
+                Location = new Point(12, 105),
                 Width = 125,
-                Height = 35,
+                Height = 36,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                UseVisualStyleBackColor = true
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(37, 40, 50),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Cursor = Cursors.Hand
             };
+            btnDuplicate.FlatAppearance.BorderColor = Color.FromArgb(60, 65, 80);
+            btnDuplicate.FlatAppearance.BorderSize = 1;
             btnDuplicate.Click += BtnDuplicate_Click;
 
             btnDelete = new Button
             {
-                Text = "Supprimer",
-                Location = new Point(10, 150),
+                Text = "🗑️ Supprimer",
+                Location = new Point(12, 150),
                 Width = 125,
-                Height = 35,
+                Height = 36,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                UseVisualStyleBackColor = true,
-                BackColor = Color.FromArgb(244, 67, 54),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(180, 40, 40),
                 ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Cursor = Cursors.Hand
             };
+            btnDelete.FlatAppearance.BorderSize = 0;
             btnDelete.Click += BtnDelete_Click;
 
             rightPanel.Controls.AddRange(new Control[] { btnAdd, btnEdit, btnDuplicate, btnDelete });
@@ -193,10 +225,33 @@ namespace ImageGeneratorApp
                 AllowUserToDeleteRows = false,
                 AllowUserToOrderColumns = false,
                 RowHeadersVisible = false,
-                BackgroundColor = Color.White,
+                BackgroundColor = Color.FromArgb(18, 19, 24),
+                ForeColor = Color.White,
                 BorderStyle = BorderStyle.None,
-                GridColor = Color.LightGray,
-                AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.FromArgb(245, 245, 245) }
+                GridColor = Color.FromArgb(40, 44, 56),
+                EnableHeadersVisualStyles = false,
+                RowsDefaultCellStyle = new DataGridViewCellStyle
+                {
+                    BackColor = Color.FromArgb(25, 27, 34),
+                    ForeColor = Color.White,
+                    SelectionBackColor = Color.FromArgb(217, 56, 30),
+                    SelectionForeColor = Color.White
+                },
+                AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle
+                {
+                    BackColor = Color.FromArgb(20, 22, 28),
+                    ForeColor = Color.White,
+                    SelectionBackColor = Color.FromArgb(217, 56, 30),
+                    SelectionForeColor = Color.White
+                },
+                ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
+                {
+                    BackColor = Color.FromArgb(32, 35, 46),
+                    ForeColor = Color.White,
+                    Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                    SelectionBackColor = Color.FromArgb(32, 35, 46),
+                    Alignment = DataGridViewContentAlignment.MiddleLeft
+                }
             };
 
             // Bind to BindingList

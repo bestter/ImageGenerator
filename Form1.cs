@@ -108,7 +108,7 @@ namespace ImageGeneratorApp
             InitializeTemplateControls(contentTop);
 
             this.Controls.AddRange(new Control[] { lblKey, txtApiKey, lblPrompt, txtPrompt, lblModel, cmbModel, lblRes, cmbResolution, btnAddImages, lblRatio, cmbAspectRatio, chkMultiTurnEditing,
-                btnGenerate, btnSave, btnClear, btnHistory, lblStatus, pictureBox, btnManageTemplates, chkEnableTemplates, lstAutocomplete });
+                btnGenerate, btnSave, btnClear, btnHistory, lblStatus, btnCopyError, pictureBox, btnManageTemplates, chkEnableTemplates, lstAutocomplete });
 
             lstAutocomplete.BringToFront();
 
@@ -136,25 +136,43 @@ namespace ImageGeneratorApp
             // Create the menu FIRST (before ClientSize / WindowState / any other controls).
             // This gives the docked MenuStrip the best chance to reserve vertical space
             // in the client area before we use absolute Locations. Critical on Maximized forms.
-            mainMenuStrip = new MenuStrip();
-            var helpMenu = new ToolStripMenuItem("Aide");
-            var aboutMenuItem = new ToolStripMenuItem("À propos de Générateur d'image...");
+            mainMenuStrip = new MenuStrip
+            {
+                BackColor = Color.FromArgb(24, 25, 30),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9F, FontStyle.Regular)
+            };
+
+            // Apply dark professional menu renderer for Bauhaus styling
+            mainMenuStrip.Renderer = new ToolStripProfessionalRenderer(new DarkBauhausColorTable());
+
+            var helpMenu = new ToolStripMenuItem("Aide")
+            {
+                ForeColor = Color.White
+            };
+            var aboutMenuItem = new ToolStripMenuItem("À propos de Générateur d'image...")
+            {
+                BackColor = Color.FromArgb(32, 34, 42),
+                ForeColor = Color.White
+            };
             aboutMenuItem.Click += AboutMenuItem_Click;
             helpMenu.DropDownItems.Add(aboutMenuItem);
             mainMenuStrip.Items.Add(helpMenu);
             this.Controls.Add(mainMenuStrip);
 
             this.Text = "Générateur d'image Grok Imagine et Nano Banana Pro";
-            this.ClientSize = new Size(900, 700);
+            this.ClientSize = new Size(920, 720);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.WindowState = FormWindowState.Maximized;
+            this.BackColor = Color.FromArgb(18, 19, 22); // Bauhaus Obsidian Ink background
+            this.ForeColor = Color.FromArgb(240, 242, 248);
+            this.Font = new Font("Segoe UI", 9.5F);
 
             // Force the MenuStrip to perform layout immediately so its Height is measured
             // and the client area top is correctly offset before we position the first controls.
-            // This prevents the classic MenuStrip-overlapping-absolute-controls bug on Maximized + HighDPI forms.
             this.PerformLayout();
             int menuHeight = mainMenuStrip.Height;
-            return menuHeight + 6; // small breathing room under the menu
+            return menuHeight + 12; // breathing room under the menu
         }
 
         private void InitializeApiAndPrompt(int contentTop)
@@ -163,17 +181,49 @@ namespace ImageGeneratorApp
             lblKey = new Label
             {
                 Text = "Clé API xAI :",
-                Location = new Point(20, contentTop),
+                Location = new Point(24, contentTop),
                 AutoSize = true,
-                ForeColor = Color.FromArgb(220, 76, 30)
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(220, 76, 30) // xAI Accent
             };
             // ⚡ Bolt Optimization: Enforce MaxLength to prevent UI thread freezing and memory exhaustion from pasting massive strings
-            txtApiKey = new TextBox { Location = new Point(190, contentTop - 3), Width = 580, PasswordChar = '•', Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, MaxLength = 1024 };
+            txtApiKey = new TextBox
+            {
+                Location = new Point(190, contentTop - 3),
+                Width = 570,
+                UseSystemPasswordChar = true,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                MaxLength = 1024,
+                BackColor = Color.FromArgb(28, 30, 36),
+                ForeColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                Font = new Font("Segoe UI", 9.5F)
+            };
             txtApiKey.TextChanged += TxtApiKey_TextChanged;
 
             // Prompt - also protected from menu overlap using the same measured offset
-            lblPrompt = new Label { Text = "Prompt :", Location = new Point(20, contentTop + 38), AutoSize = true };
-            txtPrompt = new TextBox { Location = new Point(190, contentTop + 35), Width = 580, Height = 100, Multiline = true, ScrollBars = ScrollBars.Vertical, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, MaxLength = ImageGeneratorClient.GetMaxPromptLength(cmbModel?.SelectedItem?.ToString()) };
+            lblPrompt = new Label
+            {
+                Text = "Prompt :",
+                Location = new Point(24, contentTop + 38),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(220, 225, 235)
+            };
+            txtPrompt = new TextBox
+            {
+                Location = new Point(190, contentTop + 35),
+                Width = 570,
+                Height = 95,
+                Multiline = true,
+                ScrollBars = ScrollBars.Vertical,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                MaxLength = ImageGeneratorClient.GetMaxPromptLength(cmbModel?.SelectedItem?.ToString()),
+                BackColor = Color.FromArgb(28, 30, 36),
+                ForeColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                Font = new Font("Segoe UI", 9.5F)
+            };
             txtPrompt.KeyDown += TxtPrompt_KeyDown;
             txtPrompt.TextChanged += TxtPrompt_TextChanged;
             txtPrompt.LostFocus += TxtPrompt_LostFocus;
@@ -182,25 +232,89 @@ namespace ImageGeneratorApp
         private void InitializeModelAndOptions(int contentTop)
         {
             // Modèle
-            lblModel = new Label { Text = "Modèle :", Location = new Point(20, contentTop + 145), AutoSize = true };
-            cmbModel = new ComboBox { Location = new Point(190, contentTop + 142), Width = 230, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            lblModel = new Label
+            {
+                Text = "Modèle :",
+                Location = new Point(24, contentTop + 143),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(220, 225, 235)
+            };
+            cmbModel = new ComboBox
+            {
+                Location = new Point(190, contentTop + 140),
+                Width = 230,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                FlatStyle = FlatStyle.Flat,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left,
+                BackColor = Color.FromArgb(28, 30, 36),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9.5F)
+            };
             cmbModel.Items.AddRange(new[] { "grok-imagine-image", "grok-imagine-image-quality", "nano-banana-pro" });
             cmbModel.SelectedIndex = 0;
             cmbModel.SelectedIndexChanged += CmbModel_SelectedIndexChanged;
 
             // Résolution (haute dispo)
-            lblRes = new Label { Text = "Résolution :", Location = new Point(440, contentTop + 145), AutoSize = true };
-            cmbResolution = new ComboBox { Location = new Point(520, contentTop + 142), Width = 150, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            lblRes = new Label
+            {
+                Text = "Résolution :",
+                Location = new Point(440, contentTop + 143),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(220, 225, 235)
+            };
+            cmbResolution = new ComboBox
+            {
+                Location = new Point(530, contentTop + 140),
+                Width = 140,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                FlatStyle = FlatStyle.Flat,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left,
+                BackColor = Color.FromArgb(28, 30, 36),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9.5F)
+            };
             cmbResolution.Items.AddRange(new[] { "1k", "2k" });
             cmbResolution.SelectedIndex = 1; // 2k par défaut (haute résolution)
 
             // Images
-            btnAddImages = new Button { Text = "Ajouter images (0/3)", Location = new Point(690, contentTop + 141), Width = 150, Height = 25, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnAddImages = new Button
+            {
+                Text = "📷 Images (0/3)",
+                Location = new Point(685, contentTop + 138),
+                Width = 150,
+                Height = 28,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(34, 37, 46),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold)
+            };
+            btnAddImages.FlatAppearance.BorderColor = Color.FromArgb(55, 60, 75);
+            btnAddImages.FlatAppearance.BorderSize = 1;
             btnAddImages.Click += BtnAddImages_Click;
 
             // Aspect Ratio
-            lblRatio = new Label { Text = "Aspect Ratio :", Location = new Point(20, contentTop + 190), AutoSize = true };
-            cmbAspectRatio = new ComboBox { Location = new Point(190, contentTop + 187), Width = 210, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            lblRatio = new Label
+            {
+                Text = "Aspect Ratio :",
+                Location = new Point(24, contentTop + 185),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(220, 225, 235)
+            };
+            cmbAspectRatio = new ComboBox
+            {
+                Location = new Point(190, contentTop + 182),
+                Width = 230,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                FlatStyle = FlatStyle.Flat,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left,
+                BackColor = Color.FromArgb(28, 30, 36),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9.5F)
+            };
             cmbAspectRatio.Items.AddRange(new[] { "1:1 (Médias sociaux)", "16:9 (Widescreen)", "9:16 (Stories/Reels)", "4:3 (Standard)", "3:2 (Photographie)", "20:9 (Panoramique cellulaire)" });
             cmbAspectRatio.SelectedIndex = 1; // 16:9 par défaut
 
@@ -208,16 +322,32 @@ namespace ImageGeneratorApp
             chkMultiTurnEditing = new CheckBox
             {
                 Text = "Éditer l'image actuelle (Multi-turn)",
-                Location = new Point(440, contentTop + 190),
+                Location = new Point(440, contentTop + 185),
                 AutoSize = true,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left
+                Anchor = AnchorStyles.Top | AnchorStyles.Left,
+                FlatStyle = FlatStyle.Flat,
+                ForeColor = Color.FromArgb(220, 225, 235),
+                Font = new Font("Segoe UI", 9F, FontStyle.Regular)
             };
         }
 
         private void InitializeActionButtons(int contentTop)
         {
-            // Boutons
-            btnGenerate = new Button { Text = "Générer l'image", Location = new Point(190, contentTop + 230), Width = 160, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            // Boutons Bauhaus Styled
+            btnGenerate = new Button
+            {
+                Text = "⚡ GÉNÉRER L'IMAGE",
+                Location = new Point(190, contentTop + 225),
+                Width = 175,
+                Height = 42,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(217, 56, 30), // Bauhaus Vermilion Red
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnGenerate.FlatAppearance.BorderSize = 0;
             btnGenerate.Click += BtnGenerate_Click;
             btnGenerate.MouseEnter += BtnGenerate_MouseEnter;
 
@@ -232,42 +362,97 @@ namespace ImageGeneratorApp
                 ReshowDelay = 100
             };
 
-            btnSave = new Button { Text = "📥 Enregistrer l'image (haute rés.)", Location = new Point(370, contentTop + 230), Width = 250, Height = 40, Enabled = false, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnSave = new Button
+            {
+                Text = "📥 Enregistrer l'image",
+                Location = new Point(380, contentTop + 225),
+                Width = 220,
+                Height = 42,
+                Enabled = false,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(37, 40, 50),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnSave.FlatAppearance.BorderColor = Color.FromArgb(60, 65, 80);
+            btnSave.FlatAppearance.BorderSize = 1;
             btnSave.Click += BtnSave_Click;
 
-            btnClear = new Button { Text = "Effacer", Location = new Point(640, contentTop + 230), Width = 100, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnClear = new Button
+            {
+                Text = "Effacer",
+                Location = new Point(615, contentTop + 225),
+                Width = 95,
+                Height = 42,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(32, 35, 44),
+                ForeColor = Color.FromArgb(200, 205, 215),
+                Font = new Font("Segoe UI", 9F, FontStyle.Regular),
+                Cursor = Cursors.Hand
+            };
+            btnClear.FlatAppearance.BorderColor = Color.FromArgb(50, 54, 66);
+            btnClear.FlatAppearance.BorderSize = 1;
             btnClear.Click += (s, e) => ClearForm();
 
-            btnHistory = new Button { Text = "📜 Historique", Location = new Point(750, contentTop + 230), Width = 130, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnHistory = new Button
+            {
+                Text = "📜 Historique",
+                Location = new Point(720, contentTop + 225),
+                Width = 120,
+                Height = 42,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(37, 40, 50),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnHistory.FlatAppearance.BorderColor = Color.FromArgb(60, 65, 80);
+            btnHistory.FlatAppearance.BorderSize = 1;
             btnHistory.Click += BtnHistory_Click;
         }
 
         private void InitializeStatusAndImage(int contentTop)
         {
             // Status
-            lblStatus = new Label { Location = new Point(20, contentTop + 280), Width = 730, Height = 30, ForeColor = Color.DarkBlue, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
+            lblStatus = new Label
+            {
+                Location = new Point(24, contentTop + 278),
+                Width = 720,
+                Height = 28,
+                ForeColor = Color.FromArgb(56, 189, 248), // Sky Blue Accent
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
 
             btnCopyError = new Button
             {
                 Text = "📋 Copier",
-                Location = new Point(760, contentTop + 276),
-                Width = 100,
+                Location = new Point(755, contentTop + 275),
+                Width = 95,
                 Height = 28,
                 Visible = false,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                UseVisualStyleBackColor = true
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(40, 44, 56),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold)
             };
+            btnCopyError.FlatAppearance.BorderColor = Color.FromArgb(70, 75, 95);
             btnCopyError.Click += BtnCopyError_Click;
             toolTipGenerate.SetToolTip(btnCopyError, "Copier le message d'erreur dans le presse-papier");
 
-            // PictureBox
+            // PictureBox Canvas Box with Bauhaus Frame
             pictureBox = new PictureBox
             {
-                Location = new Point(20, contentTop + 310),
-                Size = new Size(840, 320),
+                Location = new Point(24, contentTop + 310),
+                Size = new Size(840, 330),
                 SizeMode = PictureBoxSizeMode.Zoom,
                 BorderStyle = BorderStyle.FixedSingle,
-                BackColor = Color.Black,
+                BackColor = Color.FromArgb(10, 10, 12), // Bauhaus Deep Canvas
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
             };
         }
@@ -277,24 +462,32 @@ namespace ImageGeneratorApp
             // Prompt Template System UI controls
             btnManageTemplates = new Button
             {
-                Text = "Modèles",
-                Location = new Point(780, contentTop + 27),
-                Width = 100,
-                Height = 60,
+                Text = "🧩 Modèles",
+                Location = new Point(775, contentTop + 27),
+                Width = 105,
+                Height = 55,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                UseVisualStyleBackColor = true
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(30, 64, 175), // Bauhaus Cobalt Blue Accent
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Cursor = Cursors.Hand
             };
+            btnManageTemplates.FlatAppearance.BorderSize = 0;
             btnManageTemplates.Click += BtnManageTemplates_Click;
 
             chkEnableTemplates = new CheckBox
             {
                 Text = "Activer modèles",
-                Location = new Point(780, contentTop + 95),
-                Width = 110,
+                Location = new Point(775, contentTop + 95),
+                Width = 120,
                 Height = 30,
                 Checked = true,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                AutoSize = true
+                AutoSize = true,
+                FlatStyle = FlatStyle.Flat,
+                ForeColor = Color.FromArgb(220, 225, 235),
+                Font = new Font("Segoe UI", 9F, FontStyle.Regular)
             };
             chkEnableTemplates.CheckedChanged += (s, ev) =>
             {
@@ -306,12 +499,12 @@ namespace ImageGeneratorApp
             lstAutocomplete = new ListBox
             {
                 Visible = false,
-                Width = 200,
-                Height = 120,
+                Width = 220,
+                Height = 130,
                 BorderStyle = BorderStyle.FixedSingle,
-                BackColor = Color.White,
-                ForeColor = Color.Black,
-                Font = new Font("Segoe UI", 9F, FontStyle.Regular)
+                BackColor = Color.FromArgb(28, 30, 38),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Regular)
             };
             lstAutocomplete.DoubleClick += (s, ev) => InsertSelectedTemplate();
 
@@ -1129,9 +1322,16 @@ namespace ImageGeneratorApp
 
         private void Form1_Paint(object? sender, PaintEventArgs e)
         {
+            // Draw top Bauhaus accent line under MenuStrip
+            if (mainMenuStrip != null)
+            {
+                using var accentPen = new Pen(Color.FromArgb(217, 56, 30), 3); // Bauhaus Red Accent Bar
+                e.Graphics.DrawLine(accentPen, 0, mainMenuStrip.Height + 1, this.ClientSize.Width, mainMenuStrip.Height + 1);
+            }
+
             if (_hasPromptError && txtPrompt != null)
             {
-                using (var pen = new Pen(Color.Red, 2))
+                using (var pen = new Pen(Color.FromArgb(217, 56, 30), 2))
                 {
                     var rect = txtPrompt.Bounds;
                     rect.Inflate(2, 2);
@@ -1261,5 +1461,25 @@ namespace ImageGeneratorApp
 
             btnGenerate.Enabled = isValid;
         }
+    }
+
+    /// <summary>
+    /// Custom ProfessionalColorTable implementing dark Bauhaus styling for MenuStrip controls.
+    /// </summary>
+    public class DarkBauhausColorTable : ProfessionalColorTable
+    {
+        public override Color MenuStripGradientBegin => Color.FromArgb(24, 25, 30);
+        public override Color MenuStripGradientEnd => Color.FromArgb(24, 25, 30);
+        public override Color MenuItemSelected => Color.FromArgb(40, 44, 56);
+        public override Color MenuItemSelectedGradientBegin => Color.FromArgb(40, 44, 56);
+        public override Color MenuItemSelectedGradientEnd => Color.FromArgb(40, 44, 56);
+        public override Color MenuItemBorder => Color.FromArgb(217, 56, 30); // Bauhaus Red
+        public override Color MenuBorder => Color.FromArgb(45, 48, 60);
+        public override Color MenuItemPressedGradientBegin => Color.FromArgb(30, 64, 175); // Bauhaus Cobalt
+        public override Color MenuItemPressedGradientEnd => Color.FromArgb(30, 64, 175);
+        public override Color ToolStripDropDownBackground => Color.FromArgb(28, 30, 38);
+        public override Color ImageMarginGradientBegin => Color.FromArgb(28, 30, 38);
+        public override Color ImageMarginGradientMiddle => Color.FromArgb(28, 30, 38);
+        public override Color ImageMarginGradientEnd => Color.FromArgb(28, 30, 38);
     }
 }

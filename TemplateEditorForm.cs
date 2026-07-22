@@ -77,12 +77,15 @@ namespace ImageGeneratorApp
             this.MinimumSize = new Size(450, 350);
             this.MaximizeBox = false;
             this.MinimizeBox = false;
+            this.BackColor = Color.FromArgb(18, 19, 22);
+            this.ForeColor = Color.FromArgb(240, 242, 248);
+            this.Font = new Font("Segoe UI", 9.5F);
 
             // Labels
-            var lblKey = new Label { Text = "Nom de clé :", Location = new Point(20, 25), Width = 100, Font = new Font(this.Font, FontStyle.Bold) };
-            var lblCategory = new Label { Text = "Catégorie :", Location = new Point(20, 65), Width = 100, Font = new Font(this.Font, FontStyle.Bold) };
-            var lblTags = new Label { Text = "Tags :", Location = new Point(20, 105), Width = 100, Font = new Font(this.Font, FontStyle.Bold) };
-            var lblValue = new Label { Text = "Texte prompt :", Location = new Point(20, 145), Width = 100, Font = new Font(this.Font, FontStyle.Bold) };
+            var lblKey = new Label { Text = "Nom de clé :", Location = new Point(20, 25), Width = 100, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(220, 225, 235) };
+            var lblCategory = new Label { Text = "Catégorie :", Location = new Point(20, 65), Width = 100, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(220, 225, 235) };
+            var lblTags = new Label { Text = "Tags :", Location = new Point(20, 105), Width = 100, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(220, 225, 235) };
+            var lblValue = new Label { Text = "Texte prompt :", Location = new Point(20, 145), Width = 100, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(220, 225, 235) };
 
             // TextBoxes
             txtKey = new TextBox
@@ -90,17 +93,23 @@ namespace ImageGeneratorApp
                 Location = new Point(130, 22),
                 Width = 380,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                MaxLength = 100
+                MaxLength = 100,
+                BackColor = Color.FromArgb(28, 30, 38),
+                ForeColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                Font = new Font("Segoe UI", 9.5F)
             };
-            // Disable editing the key if we are in edit mode to prevent breaking references,
-            // or we can allow it with collision checks. Let's allow it but check duplicate keys.
 
             txtCategory = new TextBox
             {
                 Location = new Point(130, 62),
                 Width = 380,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                MaxLength = 100
+                MaxLength = 100,
+                BackColor = Color.FromArgb(28, 30, 38),
+                ForeColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                Font = new Font("Segoe UI", 9.5F)
             };
 
             txtTags = new TextBox
@@ -109,7 +118,11 @@ namespace ImageGeneratorApp
                 Width = 380,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 MaxLength = 200,
-                PlaceholderText = "ex: style, retro, portrait (séparés par virgules)"
+                PlaceholderText = "ex: style, retro, portrait (séparés par virgules)",
+                BackColor = Color.FromArgb(28, 30, 38),
+                ForeColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                Font = new Font("Segoe UI", 9.5F)
             };
 
             txtValue = new TextBox
@@ -121,7 +134,11 @@ namespace ImageGeneratorApp
                 ScrollBars = ScrollBars.Vertical,
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
                 MaxLength = 4000,
-                PlaceholderText = "Saisissez votre prompt. Utilisez {0}, {1} pour les paramètres."
+                PlaceholderText = "Saisissez votre prompt. Utilisez {0}, {1} pour les paramètres.",
+                BackColor = Color.FromArgb(28, 30, 38),
+                ForeColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                Font = new Font("Segoe UI", 9.5F)
             };
 
             // Buttons
@@ -129,23 +146,34 @@ namespace ImageGeneratorApp
             {
                 Text = "Enregistrer",
                 Location = new Point(290, 325),
-                Width = 100,
-                Height = 35,
+                Width = 105,
+                Height = 36,
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
-                UseVisualStyleBackColor = true
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(217, 56, 30), // Bauhaus Vermilion Red
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Cursor = Cursors.Hand
             };
+            btnSave.FlatAppearance.BorderSize = 0;
             btnSave.Click += BtnSave_Click;
 
             btnCancel = new Button
             {
                 Text = "Annuler",
-                Location = new Point(410, 325),
-                Width = 100,
-                Height = 35,
+                Location = new Point(405, 325),
+                Width = 105,
+                Height = 36,
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
                 DialogResult = DialogResult.Cancel,
-                UseVisualStyleBackColor = true
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(37, 40, 50),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9F, FontStyle.Regular),
+                Cursor = Cursors.Hand
             };
+            btnCancel.FlatAppearance.BorderColor = Color.FromArgb(60, 65, 80);
+            btnCancel.FlatAppearance.BorderSize = 1;
 
             // Assemble controls
             this.Controls.AddRange(new Control[] {

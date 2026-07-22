@@ -110,12 +110,12 @@ namespace ImageGeneratorApp
             this.Size = new Size(1100, 700);
             this.StartPosition = FormStartPosition.CenterParent;
             this.MinimumSize = new Size(800, 500);
-            this.BackColor = Color.FromArgb(20, 20, 20); // Deep background dark mode
-            this.ForeColor = Color.White;
+            this.BackColor = Color.FromArgb(18, 19, 22); // Bauhaus Obsidian Ink
+            this.ForeColor = Color.FromArgb(240, 242, 248);
 
             // Custom typography
             var mainFont = new Font("Segoe UI", 9.5F);
-            var titleFont = new Font("Segoe UI Semibold", 10F);
+            var titleFont = new Font("Segoe UI", 10F, FontStyle.Bold);
             this.Font = mainFont;
 
             // SplitContainer for left-side (search/list) and right-side (preview/details)
@@ -141,24 +141,24 @@ namespace ImageGeneratorApp
             var leftPanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(28, 28, 28),
+                BackColor = Color.FromArgb(25, 27, 34),
                 Padding = new Padding(15)
             };
-            leftPanel.Paint += (s, e) => DrawRoundedBorder(leftPanel, e.Graphics, Color.FromArgb(45, 45, 45), 8);
+            leftPanel.Paint += (s, e) => DrawRoundedBorder(leftPanel, e.Graphics, Color.FromArgb(45, 48, 60), 6);
 
             var lblSearch = new Label
             {
                 Text = "Rechercher (Prompt / Modèle) :",
                 Dock = DockStyle.Top,
                 Height = 22,
-                ForeColor = Color.FromArgb(200, 200, 200),
+                ForeColor = Color.FromArgb(220, 225, 235),
                 Font = titleFont
             };
 
             txtSearch = new TextBox
             {
                 Dock = DockStyle.Top,
-                BackColor = Color.FromArgb(40, 40, 40),
+                BackColor = Color.FromArgb(18, 19, 24),
                 ForeColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle,
                 Height = 28,
@@ -180,10 +180,10 @@ namespace ImageGeneratorApp
                 AllowUserToDeleteRows = false,
                 AllowUserToOrderColumns = false,
                 RowHeadersVisible = false,
-                BackgroundColor = Color.FromArgb(30, 30, 30),
+                BackgroundColor = Color.FromArgb(18, 19, 24),
                 ForeColor = Color.White,
                 BorderStyle = BorderStyle.None,
-                GridColor = Color.FromArgb(45, 45, 45),
+                GridColor = Color.FromArgb(40, 44, 56),
                 EnableHeadersVisualStyles = false,
                 RowTemplate = { Height = 40 }
             };
@@ -192,21 +192,21 @@ namespace ImageGeneratorApp
             // Grid header style
             dataGridViewHistory.ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
             {
-                BackColor = Color.FromArgb(40, 40, 40),
+                BackColor = Color.FromArgb(32, 35, 46),
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI Semibold", 9.5F),
-                SelectionBackColor = Color.FromArgb(40, 40, 40),
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                SelectionBackColor = Color.FromArgb(32, 35, 46),
                 Alignment = DataGridViewContentAlignment.MiddleLeft
             };
             dataGridViewHistory.ColumnHeadersHeight = 35;
             dataGridViewHistory.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
 
-            // Grid row cell styles
+            // Grid row cell styles (Bauhaus Red selection highlight)
             dataGridViewHistory.RowsDefaultCellStyle = new DataGridViewCellStyle
             {
-                BackColor = Color.FromArgb(30, 30, 30),
+                BackColor = Color.FromArgb(25, 27, 34),
                 ForeColor = Color.White,
-                SelectionBackColor = Color.FromArgb(0, 120, 215), // Sky blue accent
+                SelectionBackColor = Color.FromArgb(217, 56, 30), // Bauhaus Vermilion Red
                 SelectionForeColor = Color.White,
                 Font = mainFont,
                 Alignment = DataGridViewContentAlignment.MiddleLeft
@@ -214,9 +214,9 @@ namespace ImageGeneratorApp
 
             dataGridViewHistory.AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle
             {
-                BackColor = Color.FromArgb(35, 35, 35),
+                BackColor = Color.FromArgb(20, 22, 28),
                 ForeColor = Color.White,
-                SelectionBackColor = Color.FromArgb(0, 120, 215),
+                SelectionBackColor = Color.FromArgb(217, 56, 30),
                 SelectionForeColor = Color.White,
                 Font = mainFont
             };
