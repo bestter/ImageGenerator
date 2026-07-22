@@ -41,5 +41,12 @@ namespace ImageGeneratorApp
         /// Gets or sets the date and time when the generation history record was created.
         /// </summary>
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        /// <summary>
+        /// Gets the creation date and time converted to the user's local time zone.
+        /// </summary>
+        public DateTime CreatedAtLocal => CreatedAt.Kind == DateTimeKind.Utc
+            ? CreatedAt.ToLocalTime()
+            : DateTime.SpecifyKind(CreatedAt, DateTimeKind.Utc).ToLocalTime();
     }
 }

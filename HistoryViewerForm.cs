@@ -224,7 +224,7 @@ namespace ImageGeneratorApp
             // DataGridView Columns
             var colDate = new DataGridViewTextBoxColumn
             {
-                DataPropertyName = "CreatedAt",
+                DataPropertyName = "CreatedAtLocal",
                 HeaderText = "Date",
                 Width = 120,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "yyyy-MM-dd HH:mm" }
