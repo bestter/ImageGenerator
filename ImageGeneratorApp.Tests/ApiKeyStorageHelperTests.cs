@@ -32,7 +32,7 @@ namespace ImageGeneratorApp.Tests
         public ApiKeyStorageHelperTests()
         {
             _testProvider = "TestProvider_" + Guid.NewGuid().ToString("N");
-            string safeProvider = string.Concat(Path.GetFileName(_testProvider).Split(Path.GetInvalidFileNameChars()));
+            string safeProvider = string.Concat(_testProvider.Split(Path.GetInvalidFileNameChars()));
             _filePath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "ImageGeneratorApp",

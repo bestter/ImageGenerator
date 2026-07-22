@@ -141,7 +141,8 @@ namespace ImageGeneratorApp
             aboutMenuItem.Click += AboutMenuItem_Click;
             helpMenu.DropDownItems.Add(aboutMenuItem);
             mainMenuStrip.Items.Add(helpMenu);
-            this.MainMenuStrip = mainMenuStrip;
+            this.Controls.Add(mainMenuStrip);
+
             this.Text = "Générateur d'image Grok Imagine et Nano Banana Pro";
             this.ClientSize = new Size(900, 700);
             this.StartPosition = FormStartPosition.CenterScreen;
@@ -764,9 +765,8 @@ namespace ImageGeneratorApp
                     {
                         try
                         {
-                            // 🛡️ Sentinel: Fix TOCTOU vulnerability in file size check.
-                            // Open a FileStream securely to ensure the file's size is verified on an active handle.
-                            using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                            // 🛡️ Sentinel: Prevent TOCTOU race condition by keeping the file handle open during check
+                            using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
                             {
                                 if (fs.Length > MaxFileSizeBytes)
                                 {
@@ -900,9 +900,7 @@ namespace ImageGeneratorApp
             try
             {
                 var templateKeys = await _templateRepo.GetAllKeysAsync();
-                // ⚡ Bolt Optimization: Keys are already returned pre-sorted via database index (GetAllKeysAsync),
-                // completely eliminating the O(N log N) in-memory OrderBy allocation on the UI thread.
-                _templateKeysCache = templateKeys.ToList();
+                _templateKeysCache = templateKeys.OrderBy(k => k).ToList();
             }
             catch
             {

@@ -11,7 +11,7 @@ namespace ImageGeneratorApp
         private static string GetStorageFilePath(string provider)
         {
             // Sanitize provider name to avoid path traversal (though it's hardcoded internally)
-            string safeProvider = string.Concat(Path.GetFileName(provider).Split(Path.GetInvalidFileNameChars()));
+            string safeProvider = string.Concat(provider.Split(Path.GetInvalidFileNameChars()));
             return Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "ImageGeneratorApp",

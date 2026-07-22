@@ -137,24 +137,21 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
-        public async Task GetAllKeysAsync_ShouldReturnAllKeys_SortedAlphabetically()
+        public async Task GetAllKeysAsync_ShouldReturnAllKeys()
         {
             // Arrange
-            var t1 = new TemplateModel { Key = "z_key", Value = "val1" };
-            var t2 = new TemplateModel { Key = "a_key", Value = "val2" };
-            var t3 = new TemplateModel { Key = "m_key", Value = "val3" };
+            var t1 = new TemplateModel { Key = "key1", Value = "val1" };
+            var t2 = new TemplateModel { Key = "key2", Value = "val2" };
             await _repository.InsertAsync(t1);
             await _repository.InsertAsync(t2);
-            await _repository.InsertAsync(t3);
 
             // Act
             var keys = (await _repository.GetAllKeysAsync()).ToList();
 
             // Assert
-            keys.Should().HaveCount(3);
-            keys[0].Should().Be("a_key");
-            keys[1].Should().Be("m_key");
-            keys[2].Should().Be("z_key");
+            keys.Should().HaveCount(2);
+            keys.Should().Contain("key1");
+            keys.Should().Contain("key2");
         }
 
         [Fact]

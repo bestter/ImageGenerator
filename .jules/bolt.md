@@ -87,3 +87,4 @@
 ## 2026-06-28 - Use HashSet instead of LINQ chains in hot loops
 **Learning:** Using LINQ chains like `.Cast<Match>().Select(m => m.Value).Distinct().ToList()` inside a parsing loop allocates multiple intermediate enumerators, arrays, and closures per iteration. In a hot loop (like a recursive template parser), this creates massive garbage collection pressure.
 **Action:** Always replace LINQ collection extraction chains with a `HashSet<string>` populated via a simple `for` loop to eliminate intermediate allocations and enumerator overhead completely.
+

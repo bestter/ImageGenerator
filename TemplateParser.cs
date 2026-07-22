@@ -98,10 +98,7 @@ namespace ImageGeneratorApp
             var initialMatches = TemplateRegex().Matches(inputPrompt);
             foreach (System.Text.RegularExpressions.Match match in initialMatches)
             {
-                // ⚡ Bolt Optimization: Avoid allocating string arrays via Split(':') just to get the key
-                var innerContent = match.Value[1..^1];
-                int colonIndex = innerContent.IndexOf(':');
-                var key = colonIndex == -1 ? innerContent.Trim() : innerContent.Substring(0, colonIndex).Trim();
+                var key = match.Value[1..^1].Split(':')[0].Trim();
                 keysToFetch.Add(key);
             }
 
@@ -120,10 +117,7 @@ namespace ImageGeneratorApp
                     var templateMatches = TemplateRegex().Matches(template.Value);
                     foreach (System.Text.RegularExpressions.Match match in templateMatches)
                     {
-                        // ⚡ Bolt Optimization: Avoid allocating string arrays via Split(':') just to get the key
-                        var innerContent = match.Value[1..^1];
-                        int colonIndex = innerContent.IndexOf(':');
-                        var innerKey = colonIndex == -1 ? innerContent.Trim() : innerContent.Substring(0, colonIndex).Trim();
+                        var innerKey = match.Value[1..^1].Split(':')[0].Trim();
                         if (!localCache.ContainsKey(innerKey))
                         {
                             keysToFetch.Add(innerKey);
