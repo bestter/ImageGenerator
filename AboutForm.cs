@@ -176,14 +176,16 @@ https://www.gnu.org/licenses/";
                 // We use FileShare.ReadWrite so the default handler can still open it while we hold the handle briefly.
                 using (var fs = new FileStream(licensePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 {
-                    var startInfo = new ProcessStartInfo
-                    {
-                        FileName = licensePath,
-                        UseShellExecute = true
-                    };
-
-                    Process.Start(startInfo);
+                    // Validation succeeded; stream handle disposed at end of block
                 }
+
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = licensePath,
+                    UseShellExecute = true
+                };
+
+                Process.Start(startInfo);
             }
             catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException)
             {

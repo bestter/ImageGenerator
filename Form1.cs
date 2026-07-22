@@ -606,8 +606,9 @@ namespace ImageGeneratorApp
 
             DisposeCurrentImage();
             using (var ms = new MemoryStream(imageBytes))
+            using (var tempImage = Image.FromStream(ms))
             {
-                pictureBox.Image = Image.FromStream(ms);
+                pictureBox.Image = new Bitmap(tempImage);
             }
 
             _lastErrorMessage = null;
@@ -1110,7 +1111,7 @@ namespace ImageGeneratorApp
 
         private void TxtPrompt_LostFocus(object? sender, EventArgs e)
         {
-            _ = ValidatePromptAsync(showPopupOnError: true);
+            _ = ValidatePromptAsync(showPopupOnError: false);
 
             // Give double-click actions some time to resolve before closing the window
             var timer = new System.Windows.Forms.Timer { Interval = 200 };
