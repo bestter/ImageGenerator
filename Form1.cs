@@ -117,7 +117,7 @@ namespace ImageGeneratorApp
             this.Paint += Form1_Paint;
             this.Resize += Form1_Resize;
 
-            UpdateGenerateButtonState();
+            _ = UpdateGenerateButtonStateAsync();
         }
 
         private void InitializeTimers()
