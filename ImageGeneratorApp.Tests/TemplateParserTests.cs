@@ -64,7 +64,15 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
+        public void Constructor_NullRepository_ThrowsArgumentNullException()
+        {
+            Action act = () => new TemplateParser(null!);
+            act.Should().Throw<ArgumentNullException>().WithParameterName("repository");
+        }
+
+        [Fact]
         public async Task ProcessPromptAsync_ShouldReplaceSimpleTemplates()
+
         {
             // Arrange
             await _repository.InsertAsync(new TemplateModel { Key = "style", Value = "photorealistic oil painting" });
@@ -145,6 +153,25 @@ namespace ImageGeneratorApp.Tests
             // Assert
             await act.Should().ThrowAsync<InvalidOperationException>()
                 .WithMessage("*récursion infinie*");
+        }
+
+        [Fact]
+        public async Task ProcessPromptAsync_ShouldThrowInvalidOperationException_OnExcessiveLength()
+        {
+            // Arrange
+            // Create a template that expands massively
+            string massiveString = new string('A', 55000);
+            await _repository.InsertAsync(new TemplateModel { Key = "massive", Value = massiveString });
+
+            // 55000 * 2 = 110,000 characters > 100,000
+            string prompt = "{massive} {massive}";
+
+            // Act
+            Func<Task> act = async () => await _parser.ProcessPromptAsync(prompt);
+
+            // Assert
+            await act.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage("*dépasse la taille maximale autorisée*");
         }
 
         [Theory]

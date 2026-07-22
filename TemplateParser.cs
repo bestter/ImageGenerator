@@ -230,6 +230,13 @@ namespace ImageGeneratorApp
                     currentPrompt = currentPrompt.Replace(tag, templateValue);
                     replacedAny = true;
 
+                    // 🛡️ Sentinel: Enforce maximum length on resolved prompt to prevent memory exhaustion (DoS)
+                    // from exponential template expansion (similar to a Billion Laughs attack).
+                    if (currentPrompt.Length > 100000)
+                    {
+                        throw new InvalidOperationException("Le prompt résolu dépasse la taille maximale autorisée (100000 caractères).");
+                    }
+
                     // If requested, asynchronously increment usage stats for this key in the database
                     if (incrementUsageStats)
                     {

@@ -86,7 +86,9 @@ namespace ImageGeneratorApp
             // SÉCURITÉ : Échappe les caractères joker SQL (%, _, [, et le caractère d'échappement lui-même)
             // pour prévenir les attaques par injection de wildcards (qui peuvent causer des lenteurs DoS).
             var trimmedTerm = searchTerm.Trim();
+            // ⚡ Bolt Optimization: Append wildcard characters directly to StringBuilder to avoid string concatenation allocations
             var sb = new System.Text.StringBuilder(trimmedTerm.Length + 10);
+            sb.Append('%');
             foreach (var c in trimmedTerm)
             {
                 if (c == '\\' || c == '%' || c == '_' || c == '[')
@@ -95,7 +97,8 @@ namespace ImageGeneratorApp
                 }
                 sb.Append(c);
             }
-            var escapedTerm = "%" + sb.ToString() + "%";
+            sb.Append('%');
+            var escapedTerm = sb.ToString();
 
             using var connection = _databaseHelper.GetConnection();
             return await connection.QueryAsync<GenerationHistoryModel>(sql, new { Query = escapedTerm });
