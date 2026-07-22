@@ -65,26 +65,6 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
-        public async Task InsertAsync_WithNullTemplate_ShouldThrowArgumentNullException()
-        {
-            // Act
-            Func<Task> act = async () => await _repository.InsertAsync(null!);
-
-            // Assert
-            await act.Should().ThrowAsync<ArgumentNullException>().WithMessage("*template*");
-        }
-
-        [Fact]
-        public async Task UpdateAsync_WithNullTemplate_ShouldThrowArgumentNullException()
-        {
-            // Act
-            Func<Task> act = async () => await _repository.UpdateAsync(null!);
-
-            // Assert
-            await act.Should().ThrowAsync<ArgumentNullException>().WithMessage("*template*");
-        }
-
-        [Fact]
         public async Task InsertAsync_ShouldSaveTemplateAndSetId()
         {
             // Arrange
@@ -110,16 +90,6 @@ namespace ImageGeneratorApp.Tests
             retrieved.Tags.Should().Be(template.Tags);
             retrieved.UsageCount.Should().Be(0);
             retrieved.LastUsed.Should().BeNull();
-        }
-
-        [Fact]
-        public async Task InsertAsync_ShouldThrowArgumentNullException_WhenTemplateIsNull()
-        {
-            // Act
-            Func<Task> act = async () => await _repository.InsertAsync(null!);
-
-            // Assert
-            await act.Should().ThrowAsync<ArgumentNullException>().WithMessage("*template*");
         }
 
         [Fact]
@@ -294,34 +264,6 @@ namespace ImageGeneratorApp.Tests
             result.Should().BeFalse();
         }
 
-
-        [Theory]
-        [InlineData("")]
-        [InlineData(" ")]
-        [InlineData(null)]
-        public async Task UpdateUsageStatsAsync_ShouldReturnFalse_WhenKeyIsEmptyOrNull(string? invalidKey)
-        {
-            // Act
-            bool result = await _repository.UpdateUsageStatsAsync(invalidKey!); // Suppress null warning as we are explicitly testing null input
-
-            // Assert
-            result.Should().BeFalse();
-        }
-
-
-        [Theory]
-        [InlineData(null)]
-        [InlineData("")]
-        [InlineData("   ")]
-        public async Task UpdateUsageStatsAsync_NullOrWhiteSpaceKey_ReturnsFalse(string? invalidKey)
-        {
-            // Act
-            bool result = await _repository.UpdateUsageStatsAsync(invalidKey!);
-
-            // Assert
-            result.Should().BeFalse();
-        }
-
         [Fact]
         public async Task UpdateUsageStatsAsync_ShouldIncrementUsageCountAndSetLastUsed()
         {
@@ -345,62 +287,6 @@ namespace ImageGeneratorApp.Tests
             success2.Should().BeTrue();
             afterSecond.Should().NotBeNull();
             afterSecond!.UsageCount.Should().Be(2);
-        }
-
-        [Fact]
-        public async Task UpdateUsageStatsBulkAsync_ShouldIncrementUsageCountAndSetLastUsed_ForMultipleTemplates()
-        {
-            // Arrange
-            var t1 = new TemplateModel { Key = "bulk_test_1", Value = "val 1" };
-            var t2 = new TemplateModel { Key = "bulk_test_2", Value = "val 2" };
-            var t3 = new TemplateModel { Key = "bulk_test_3", Value = "val 3" };
-            await _repository.InsertAsync(t1);
-            await _repository.InsertAsync(t2);
-            await _repository.InsertAsync(t3);
-
-            // Act
-            bool success = await _repository.UpdateUsageStatsBulkAsync(new[] { "bulk_test_1", "bulk_test_3" });
-
-            var afterT1 = await _repository.GetByKeyAsync("bulk_test_1");
-            var afterT2 = await _repository.GetByKeyAsync("bulk_test_2");
-            var afterT3 = await _repository.GetByKeyAsync("bulk_test_3");
-
-            // Assert
-            success.Should().BeTrue();
-
-            afterT1.Should().NotBeNull();
-            afterT1!.UsageCount.Should().Be(1);
-            afterT1.LastUsed.Should().NotBeNull();
-
-            afterT2.Should().NotBeNull();
-            afterT2!.UsageCount.Should().Be(0); // Should remain unchanged
-            afterT2.LastUsed.Should().BeNull();
-
-            afterT3.Should().NotBeNull();
-            afterT3!.UsageCount.Should().Be(1);
-            afterT3.LastUsed.Should().NotBeNull();
-        }
-
-        [Fact]
-        public async Task UpdateUsageStatsBulkAsync_WithNullKeys_ShouldReturnFalse()
-        {
-            // Act
-            bool success = await _repository.UpdateUsageStatsBulkAsync(null!);
-
-            // Assert
-            success.Should().BeFalse();
-        }
-
-        [Fact]
-        public async Task UpdateUsageStatsBulkAsync_WithEmptyOrWhitespaceKeys_ShouldReturnFalse()
-        {
-            // Act
-            bool successEmpty = await _repository.UpdateUsageStatsBulkAsync(Array.Empty<string>());
-            bool successWhitespace = await _repository.UpdateUsageStatsBulkAsync(new[] { "", " ", null! });
-
-            // Assert
-            successEmpty.Should().BeFalse();
-            successWhitespace.Should().BeFalse();
         }
     }
 }

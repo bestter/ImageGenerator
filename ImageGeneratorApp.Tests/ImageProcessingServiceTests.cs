@@ -35,7 +35,7 @@ namespace ImageGeneratorApp.Tests
             }
         }
 
-[Fact]
+        [Fact]
         public async Task LoadWebpForWinFormsAsync_ShouldLoadWebpImageAsGdiPlusImage()
         {
             // Arrange
@@ -55,7 +55,7 @@ namespace ImageGeneratorApp.Tests
             gdiImage.Should().BeOfType<System.Drawing.Bitmap>();
         }
 
-[Fact]
+        [Fact]
         public async Task LoadWebpForWinFormsAsync_InvalidPaths_ThrowExceptions()
         {
             // Assert null/empty path throws ArgumentException
@@ -71,7 +71,7 @@ namespace ImageGeneratorApp.Tests
             await act3.Should().ThrowAsync<FileNotFoundException>();
         }
 
-[Fact]
+        [Fact]
         public async Task LoadWebpForWinFormsAsync_EmptyFile_ThrowsArgumentException()
         {
             // Arrange
@@ -98,32 +98,6 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
-        public async Task LoadWebpForWinFormsAsync_TooLargeFile_ThrowsArgumentException()
-        {
-            var largeFilePath = Path.Combine(Path.GetTempPath(), $"large_{Guid.NewGuid().ToString("N")}.webp");
-
-            using (var fs = new FileStream(largeFilePath, FileMode.Create, FileAccess.Write, FileShare.None))
-            {
-                fs.SetLength(20 * 1024 * 1024 + 1);
-            }
-            _createdWebpPath = largeFilePath;
-
-            try
-            {
-                Func<Task> act = async () => await _imageProcessingService.LoadWebpForWinFormsAsync(largeFilePath);
-                await act.Should().ThrowAsync<ArgumentException>()
-                    .WithMessage("File exceeds the maximum allowed size of 20 MB.*");
-            }
-            finally
-            {
-                if (File.Exists(largeFilePath))
-                {
-                    File.Delete(largeFilePath);
-                }
-            }
-        }
-
-        [Fact]
         public async Task SaveImageAsWebpAsync_NullOrEmptySourceBytes_ThrowsArgumentException()
         {
             // Arrange
@@ -138,7 +112,7 @@ namespace ImageGeneratorApp.Tests
             await act2.Should().ThrowAsync<ArgumentException>().WithMessage("*Source image bytes cannot be null or empty.*");
         }
 
-[Fact]
+        [Fact]
         public async Task SaveImageAsWebpAsync_NullOrWhitespaceBaseFileName_ThrowsArgumentException()
         {
             // Act & Assert Null

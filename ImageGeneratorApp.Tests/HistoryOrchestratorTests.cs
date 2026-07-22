@@ -158,4 +158,4 @@ namespace ImageGeneratorApp.Tests
             act2.Should().Throw<ArgumentNullException>().WithParameterName("historyRepository");
         }
     }
-}
+}

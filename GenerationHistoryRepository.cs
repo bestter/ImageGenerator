@@ -13,8 +13,6 @@ namespace ImageGeneratorApp
     {
         private readonly DatabaseHelper _databaseHelper;
 
-        private static readonly char[] _sqlSpecialChars = { '\\', '%', '_', '[' };
-
         /// <summary>
         /// Initializes a new instance of the <see cref="GenerationHistoryRepository"/> class.
         /// </summary>
@@ -79,8 +77,8 @@ namespace ImageGeneratorApp
             // ⚡ Bolt Optimization: Avoid fetching full entity models when only keys/summaries are needed.
             const string sql = @"
                 SELECT Id, ImagePath, Prompt, ModelName, ModelVersion, CreatedAt FROM GenerationHistory
-                WHERE Prompt LIKE @Query ESCAPE '\'
-                   OR ModelName LIKE @Query ESCAPE '\'
+                WHERE Prompt LIKE '%' || @Query || '%' ESCAPE '\'
+                   OR ModelName LIKE '%' || @Query || '%' ESCAPE '\'
                 ORDER BY CreatedAt DESC;";
 
             // SÉCURITÉ : Échappe les caractères joker SQL (%, _, [, et le caractère d'échappement lui-même)

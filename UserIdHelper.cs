@@ -26,11 +26,6 @@ namespace ImageGeneratorApp
     {
         private static string? _cachedDefaultUserId;
 
-        /// <summary>
-        /// Optional folder override used by unit tests to avoid touching the real LocalApplicationData path.
-        /// </summary>
-        internal static string? AppFolderOverride { get; set; }
-
         public static async Task<string> GetOpaqueUserIdAsync()
         {
             if (_cachedDefaultUserId != null)
@@ -41,14 +36,13 @@ namespace ImageGeneratorApp
             try
             {
                 // 🛡️ Sentinel: Prevent PII leakage by using a stable GUID instead of Environment.UserName
-                string folder = AppFolderOverride
-                    ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ImageGeneratorApp");
+                string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ImageGeneratorApp");
+                Directory.CreateDirectory(folder);
                 string filePath = Path.Combine(folder, "device_id.txt");
 
                 try
                 {
-                    // ⚡ Bolt: pass useAsync: true to avoid blocking the thread pool during async read
-                    using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
+                    using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
                         if (fs.Length <= 1024)
                         {
@@ -71,17 +65,7 @@ namespace ImageGeneratorApp
                 if (string.IsNullOrEmpty(_cachedDefaultUserId))
                 {
                     _cachedDefaultUserId = Guid.NewGuid().ToString("N");
-
-                    // ⚡ Bolt: EAFP pattern to prevent thread-pool starvation from synchronous I/O operations in async methods
-                    try
-                    {
-                        await File.WriteAllTextAsync(filePath, _cachedDefaultUserId);
-                    }
-                    catch (DirectoryNotFoundException)
-                    {
-                        await Task.Run(() => Directory.CreateDirectory(folder));
-                        await File.WriteAllTextAsync(filePath, _cachedDefaultUserId);
-                    }
+                    await File.WriteAllTextAsync(filePath, _cachedDefaultUserId);
                 }
             }
             catch

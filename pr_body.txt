@@ -1,9 +1,0 @@
-💡 **What:** Replaced the unconditional synchronous `Directory.CreateDirectory` wrapped in `Task.Run` with an Easier to Ask for Forgiveness than Permission (EAFP) pattern. We now first attempt to write the file, and only if it fails with `DirectoryNotFoundException` do we offload the directory creation to the thread pool and try again.
-
-🎯 **Why:** To eliminate thread-pool starvation caused by synchronous I/O. The previous implementation unconditionally dispatched to the thread pool on every initial run to check/create the directory, even if the directory already existed. This new pattern leverages async execution efficiently on the happy path.
-
-📊 **Measured Improvement:**
-In a benchmark with 10,000 iterations:
-- **Original:** 2963ms
-- **Optimized:** 2639ms
-- **Improvement:** ~11% speedup by avoiding unnecessary thread pool dispatch and file system checks when the directory already exists.
