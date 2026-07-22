@@ -122,3 +122,7 @@
 **Vulnerability:** The API Key storage helper used `provider.Split(Path.GetInvalidFileNameChars())` to sanitize the provider name before writing the local file. While this strips `\` and `/`, it does not inherently guarantee safe extraction of the filename if a path is supplied, potentially leaving other traversal patterns or misinterpretations.
 **Learning:** `Path.GetInvalidFileNameChars()` is meant for invalidating characters, not extracting safe filenames from potentially malicious paths.
 **Prevention:** Always use `Path.GetFileName()` to definitively isolate the final file component from a user-provided or potentially tainted path before performing any further character sanitization or path combinations.
+## 2026-07-02 - Prevent TOCTOU via FileStream
+**Vulnerability:** Checking file length via `FileInfo.Length` before using the file creates a TOCTOU (Time of check to time of use) race condition. An attacker can replace a small file with a large one after the check but before the read, causing an out-of-memory denial of service.
+**Learning:** `FileInfo(file).Length` checks the metadata at that exact moment but does not lock the file.
+**Prevention:** Always open a `FileStream` securely and check its length directly on the open handle. This ensures that the size verified is for the exact file instance that is being processed.
