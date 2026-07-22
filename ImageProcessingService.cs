@@ -40,48 +40,31 @@ namespace ImageGeneratorApp
                 "ImageGeneratorApp",
                 "HistoryImages"
             );
+            Directory.CreateDirectory(historyFolder);
 
             // Clean the base file name, strip any existing extension, and append .webp
             var safeBaseName = Path.GetFileName(baseFileName);
             var cleanFileName = Path.GetFileNameWithoutExtension(safeBaseName) + ".webp";
             var fullPath = Path.Combine(historyFolder, cleanFileName);
 
-            // ⚡ Bolt Optimization: Offload only the CPU-bound operations to the thread pool,
-            // while using true asynchronous I/O (FileOptions.Asynchronous + SaveAsync) for the actual file save
-            // to prevent thread pool starvation and improve scalability.
-            using var image = await Task.Run(() =>
+            // Offload CPU-heavy image loading, encoding, and IO-heavy saving to a background thread to prevent UI freezing
+            await Task.Run(() =>
             {
                 // Fully qualified name to prevent any ambiguity with System.Drawing.Image in WinForms
-                var img = SixLabors.ImageSharp.Image.Load(sourceImageBytes);
+                using var image = SixLabors.ImageSharp.Image.Load(sourceImageBytes);
 
                 if (metadata != null)
                 {
-                    ImageMetadataEmbedder.ApplyMetadata(img, metadata);
+                    ImageMetadataEmbedder.ApplyMetadata(image, metadata);
                 }
 
-                return img;
+                var encoder = new WebpEncoder
+                {
+                    Quality = 80
+                };
+
+                image.Save(fullPath, encoder);
             });
-
-            var encoder = new WebpEncoder
-            {
-                Quality = 80
-            };
-
-            try
-            {
-                using var fs = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous);
-                await image.SaveAsync(fs, encoder);
-            }
-            catch (DirectoryNotFoundException)
-            {
-                // ⚡ Bolt Optimization: Offload synchronous I/O from the async hot path to prevent thread pool starvation.
-                // Execute only in the rare fallback condition when the directory actually needs to be generated.
-                // 🛡️ Sentinel: Removed Directory.Exists check before CreateDirectory to prevent TOCTOU race conditions.
-                await Task.Run(() => Directory.CreateDirectory(historyFolder));
-
-                using var fs = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous);
-                await image.SaveAsync(fs, encoder);
-            }
 
             return fullPath;
         }
@@ -106,10 +89,7 @@ namespace ImageGeneratorApp
             return await Task.Run(async () =>
             {
                 // 🛡️ Sentinel: Prevent TOCTOU race condition and handle file existence securely
-                // ⚡ Bolt Optimization: Use FileOptions.Asynchronous for true asynchronous I/O to prevent thread pool starvation
-                using var fs = new FileStream(webpFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous);
-
-                if (fs.Length > 20 * 1024 * 1024) throw new ArgumentException("File exceeds the maximum allowed size of 20 MB.", nameof(webpFilePath));
+                using var fs = new FileStream(webpFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
 
                 if (fs.Length == 0)
                 {

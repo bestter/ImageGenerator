@@ -148,5 +148,14 @@ namespace ImageGeneratorApp.Tests
             await act6.Should().ThrowAsync<ArgumentException>().WithMessage("*Model name*");
         }
 
+        [Fact]
+        public void Constructor_NullDependencies_ThrowsArgumentNullException()
+        {
+            Action act1 = () => new HistoryOrchestrator(null!, _repository);
+            act1.Should().Throw<ArgumentNullException>().WithParameterName("imageProcessingService");
+
+            Action act2 = () => new HistoryOrchestrator(_imageProcessingService, null!);
+            act2.Should().Throw<ArgumentNullException>().WithParameterName("historyRepository");
+        }
     }
 }

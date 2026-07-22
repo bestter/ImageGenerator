@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
@@ -17,13 +17,12 @@
     </PackageReference>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="*" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
-    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
     <PackageReference Include="xunit.v3" Version="3.2.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageReference Include="Moq" Version="*" />
     <PackageReference Include="FluentAssertions" Version="*" />
     <PackageReference Include="Dapper" Version="2.1.79" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.10" />
   </ItemGroup>
 
   <ItemGroup>
@@ -47,5 +46,8 @@
     <Compile Include="..\Helpers\ApiKeyStorageHelper.cs" />
     <Compile Include="..\AboutForm.cs" />
     <Compile Include="..\TemplateEditorForm.cs" />
+    <Compile Include="..\TemplatesManagerForm.cs" />
+    <Compile Include="..\HistoryViewerForm.cs" />
   </ItemGroup>
 </Project>
+

@@ -40,6 +40,7 @@ namespace ImageGeneratorApp
         public string[]? ResponseModalities { get; set; }
 
         [JsonPropertyName("imageConfig")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public GeminiImageConfig? ImageConfig { get; set; }
     }
 

@@ -33,6 +33,11 @@ namespace ImageGeneratorApp
     {
         private PictureBox pictureBox = null!;
         private Label lblKey = null!;
+        private Label lblPrompt = null!;
+        private Label lblModel = null!;
+        private Label lblRes = null!;
+        private Label lblRatio = null!;
+
         private TextBox txtApiKey = null!;
         private TextBox txtPrompt = null!;
         private ComboBox cmbModel = null!;
@@ -43,6 +48,8 @@ namespace ImageGeneratorApp
         private Button btnSave = null!;
         private Button btnClear = null!;
         private Label lblStatus = null!;
+        private Button btnCopyError = null!;
+        private string? _lastErrorMessage = null;
         private CheckBox chkMultiTurnEditing = null!;
         private string? currentBase64Image = null;
         private byte[]? currentImageBytes = null;
@@ -91,13 +98,40 @@ namespace ImageGeneratorApp
 
         private void InitializeControls()
         {
+            InitializeTimers();
+            int contentTop = InitializeFormAndMenu();
+            InitializeApiAndPrompt(contentTop);
+            InitializeModelAndOptions(contentTop);
+            InitializeActionButtons(contentTop);
+            InitializeStatusAndImage(contentTop);
+            InitializeTemplateControls(contentTop);
+
+            this.Controls.AddRange(new Control[] { lblKey, txtApiKey, lblPrompt, txtPrompt, lblModel, cmbModel, lblRes, cmbResolution, btnAddImages, lblRatio, cmbAspectRatio, chkMultiTurnEditing,
+                btnGenerate, btnSave, btnClear, btnHistory, lblStatus, pictureBox, btnManageTemplates, chkEnableTemplates, lstAutocomplete });
+
+            lstAutocomplete.BringToFront();
+
+            // Apply initial model-dependent state now that all controls are created
+            UpdateModelDependentControls();
+
+            this.Paint += Form1_Paint;
+            this.Resize += Form1_Resize;
+
+            UpdateGenerateButtonState();
+        }
+
+        private void InitializeTimers()
+        {
             _validationDebounceTimer = new System.Windows.Forms.Timer { Interval = 300 };
             _validationDebounceTimer.Tick += (s, ev) =>
             {
                 _validationDebounceTimer.Stop();
-                UpdateGenerateButtonState();
+                _ = UpdateGenerateButtonStateAsync();
             };
+        }
 
+        private int InitializeFormAndMenu()
+        {
             // Create the menu FIRST (before ClientSize / WindowState / any other controls).
             // This gives the docked MenuStrip the best chance to reserve vertical space
             // in the client area before we use absolute Locations. Critical on Maximized forms.
@@ -107,7 +141,6 @@ namespace ImageGeneratorApp
             aboutMenuItem.Click += AboutMenuItem_Click;
             helpMenu.DropDownItems.Add(aboutMenuItem);
             mainMenuStrip.Items.Add(helpMenu);
-            this.MainMenuStrip = mainMenuStrip;
             this.Controls.Add(mainMenuStrip);
 
             this.Text = "Générateur d'image Grok Imagine et Nano Banana Pro";
@@ -120,8 +153,11 @@ namespace ImageGeneratorApp
             // This prevents the classic MenuStrip-overlapping-absolute-controls bug on Maximized + HighDPI forms.
             this.PerformLayout();
             int menuHeight = mainMenuStrip.Height;
-            int contentTop = menuHeight + 6; // small breathing room under the menu
+            return menuHeight + 6; // small breathing room under the menu
+        }
 
+        private void InitializeApiAndPrompt(int contentTop)
+        {
             // UI elements are offset relative to contentTop to avoid MenuStrip overlap on HighDPI/Maximized
             lblKey = new Label
             {
@@ -135,21 +171,24 @@ namespace ImageGeneratorApp
             txtApiKey.TextChanged += TxtApiKey_TextChanged;
 
             // Prompt - also protected from menu overlap using the same measured offset
-            var lblPrompt = new Label { Text = "Prompt :", Location = new Point(20, contentTop + 38), AutoSize = true };
+            lblPrompt = new Label { Text = "Prompt :", Location = new Point(20, contentTop + 38), AutoSize = true };
             txtPrompt = new TextBox { Location = new Point(190, contentTop + 35), Width = 580, Height = 100, Multiline = true, ScrollBars = ScrollBars.Vertical, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, MaxLength = 4000 };
             txtPrompt.KeyDown += TxtPrompt_KeyDown;
             txtPrompt.TextChanged += TxtPrompt_TextChanged;
             txtPrompt.LostFocus += TxtPrompt_LostFocus;
+        }
 
+        private void InitializeModelAndOptions(int contentTop)
+        {
             // Modèle
-            var lblModel = new Label { Text = "Modèle :", Location = new Point(20, contentTop + 145), AutoSize = true };
+            lblModel = new Label { Text = "Modèle :", Location = new Point(20, contentTop + 145), AutoSize = true };
             cmbModel = new ComboBox { Location = new Point(190, contentTop + 142), Width = 230, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             cmbModel.Items.AddRange(new[] { "grok-imagine-image", "grok-imagine-image-quality", "nano-banana-pro" });
             cmbModel.SelectedIndex = 0;
             cmbModel.SelectedIndexChanged += CmbModel_SelectedIndexChanged;
 
             // Résolution (haute dispo)
-            var lblRes = new Label { Text = "Résolution :", Location = new Point(440, contentTop + 145), AutoSize = true };
+            lblRes = new Label { Text = "Résolution :", Location = new Point(440, contentTop + 145), AutoSize = true };
             cmbResolution = new ComboBox { Location = new Point(520, contentTop + 142), Width = 150, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             cmbResolution.Items.AddRange(new[] { "1k", "2k" });
             cmbResolution.SelectedIndex = 1; // 2k par défaut (haute résolution)
@@ -159,7 +198,7 @@ namespace ImageGeneratorApp
             btnAddImages.Click += BtnAddImages_Click;
 
             // Aspect Ratio
-            var lblRatio = new Label { Text = "Aspect Ratio :", Location = new Point(20, contentTop + 190), AutoSize = true };
+            lblRatio = new Label { Text = "Aspect Ratio :", Location = new Point(20, contentTop + 190), AutoSize = true };
             cmbAspectRatio = new ComboBox { Location = new Point(190, contentTop + 187), Width = 210, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             cmbAspectRatio.Items.AddRange(new[] { "1:1 (Médias sociaux)", "16:9 (Widescreen)", "9:16 (Stories/Reels)", "4:3 (Standard)", "3:2 (Photographie)", "20:9 (Panoramique cellulaire)" });
             cmbAspectRatio.SelectedIndex = 1; // 16:9 par défaut
@@ -172,9 +211,12 @@ namespace ImageGeneratorApp
                 AutoSize = true,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
+        }
 
+        private void InitializeActionButtons(int contentTop)
+        {
             // Boutons
-            btnGenerate = new Button { Text = "Générer l\'image", Location = new Point(190, contentTop + 230), Width = 160, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnGenerate = new Button { Text = "Générer l'image", Location = new Point(190, contentTop + 230), Width = 160, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnGenerate.Click += BtnGenerate_Click;
             btnGenerate.MouseEnter += BtnGenerate_MouseEnter;
 
@@ -189,7 +231,7 @@ namespace ImageGeneratorApp
                 ReshowDelay = 100
             };
 
-            btnSave = new Button { Text = "📥 Enregistrer l\'image (haute rés.)", Location = new Point(370, contentTop + 230), Width = 250, Height = 40, Enabled = false, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnSave = new Button { Text = "📥 Enregistrer l'image (haute rés.)", Location = new Point(370, contentTop + 230), Width = 250, Height = 40, Enabled = false, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnSave.Click += BtnSave_Click;
 
             btnClear = new Button { Text = "Effacer", Location = new Point(640, contentTop + 230), Width = 100, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
@@ -197,9 +239,25 @@ namespace ImageGeneratorApp
 
             btnHistory = new Button { Text = "📜 Historique", Location = new Point(750, contentTop + 230), Width = 130, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnHistory.Click += BtnHistory_Click;
+        }
 
+        private void InitializeStatusAndImage(int contentTop)
+        {
             // Status
-            lblStatus = new Label { Location = new Point(20, contentTop + 280), Width = 750, Height = 30, ForeColor = Color.DarkBlue, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
+            lblStatus = new Label { Location = new Point(20, contentTop + 280), Width = 730, Height = 30, ForeColor = Color.DarkBlue, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
+
+            btnCopyError = new Button
+            {
+                Text = "📋 Copier",
+                Location = new Point(760, contentTop + 276),
+                Width = 100,
+                Height = 28,
+                Visible = false,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                UseVisualStyleBackColor = true
+            };
+            btnCopyError.Click += BtnCopyError_Click;
+            toolTipGenerate.SetToolTip(btnCopyError, "Copier le message d'erreur dans le presse-papier");
 
             // PictureBox
             pictureBox = new PictureBox
@@ -211,7 +269,10 @@ namespace ImageGeneratorApp
                 BackColor = Color.Black,
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
             };
+        }
 
+        private void InitializeTemplateControls(int contentTop)
+        {
             // Prompt Template System UI controls
             btnManageTemplates = new Button
             {
@@ -254,7 +315,7 @@ namespace ImageGeneratorApp
             lstAutocomplete.DoubleClick += (s, ev) => InsertSelectedTemplate();
 
             this.Controls.AddRange(new Control[] { lblKey, txtApiKey, lblPrompt, txtPrompt, lblModel, cmbModel, lblRes, cmbResolution, btnAddImages, lblRatio, cmbAspectRatio, chkMultiTurnEditing,
-                btnGenerate, btnSave, btnClear, btnHistory, lblStatus, pictureBox, btnManageTemplates, chkEnableTemplates, lstAutocomplete });
+                btnGenerate, btnSave, btnClear, btnHistory, lblStatus, btnCopyError, pictureBox, btnManageTemplates, chkEnableTemplates, lstAutocomplete });
 
             lstAutocomplete.BringToFront();
 
@@ -264,7 +325,7 @@ namespace ImageGeneratorApp
             this.Paint += Form1_Paint;
             this.Resize += Form1_Resize;
 
-            UpdateGenerateButtonState();
+            _ = UpdateGenerateButtonStateAsync();
         }
 
         private async void BtnManageTemplates_Click(object? sender, EventArgs e)
@@ -364,7 +425,7 @@ namespace ImageGeneratorApp
             string apiKey = txtApiKey.Text?.Trim() ?? string.Empty;
 
             string provider = cmbModel.Text == "nano-banana-pro" ? "Google" : "xAI";
-            await ApiKeyStorageHelper.SaveApiKeyAsync(provider, apiKey);
+            ApiKeyStorageHelper.SaveApiKey(provider, apiKey);
 
             string? imageToEditBase64 = null;
             if (chkMultiTurnEditing.Checked && !string.IsNullOrEmpty(currentBase64Image))
@@ -377,8 +438,10 @@ namespace ImageGeneratorApp
             byte[]? previousImageBytes = currentImageBytes;
 
             _isGenerating = true;
-            UpdateGenerateButtonState();
+            _ = UpdateGenerateButtonStateAsync();
             btnSave.Enabled = false;
+            _lastErrorMessage = null;
+            btnCopyError.Visible = false;
             lblStatus.Text = "⏳ Génération en cours...";
             DisposeCurrentImage();
             currentBase64Image = null;
@@ -387,10 +450,7 @@ namespace ImageGeneratorApp
             try
             {
                 string selectedRatioText = cmbAspectRatio.SelectedItem?.ToString() ?? "16:9";
-                // ⚡ Bolt Optimization: Use IndexOf and Substring instead of Split()[0] to extract the aspect ratio value.
-                // This eliminates an unnecessary string array allocation on the UI thread when reading the aspect ratio.
-                int spaceIndex = selectedRatioText.IndexOf(' ');
-                string aspectRatioValue = spaceIndex == -1 ? selectedRatioText : selectedRatioText.Substring(0, spaceIndex);
+                string aspectRatioValue = selectedRatioText.Split(' ')[0];
                 string opaqueUserId = await UserIdHelper.GetOpaqueUserIdAsync();
 
                 List<ImageUrlObject> imagesList = await PrepareReferenceImagesAsync(imageToEditBase64);
@@ -419,7 +479,7 @@ namespace ImageGeneratorApp
             finally
             {
                 _isGenerating = false;
-                UpdateGenerateButtonState();
+                _ = UpdateGenerateButtonStateAsync();
                 if (currentBase64Image == null && previousBase64Image != null)
                 {
                     currentBase64Image = previousBase64Image;
@@ -443,16 +503,43 @@ namespace ImageGeneratorApp
                     imagesList.Add(new ImageUrlObject { Type = "image_url", Url = $"data:image/png;base64,{imageToEditBase64}" });
                 }
 
-                // ⚡ Bolt Optimization: Replace LINQ Select chains when building asynchronous tasks.
-                // Iterating and adding manually to a pre-allocated List prevents intermediate enumerator and closure allocations
-                // on the UI thread when resolving multiple files concurrently.
-                var tasks = new List<Task<ImageUrlObject?>>(selectedImages.Count);
-                foreach (var imgPath in selectedImages)
+                var tasks = selectedImages.Select(async imgPath =>
                 {
-                    // Define a local async function inside the foreach loop
-                    // This creates a single delegate without capturing the loop variable `imgPath` per iteration
-                    tasks.Add(ProcessImageAsync(imgPath));
-                }
+                    var ext = Path.GetExtension(imgPath).ToLower().TrimStart('.');
+                    if (ext == "jpg") ext = "jpeg";
+
+                    byte[] b64Bytes;
+                    using (var fs = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
+                    {
+                        // 🛡️ Sentinel: Prevent TOCTOU race condition by checking length on the opened handle
+                        if (fs.Length > MaxFileSizeBytes)
+                        {
+                            this.Invoke(() =>
+                            {
+                                lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(imgPath)}";
+                                MessageBox.Show($"L'image '{Path.GetFileName(imgPath)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            });
+                            return null;
+                        }
+
+                        // ⚡ Bolt Optimization: Pre-allocate and read directly to avoid MemoryStream chunking
+                        b64Bytes = new byte[(int)fs.Length];
+                        await fs.ReadExactlyAsync(b64Bytes, 0, b64Bytes.Length);
+                    }
+
+                    // ⚡ Bolt Optimization: Use string.Create to build the data URI directly into a pre-allocated string.
+                    // This eliminates the intermediate base64 string allocation (~26MB chars for a 20MB file),
+                    // significantly reducing Large Object Heap (LOH) fragmentation and memory pressure.
+                    string prefix = $"data:image/{ext};base64,";
+                    int b64Length = ((b64Bytes.Length + 2) / 3) * 4;
+                    string url = string.Create(prefix.Length + b64Length, (prefix, b64Bytes), (span, state) =>
+                    {
+                        state.prefix.AsSpan().CopyTo(span);
+                        Convert.TryToBase64Chars(state.b64Bytes, span.Slice(state.prefix.Length), out _);
+                    });
+
+                    return new ImageUrlObject { Type = "image_url", Url = url };
+                }).ToArray();
 
                 var results = await Task.WhenAll(tasks);
                 foreach (var res in results)
@@ -464,52 +551,6 @@ namespace ImageGeneratorApp
             return imagesList;
         }
 
-        // Local helper method extracted from the LINQ Select projection to avoid closure allocations in the foreach loop
-        private async Task<ImageUrlObject?> ProcessImageAsync(string path)
-        {
-            var rawExt = Path.GetExtension(path);
-            string ext;
-            if (string.Equals(rawExt, ".jpg", StringComparison.OrdinalIgnoreCase) || string.Equals(rawExt, ".jpeg", StringComparison.OrdinalIgnoreCase))
-            {
-                ext = "jpeg";
-            }
-            else
-            {
-                ext = rawExt.StartsWith(".") ? rawExt.Substring(1).ToLowerInvariant() : rawExt.ToLowerInvariant();
-            }
-
-            byte[] b64Bytes;
-            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
-            {
-                // 🛡️ Sentinel: Prevent TOCTOU race condition by checking length on the opened handle
-                if (fs.Length > MaxFileSizeBytes)
-                {
-                    this.Invoke(() =>
-                    {
-                        lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(path)}";
-                        MessageBox.Show($"L'image '{Path.GetFileName(path)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    });
-                    return null;
-                }
-
-                // ⚡ Bolt Optimization: Pre-allocate and read directly to avoid MemoryStream chunking
-                b64Bytes = new byte[(int)fs.Length];
-                await fs.ReadExactlyAsync(b64Bytes, 0, b64Bytes.Length);
-            }
-
-            // ⚡ Bolt Optimization: Use string.Create to build the data URI directly into a pre-allocated string.
-            // This eliminates the intermediate base64 string allocation (~26MB chars for a 20MB file),
-            // significantly reducing Large Object Heap (LOH) fragmentation and memory pressure.
-            string prefix = $"data:image/{ext};base64,";
-            int b64Length = ((b64Bytes.Length + 2) / 3) * 4;
-            string url = string.Create(prefix.Length + b64Length, (prefix, b64Bytes), (span, state) =>
-            {
-                state.prefix.AsSpan().CopyTo(span);
-                Convert.TryToBase64Chars(state.b64Bytes, span.Slice(state.prefix.Length), out _);
-            });
-
-            return new ImageUrlObject { Type = "image_url", Url = url };
-        }
         private void UpdateUIWithGeneratedImage(string base64Image, string processedPrompt, string model, string resolution, string aspectRatio)
         {
             currentBase64Image = base64Image;
@@ -541,6 +582,8 @@ namespace ImageGeneratorApp
                 pictureBox.Image = Image.FromStream(ms);
             }
 
+            _lastErrorMessage = null;
+            btnCopyError.Visible = false;
             lblStatus.Text = $"✅ Image générée avec {model} ({resolution})";
             btnSave.Enabled = true;
 
@@ -549,9 +592,8 @@ namespace ImageGeneratorApp
             {
                 try
                 {
-                    // Construct a rawMetadata JSON string to store in the DB securely
-                    var metadata = new RawMetadata { Resolution = resolution, AspectRatio = aspectRatio };
-                    var rawMetadataJson = JsonSerializer.Serialize(metadata, ImageGeneratorJsonContext.Default.RawMetadata);
+                    // Construct a rawMetadata JSON string to store in the DB
+                    var rawMetadataJson = $"{{\"resolution\":\"{resolution}\",\"aspect_ratio\":\"{aspectRatio}\"}}";
 
                     await _historyOrchestrator.LogGenerationAsync(
                         imageBytes,
@@ -568,42 +610,72 @@ namespace ImageGeneratorApp
             });
         }
 
+        private void BtnCopyError_Click(object? sender, EventArgs e)
+        {
+            if (!string.IsNullOrEmpty(_lastErrorMessage))
+            {
+                try
+                {
+                    Clipboard.SetText(_lastErrorMessage);
+                    toolTipGenerate.Show("Message d'erreur copié !", btnCopyError, 0, -30, 2000);
+                }
+                catch (Exception)
+                {
+                    // Fallback if Clipboard access fails
+                }
+            }
+        }
+
         private void HandleGenerationException(Exception ex)
         {
             if (ex is KeyNotFoundException)
             {
                 _hasPromptError = true;
                 this.Invalidate();
+                _lastErrorMessage = ex.Message;
+                btnCopyError.Visible = true;
                 MessageBox.Show("Le gabarit demandé n'est pas reconnu ou introuvable.", "Modèle non reconnu", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else if (ex is FormatException)
             {
                 _hasPromptError = true;
                 this.Invalidate();
+                _lastErrorMessage = ex.Message;
+                btnCopyError.Visible = true;
                 MessageBox.Show("Une erreur de syntaxe a été détectée dans le gabarit.", "Erreur de modèles", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else if (ex is InvalidOperationException && ex.Message.Contains("récursion"))
             {
                 _hasPromptError = true;
                 this.Invalidate();
+                _lastErrorMessage = ex.Message;
+                btnCopyError.Visible = true;
                 MessageBox.Show("Une boucle de récursion infinie a été détectée dans les gabarits.", "Erreur de récursion", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else if (ex is ArgumentException)
             {
+                _lastErrorMessage = ex.Message;
+                btnCopyError.Visible = true;
                 MessageBox.Show("Une erreur de validation est survenue. Veuillez vérifier vos entrées.", "Erreur de validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             else if (ex is ImageGeneratorException generatorEx)
             {
+                _lastErrorMessage = generatorEx.Message;
+                btnCopyError.Visible = true;
                 lblStatus.Text = $"❌ Erreur {generatorEx.StatusCode}";
                 MessageBox.Show($"Erreur API :\n{generatorEx.Message}", "Erreur API", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else if (ex is TaskCanceledException)
             {
+                _lastErrorMessage = "La requête a mis trop de temps à répondre. Veuillez réessayer plus tard.";
+                btnCopyError.Visible = true;
                 lblStatus.Text = "❌ Délai d'attente dépassé";
                 MessageBox.Show("La requête a mis trop de temps à répondre. Veuillez réessayer plus tard.", "Erreur de délai d'attente", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else
             {
+                _lastErrorMessage = ex.Message;
+                btnCopyError.Visible = true;
                 lblStatus.Text = "❌ Erreur inattendue";
                 MessageBox.Show("Une erreur inattendue est survenue lors de la génération.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
@@ -669,6 +741,8 @@ namespace ImageGeneratorApp
             currentImageBytes = null;
             currentImageMetadata = null;
             btnSave.Enabled = false;
+            _lastErrorMessage = null;
+            btnCopyError.Visible = false;
             lblStatus.Text = "";
             selectedImages.Clear();
             UpdateImageButtonText();
@@ -691,9 +765,8 @@ namespace ImageGeneratorApp
                     {
                         try
                         {
-                            // 🛡️ Sentinel: Fix TOCTOU vulnerability in file size check.
-                            // Open a FileStream securely to ensure the file's size is verified on an active handle.
-                            using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                            // 🛡️ Sentinel: Prevent TOCTOU race condition by keeping the file handle open during check
+                            using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
                             {
                                 if (fs.Length > MaxFileSizeBytes)
                                 {
@@ -776,7 +849,7 @@ namespace ImageGeneratorApp
             }
         }
 
-        private async void CmbModel_SelectedIndexChanged(object? sender, EventArgs e)
+        private void CmbModel_SelectedIndexChanged(object? sender, EventArgs e)
         {
             UpdateModelDependentControls();
 
@@ -785,7 +858,7 @@ namespace ImageGeneratorApp
                 lblKey.Text = "Clé Google Cloud :";
                 lblKey.ForeColor = Color.FromArgb(26, 115, 232); // Google Blue
 
-                string savedKey = await ApiKeyStorageHelper.LoadApiKeyAsync("Google");
+                string savedKey = ApiKeyStorageHelper.LoadApiKey("Google");
                 if (txtApiKey != null) txtApiKey.Text = savedKey ?? string.Empty;
             }
             else
@@ -793,10 +866,18 @@ namespace ImageGeneratorApp
                 lblKey.Text = "Clé API xAI :";
                 lblKey.ForeColor = Color.FromArgb(220, 76, 30); // xAI Orange-Red
 
-                string savedKey = await ApiKeyStorageHelper.LoadApiKeyAsync("xAI");
+                string savedKey = ApiKeyStorageHelper.LoadApiKey("xAI");
                 if (txtApiKey != null) txtApiKey.Text = savedKey ?? string.Empty;
             }
         }
+
+        //[STAThread]
+        //static void Main()
+        //{
+        //    Application.EnableVisualStyles();
+        //    Application.SetCompatibleTextRenderingDefault(false);
+        //    Application.Run(new Form1());
+        //}
 
         // --- Prompt Template System Autocomplete Operations ---
 
@@ -805,7 +886,7 @@ namespace ImageGeneratorApp
             base.OnLoad(e);
 
             string initialProvider = cmbModel?.Text == "nano-banana-pro" ? "Google" : "xAI";
-            string savedKey = await ApiKeyStorageHelper.LoadApiKeyAsync(initialProvider);
+            string savedKey = ApiKeyStorageHelper.LoadApiKey(initialProvider);
             if (!string.IsNullOrEmpty(savedKey) && txtApiKey != null)
             {
                 txtApiKey.Text = savedKey;
@@ -819,9 +900,7 @@ namespace ImageGeneratorApp
             try
             {
                 var templateKeys = await _templateRepo.GetAllKeysAsync();
-                // ⚡ Bolt Optimization: Keys are already returned pre-sorted via database index (GetAllKeysAsync),
-                // completely eliminating the O(N log N) in-memory OrderBy allocation on the UI thread.
-                _templateKeysCache = templateKeys.ToList();
+                _templateKeysCache = templateKeys.OrderBy(k => k).ToList();
             }
             catch
             {
@@ -963,16 +1042,9 @@ namespace ImageGeneratorApp
             var (triggerIndex, query, active) = GetActiveTrigger();
             if (active)
             {
-                // ⚡ Bolt Optimization: Avoid LINQ and intermediate List/Cast array allocations during autocomplete filtering.
-                // Using a standard loop and a pre-sized array for the ListBox avoids garbage collection pressure on the UI thread.
-                var matched = new System.Collections.Generic.List<object>(_templateKeysCache.Count);
-                foreach (var k in _templateKeysCache)
-                {
-                    if (k.Contains(query, StringComparison.OrdinalIgnoreCase))
-                    {
-                        matched.Add(k);
-                    }
-                }
+                var matched = _templateKeysCache
+                    .Where(k => k.Contains(query, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
 
                 if (matched.Count > 0)
                 {
@@ -980,7 +1052,7 @@ namespace ImageGeneratorApp
                     lstAutocomplete.Items.Clear();
                     // ⚡ Bolt Optimization: Batch insert autocomplete items using .AddRange() instead of a foreach loop
                     // This prevents repeated array resizing and layout recalculations, optimizing rendering performance
-                    lstAutocomplete.Items.AddRange(matched.ToArray());
+                    lstAutocomplete.Items.AddRange(matched.Cast<object>().ToArray());
                     lstAutocomplete.SelectedIndex = 0;
                     lstAutocomplete.EndUpdate();
 
@@ -1001,7 +1073,7 @@ namespace ImageGeneratorApp
 
         private void TxtPrompt_LostFocus(object? sender, EventArgs e)
         {
-            ValidatePrompt();
+            _ = ValidatePromptAsync();
 
             // Give double-click actions some time to resolve before closing the window
             var timer = new System.Windows.Forms.Timer { Interval = 200 };
@@ -1037,39 +1109,26 @@ namespace ImageGeneratorApp
             _validationDebounceTimer.Start();
         }
 
-        // ⚡ Bolt Optimization: Use a bool-returning helper method instead of throwing exceptions for control flow.
-        // Throwing FormatException during UI text validation causes massive CPU and GC overhead on the UI thread.
-        private bool IsPromptSyntaxValid(string prompt)
+        private async Task ValidatePromptAsync()
         {
-            if (string.IsNullOrEmpty(prompt)) return true;
-
-            int braceCount = 0;
-            for (int i = 0; i < prompt.Length; i++)
-            {
-                char c = prompt[i];
-                if (c == '{')
-                {
-                    braceCount++;
-                    if (braceCount > 1) return false;
-                }
-                else if (c == '}')
-                {
-                    braceCount--;
-                    if (braceCount < 0) return false;
-                }
-            }
-            return braceCount == 0;
-        }
-
-        private void ValidatePrompt()
-        {
-            if (txtPrompt == null || chkEnableTemplates == null) return;
+            if (txtPrompt == null || _templateParser == null || chkEnableTemplates == null) return;
 
             bool hasError = false;
             if (chkEnableTemplates.Checked)
             {
-                // ⚡ Bolt Optimization: Avoid calling .Trim() here; IsPromptSyntaxValid handles the raw string.
-                hasError = !IsPromptSyntaxValid(txtPrompt.Text);
+                string rawPrompt = txtPrompt.Text.Trim();
+                if (!string.IsNullOrEmpty(rawPrompt))
+                {
+                    try
+                    {
+                        // Dry-run process without usage count increments
+                        await _templateParser.ProcessPromptAsync(rawPrompt, incrementUsageStats: false);
+                    }
+                    catch
+                    {
+                        hasError = true;
+                    }
+                }
             }
 
             if (_hasPromptError != hasError)
@@ -1079,7 +1138,7 @@ namespace ImageGeneratorApp
             }
         }
 
-        private void UpdateGenerateButtonState()
+        private async Task UpdateGenerateButtonStateAsync()
         {
             if (txtApiKey == null || txtPrompt == null || btnGenerate == null || _templateParser == null) return;
 
@@ -1089,15 +1148,10 @@ namespace ImageGeneratorApp
                 return;
             }
 
-            // ⚡ Bolt: [performance improvement]
-            // 💡 What: Replaced `.Trim()` and `string.IsNullOrEmpty` with `string.IsNullOrWhiteSpace` for the Text properties.
-            // 🎯 Why: Calling `.Trim()` on a large `TextBox.Text` property (e.g., up to 4000 characters) inside a frequently fired UI event (like `TextChanged` or debounced validation) creates a new string allocation on every keystroke, causing Garbage Collection pressure and UI thread overhead.
-            // 📊 Impact: Eliminates unnecessary string allocations during text validation on every keystroke.
-            // 🔬 Measurement: Observe lower GC pressure and memory allocations when repeatedly modifying text in the prompt or API key boxes.
-            string keyText = txtApiKey.Text;
-            string promptText = txtPrompt.Text;
+            string key = txtApiKey.Text.Trim();
+            string prompt = txtPrompt.Text.Trim();
 
-            if (string.IsNullOrWhiteSpace(keyText) || string.IsNullOrWhiteSpace(promptText))
+            if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(prompt))
             {
                 btnGenerate.Enabled = false;
                 return;
@@ -1106,15 +1160,47 @@ namespace ImageGeneratorApp
             // Fast-scan syntax check (sync) to avoid async database queries for basic syntax issues
             if (chkEnableTemplates != null && chkEnableTemplates.Checked)
             {
-                if (!IsPromptSyntaxValid(promptText))
+                try
+                {
+                    int braceCount = 0;
+                    for (int i = 0; i < prompt.Length; i++)
+                    {
+                        char c = prompt[i];
+                        if (c == '{')
+                        {
+                            braceCount++;
+                            if (braceCount > 1) throw new FormatException();
+                        }
+                        else if (c == '}')
+                        {
+                            braceCount--;
+                            if (braceCount < 0) throw new FormatException();
+                        }
+                    }
+                    if (braceCount != 0) throw new FormatException();
+                }
+                catch
                 {
                     btnGenerate.Enabled = false;
                     return;
                 }
             }
 
-            // The prompt syntax is valid, enable the generate button
-            btnGenerate.Enabled = true;
+            // Database key resolution check (async)
+            bool isValid = true;
+            if (chkEnableTemplates != null && chkEnableTemplates.Checked)
+            {
+                try
+                {
+                    await _templateParser.ProcessPromptAsync(prompt, incrementUsageStats: false);
+                }
+                catch
+                {
+                    isValid = false;
+                }
+            }
+
+            btnGenerate.Enabled = isValid;
         }
     }
 }
