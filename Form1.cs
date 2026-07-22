@@ -83,6 +83,7 @@ namespace ImageGeneratorApp
         private MenuStrip mainMenuStrip = null!;
         private List<string> _templateKeysCache = new List<string>();
         private bool _hasPromptError = false;
+        private string _promptErrorMessage = string.Empty;
         private bool _isGenerating = false;
         private System.Windows.Forms.Timer _validationDebounceTimer = null!;
 
@@ -172,7 +173,7 @@ namespace ImageGeneratorApp
 
             // Prompt - also protected from menu overlap using the same measured offset
             lblPrompt = new Label { Text = "Prompt :", Location = new Point(20, contentTop + 38), AutoSize = true };
-            txtPrompt = new TextBox { Location = new Point(190, contentTop + 35), Width = 580, Height = 100, Multiline = true, ScrollBars = ScrollBars.Vertical, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, MaxLength = 4000 };
+            txtPrompt = new TextBox { Location = new Point(190, contentTop + 35), Width = 580, Height = 100, Multiline = true, ScrollBars = ScrollBars.Vertical, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, MaxLength = ImageGeneratorClient.GetMaxPromptLength(cmbModel?.SelectedItem?.ToString()) };
             txtPrompt.KeyDown += TxtPrompt_KeyDown;
             txtPrompt.TextChanged += TxtPrompt_TextChanged;
             txtPrompt.LostFocus += TxtPrompt_LostFocus;
@@ -381,25 +382,36 @@ namespace ImageGeneratorApp
                 return;
             }
 
-            if (chkEnableTemplates.Checked)
+            // Check if templates are enabled and placeholders exist in the prompt
+            bool usesTemplates = chkEnableTemplates.Checked && rawPrompt.Contains('{');
+
+            if (usesTemplates)
             {
                 try
                 {
                     // Asynchronously expand and process the prompt (without updating usage count stats!)
                     string resolved = await _templateParser.ProcessPromptAsync(rawPrompt, incrementUsageStats: false);
-                    toolTipGenerate.SetToolTip(btnGenerate, $"Prompt résolu :\n{resolved}");
+
+                    // Truncate resolved preview to 300 chars max to ensure tooltips never obscure the generate button or cause screen flicker
+                    const int maxPreviewLength = 300;
+                    string preview = resolved.Length > maxPreviewLength
+                        ? string.Concat(resolved.AsSpan(0, maxPreviewLength), $"...\n({resolved.Length} caractères au total)")
+                        : resolved;
+
+                    toolTipGenerate.SetToolTip(btnGenerate, $"Prompt résolu :\n{preview}");
 
                     if (_hasPromptError)
                     {
                         _hasPromptError = false;
+                        _promptErrorMessage = string.Empty;
                         this.Invalidate();
                     }
                 }
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"Error: {ex.Message}");
-                    // 🛡️ Sentinel: Present a generic error message and avoid leaking raw exceptions.
-                    toolTipGenerate.SetToolTip(btnGenerate, "Erreur lors de la résolution du gabarit.");
+                    _promptErrorMessage = ex.Message;
+                    toolTipGenerate.SetToolTip(btnGenerate, $"Erreur de validation du prompt :\n{ex.Message}");
 
                     if (!_hasPromptError)
                     {
@@ -410,18 +422,34 @@ namespace ImageGeneratorApp
             }
             else
             {
-                toolTipGenerate.SetToolTip(btnGenerate, $"Prompt brut :\n{rawPrompt}");
+                // No templates used: remove prompt preview tooltip to prevent screen flicker and button occlusion
+                toolTipGenerate.SetToolTip(btnGenerate, null);
 
                 if (_hasPromptError)
                 {
-                    _hasPromptError = false;
-                    this.Invalidate();
+                    int maxLen = ImageGeneratorClient.GetMaxPromptLength(cmbModel?.SelectedItem?.ToString());
+                    if (txtPrompt.Text.Length > maxLen)
+                    {
+                        _promptErrorMessage = $"La longueur du prompt ({txtPrompt.Text.Length} caractères) dépasse la limite maximale autorisée pour {cmbModel?.SelectedItem} ({maxLen} caractères).";
+                        toolTipGenerate.SetToolTip(btnGenerate, $"Erreur :\n{_promptErrorMessage}");
+                    }
+                    else
+                    {
+                        _hasPromptError = false;
+                        _promptErrorMessage = string.Empty;
+                        this.Invalidate();
+                    }
                 }
             }
         }
 
         private async void BtnGenerate_Click(object? sender, EventArgs e)
         {
+            if (!await ValidatePromptAsync(showPopupOnError: true))
+            {
+                return;
+            }
+
             string apiKey = txtApiKey.Text?.Trim() ?? string.Empty;
 
             string provider = cmbModel.Text == "nano-banana-pro" ? "Google" : "xAI";
@@ -849,9 +877,17 @@ namespace ImageGeneratorApp
             }
         }
 
-        private void CmbModel_SelectedIndexChanged(object? sender, EventArgs e)
+        private async void CmbModel_SelectedIndexChanged(object? sender, EventArgs e)
         {
             UpdateModelDependentControls();
+
+            int maxLen = ImageGeneratorClient.GetMaxPromptLength(cmbModel.SelectedItem?.ToString());
+            if (txtPrompt != null)
+            {
+                txtPrompt.MaxLength = maxLen;
+            }
+
+            await ValidatePromptAsync(showPopupOnError: true);
 
             if (cmbModel.SelectedItem?.ToString() == "nano-banana-pro")
             {
@@ -1026,6 +1062,7 @@ namespace ImageGeneratorApp
             if (_hasPromptError)
             {
                 _hasPromptError = false;
+                _promptErrorMessage = string.Empty;
                 this.Invalidate();
             }
 
@@ -1073,7 +1110,7 @@ namespace ImageGeneratorApp
 
         private void TxtPrompt_LostFocus(object? sender, EventArgs e)
         {
-            _ = ValidatePromptAsync();
+            _ = ValidatePromptAsync(showPopupOnError: true);
 
             // Give double-click actions some time to resolve before closing the window
             var timer = new System.Windows.Forms.Timer { Interval = 200 };
@@ -1109,12 +1146,18 @@ namespace ImageGeneratorApp
             _validationDebounceTimer.Start();
         }
 
-        private async Task ValidatePromptAsync()
+        private async Task<bool> ValidatePromptAsync(bool showPopupOnError = false)
         {
-            if (txtPrompt == null || _templateParser == null || chkEnableTemplates == null) return;
+            if (txtPrompt == null || _templateParser == null || chkEnableTemplates == null) return true;
 
-            bool hasError = false;
-            if (chkEnableTemplates.Checked)
+            string errorMsg = string.Empty;
+            int maxLen = ImageGeneratorClient.GetMaxPromptLength(cmbModel?.SelectedItem?.ToString());
+
+            if (txtPrompt.Text.Length > maxLen)
+            {
+                errorMsg = $"La longueur du prompt ({txtPrompt.Text.Length} caractères) dépasse la limite maximale autorisée pour {cmbModel?.SelectedItem} ({maxLen} caractères).";
+            }
+            else if (chkEnableTemplates.Checked)
             {
                 string rawPrompt = txtPrompt.Text.Trim();
                 if (!string.IsNullOrEmpty(rawPrompt))
@@ -1124,18 +1167,32 @@ namespace ImageGeneratorApp
                         // Dry-run process without usage count increments
                         await _templateParser.ProcessPromptAsync(rawPrompt, incrementUsageStats: false);
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        hasError = true;
+                        errorMsg = ex.Message;
                     }
                 }
             }
+
+            bool hasError = !string.IsNullOrEmpty(errorMsg);
+            _promptErrorMessage = errorMsg;
 
             if (_hasPromptError != hasError)
             {
                 _hasPromptError = hasError;
                 this.Invalidate();
             }
+
+            if (hasError && showPopupOnError)
+            {
+                MessageBox.Show(
+                    $"Erreur de validation du prompt :\n\n{errorMsg}",
+                    "Validation du Prompt",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+
+            return !hasError;
         }
 
         private async Task UpdateGenerateButtonStateAsync()
@@ -1150,8 +1207,9 @@ namespace ImageGeneratorApp
 
             string key = txtApiKey.Text.Trim();
             string prompt = txtPrompt.Text.Trim();
+            int maxLen = ImageGeneratorClient.GetMaxPromptLength(cmbModel?.SelectedItem?.ToString());
 
-            if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(prompt))
+            if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(prompt) || txtPrompt.Text.Length > maxLen)
             {
                 btnGenerate.Enabled = false;
                 return;
