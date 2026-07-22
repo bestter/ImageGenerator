@@ -102,6 +102,46 @@ namespace ImageGeneratorApp.Tests
             handlerMock.Verify();
         }
 
+        [Fact]
+        public async Task GenerateImageAsync_ValidRequestWithMultipleImages_CallsEditsEndpointWithImagesArrayAndReturnsBase64()
+        {
+            // Arrange
+            var expectedBase64 = "dummy_multi_base64";
+            var responseJson = new { data = new[] { new { b64_json = expectedBase64 } } };
+
+            var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+            handlerMock
+               .Protected()
+               .Setup<Task<HttpResponseMessage>>(
+                  "SendAsync",
+                  ItExpr.Is<HttpRequestMessage>(req =>
+                      req.Method == HttpMethod.Post &&
+                      req.RequestUri!.ToString() == "https://api.x.ai/v1/images/edits"),
+                  ItExpr.IsAny<CancellationToken>()
+               )
+               .ReturnsAsync(new HttpResponseMessage()
+               {
+                   StatusCode = HttpStatusCode.OK,
+                   Content = new StringContent(JsonSerializer.Serialize(responseJson)),
+               })
+               .Verifiable();
+
+            var httpClient = new HttpClient(handlerMock.Object);
+            var client = new ImageGeneratorClient(httpClient);
+            var images = new List<ImageUrlObject>
+            {
+                new ImageUrlObject { Type = "image_url", Url = "data:image/png;base64,ref1" },
+                new ImageUrlObject { Type = "image_url", Url = "data:image/png;base64,ref2" }
+            };
+
+            // Act
+            var result = await client.GenerateImageAsync("dummy_key", "A cute cat", "grok-imagine-image", "1k", "16:9", "dummy_user", images);
+
+            // Assert
+            result.Should().Be(expectedBase64);
+            handlerMock.Verify();
+        }
+
         [Theory]
         [InlineData(null)]
         [InlineData("")]
@@ -464,6 +504,95 @@ namespace ImageGeneratorApp.Tests
             exception.Which.StatusCode.Should().Be(400);
         }
 
+
+        [Fact]
+        public async Task GenerateImageAsync_NanoBananaApiReturnsMalformedJson_ThrowsImageGeneratorException()
+        {
+            // Arrange
+            var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+            handlerMock
+               .Protected()
+               .Setup<Task<HttpResponseMessage>>(
+                  "SendAsync",
+                  ItExpr.IsAny<HttpRequestMessage>(),
+                  ItExpr.IsAny<CancellationToken>()
+               )
+               .ReturnsAsync(new HttpResponseMessage()
+               {
+                   StatusCode = HttpStatusCode.OK,
+                   Content = new StringContent("invalid json for nano banana"),
+               });
+
+            var httpClient = new HttpClient(handlerMock.Object);
+            var client = new ImageGeneratorClient(httpClient);
+
+            // Act
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "nano-banana-pro", "1k", "16:9", "user", new List<ImageUrlObject>());
+
+            // Assert
+            await act.Should().ThrowAsync<ImageGeneratorException>().WithMessage("La réponse de l'API est malformée.");
+        }
+
+        [Fact]
+        public async Task GenerateImageAsync_NanoBananaApiReturnsValidJsonWithoutImage_ThrowsImageGeneratorException()
+        {
+            // Arrange
+            var responseJson = new { other_field = "test" };
+
+            var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+            handlerMock
+               .Protected()
+               .Setup<Task<HttpResponseMessage>>(
+                  "SendAsync",
+                  ItExpr.IsAny<HttpRequestMessage>(),
+                  ItExpr.IsAny<CancellationToken>()
+               )
+               .ReturnsAsync(new HttpResponseMessage()
+               {
+                   StatusCode = HttpStatusCode.OK,
+                   Content = new StringContent(JsonSerializer.Serialize(responseJson)),
+               });
+
+            var httpClient = new HttpClient(handlerMock.Object);
+            var client = new ImageGeneratorClient(httpClient);
+
+            // Act
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "nano-banana-pro", "1k", "16:9", "user", new List<ImageUrlObject>());
+
+            // Assert
+            await act.Should().ThrowAsync<ImageGeneratorException>().WithMessage("La réponse de l'API ne contient pas d'image valide.");
+        }
+
+        [Fact]
+        public async Task GenerateImageAsync_ApiReturnsMalformedErrorJson_ThrowsImageGeneratorExceptionWithGenericMessage()
+        {
+            // Arrange
+            var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+            handlerMock
+               .Protected()
+               .Setup<Task<HttpResponseMessage>>(
+                  "SendAsync",
+                  ItExpr.IsAny<HttpRequestMessage>(),
+                  ItExpr.IsAny<CancellationToken>()
+               )
+               .ReturnsAsync(new HttpResponseMessage()
+               {
+                   StatusCode = HttpStatusCode.InternalServerError,
+                   Content = new StringContent("{ malformed_json: "),
+               });
+
+            var httpClient = new HttpClient(handlerMock.Object);
+            var client = new ImageGeneratorClient(httpClient);
+
+            // Act
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "model", "1k", "16:9", "user", new List<ImageUrlObject>());
+
+            // Assert
+            var exception = await act.Should().ThrowAsync<ImageGeneratorException>()
+                .WithMessage("Une erreur est survenue lors de la communication avec l'API.");
+            exception.Which.StatusCode.Should().Be(500);
+        }
+
         [Fact]
         public async Task GenerateImageAsync_SendAsyncThrowsHttpRequestException_ThrowsImageGeneratorException()
         {
@@ -519,6 +648,37 @@ namespace ImageGeneratorApp.Tests
             exception.Which.StatusCode.Should().Be(0);
         }
 
+
+        [Fact]
+        public async Task ParseErrorResponseAsync_JsonException_FallbackToGenericMessage()
+        {
+            // Arrange
+            var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+            handlerMock
+               .Protected()
+               .Setup<Task<HttpResponseMessage>>(
+                  "SendAsync",
+                  ItExpr.IsAny<HttpRequestMessage>(),
+                  ItExpr.IsAny<CancellationToken>()
+               )
+               .ReturnsAsync(new HttpResponseMessage()
+               {
+                   StatusCode = HttpStatusCode.BadRequest,
+                   Content = new StringContent("{ not_a_valid_json: "),
+               });
+
+            var httpClient = new HttpClient(handlerMock.Object);
+            var client = new ImageGeneratorClient(httpClient);
+
+            // Act
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "model", "1k", "16:9", "user", new List<ImageUrlObject>());
+
+            // Assert
+            var exception = await act.Should().ThrowAsync<ImageGeneratorException>()
+                .WithMessage("Une erreur est survenue lors de la communication avec l'API.");
+            exception.Which.StatusCode.Should().Be(400);
+        }
+
         [Fact]
         public async Task GenerateImageAsync_OversizedGeneratedImage_ThrowsImageGeneratorException_WithSafeMessage()
         {
@@ -554,6 +714,29 @@ namespace ImageGeneratorApp.Tests
             // Status code 200 in this path (we surface before real HTTP error semantics for oversized)
             exception.Which.StatusCode.Should().Be(200);
         }
-    }
 
-}
+        [Fact]
+        public async Task GenerateImageAsync_SendAsyncThrowsOperationCanceledException_RethrowsOperationCanceledException()
+        {
+            // Arrange
+            var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+            handlerMock
+               .Protected()
+               .Setup<Task<HttpResponseMessage>>(
+                  "SendAsync",
+                  ItExpr.IsAny<HttpRequestMessage>(),
+                  ItExpr.IsAny<CancellationToken>()
+               )
+               .ThrowsAsync(new OperationCanceledException("Request timed out"));
+
+            var httpClient = new HttpClient(handlerMock.Object);
+            var client = new ImageGeneratorClient(httpClient);
+
+            // Act
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "grok-imagine-image", "1k", "16:9", "user", new List<ImageUrlObject>());
+
+            // Assert
+            await act.Should().ThrowAsync<OperationCanceledException>().WithMessage("*Request timed out*");
+        }
+    }
+}

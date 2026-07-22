@@ -33,6 +33,11 @@ namespace ImageGeneratorApp
     {
         private PictureBox pictureBox = null!;
         private Label lblKey = null!;
+        private Label lblPrompt = null!;
+        private Label lblModel = null!;
+        private Label lblRes = null!;
+        private Label lblRatio = null!;
+
         private TextBox txtApiKey = null!;
         private TextBox txtPrompt = null!;
         private ComboBox cmbModel = null!;
@@ -43,6 +48,8 @@ namespace ImageGeneratorApp
         private Button btnSave = null!;
         private Button btnClear = null!;
         private Label lblStatus = null!;
+        private Button btnCopyError = null!;
+        private string? _lastErrorMessage = null;
         private CheckBox chkMultiTurnEditing = null!;
         private string? currentBase64Image = null;
         private byte[]? currentImageBytes = null;
@@ -91,13 +98,40 @@ namespace ImageGeneratorApp
 
         private void InitializeControls()
         {
+            InitializeTimers();
+            int contentTop = InitializeFormAndMenu();
+            InitializeApiAndPrompt(contentTop);
+            InitializeModelAndOptions(contentTop);
+            InitializeActionButtons(contentTop);
+            InitializeStatusAndImage(contentTop);
+            InitializeTemplateControls(contentTop);
+
+            this.Controls.AddRange(new Control[] { lblKey, txtApiKey, lblPrompt, txtPrompt, lblModel, cmbModel, lblRes, cmbResolution, btnAddImages, lblRatio, cmbAspectRatio, chkMultiTurnEditing,
+                btnGenerate, btnSave, btnClear, btnHistory, lblStatus, pictureBox, btnManageTemplates, chkEnableTemplates, lstAutocomplete });
+
+            lstAutocomplete.BringToFront();
+
+            // Apply initial model-dependent state now that all controls are created
+            UpdateModelDependentControls();
+
+            this.Paint += Form1_Paint;
+            this.Resize += Form1_Resize;
+
+            UpdateGenerateButtonState();
+        }
+
+        private void InitializeTimers()
+        {
             _validationDebounceTimer = new System.Windows.Forms.Timer { Interval = 300 };
             _validationDebounceTimer.Tick += (s, ev) =>
             {
                 _validationDebounceTimer.Stop();
                 _ = UpdateGenerateButtonStateAsync();
             };
+        }
 
+        private int InitializeFormAndMenu()
+        {
             // Create the menu FIRST (before ClientSize / WindowState / any other controls).
             // This gives the docked MenuStrip the best chance to reserve vertical space
             // in the client area before we use absolute Locations. Critical on Maximized forms.
@@ -108,20 +142,21 @@ namespace ImageGeneratorApp
             helpMenu.DropDownItems.Add(aboutMenuItem);
             mainMenuStrip.Items.Add(helpMenu);
             this.MainMenuStrip = mainMenuStrip;
-            this.Controls.Add(mainMenuStrip);
+            this.Text = "Générateur d'image Grok Imagine et Nano Banana Pro";
+            this.ClientSize = new Size(900, 700);
+            this.StartPosition = FormStartPosition.CenterScreen;
+            this.WindowState = FormWindowState.Maximized;
 
             // Force the MenuStrip to perform layout immediately so its Height is measured
             // and the client area top is correctly offset before we position the first controls.
             // This prevents the classic MenuStrip-overlapping-absolute-controls bug on Maximized + HighDPI forms.
             this.PerformLayout();
             int menuHeight = mainMenuStrip.Height;
-            int contentTop = menuHeight + 6; // small breathing room under the menu
+            return menuHeight + 6; // small breathing room under the menu
+        }
 
-            this.Text = "Générateur d'image Grok Imagine et Nano Banana Pro";
-            this.ClientSize = new Size(900, 700);
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.WindowState = FormWindowState.Maximized;
-
+        private void InitializeApiAndPrompt(int contentTop)
+        {
             // UI elements are offset relative to contentTop to avoid MenuStrip overlap on HighDPI/Maximized
             lblKey = new Label
             {
@@ -135,21 +170,24 @@ namespace ImageGeneratorApp
             txtApiKey.TextChanged += TxtApiKey_TextChanged;
 
             // Prompt - also protected from menu overlap using the same measured offset
-            var lblPrompt = new Label { Text = "Prompt :", Location = new Point(20, contentTop + 38), AutoSize = true };
+            lblPrompt = new Label { Text = "Prompt :", Location = new Point(20, contentTop + 38), AutoSize = true };
             txtPrompt = new TextBox { Location = new Point(190, contentTop + 35), Width = 580, Height = 100, Multiline = true, ScrollBars = ScrollBars.Vertical, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, MaxLength = 4000 };
             txtPrompt.KeyDown += TxtPrompt_KeyDown;
             txtPrompt.TextChanged += TxtPrompt_TextChanged;
             txtPrompt.LostFocus += TxtPrompt_LostFocus;
+        }
 
+        private void InitializeModelAndOptions(int contentTop)
+        {
             // Modèle
-            var lblModel = new Label { Text = "Modèle :", Location = new Point(20, contentTop + 145), AutoSize = true };
+            lblModel = new Label { Text = "Modèle :", Location = new Point(20, contentTop + 145), AutoSize = true };
             cmbModel = new ComboBox { Location = new Point(190, contentTop + 142), Width = 230, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             cmbModel.Items.AddRange(new[] { "grok-imagine-image", "grok-imagine-image-quality", "nano-banana-pro" });
             cmbModel.SelectedIndex = 0;
             cmbModel.SelectedIndexChanged += CmbModel_SelectedIndexChanged;
 
             // Résolution (haute dispo)
-            var lblRes = new Label { Text = "Résolution :", Location = new Point(440, contentTop + 145), AutoSize = true };
+            lblRes = new Label { Text = "Résolution :", Location = new Point(440, contentTop + 145), AutoSize = true };
             cmbResolution = new ComboBox { Location = new Point(520, contentTop + 142), Width = 150, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             cmbResolution.Items.AddRange(new[] { "1k", "2k" });
             cmbResolution.SelectedIndex = 1; // 2k par défaut (haute résolution)
@@ -159,7 +197,7 @@ namespace ImageGeneratorApp
             btnAddImages.Click += BtnAddImages_Click;
 
             // Aspect Ratio
-            var lblRatio = new Label { Text = "Aspect Ratio :", Location = new Point(20, contentTop + 190), AutoSize = true };
+            lblRatio = new Label { Text = "Aspect Ratio :", Location = new Point(20, contentTop + 190), AutoSize = true };
             cmbAspectRatio = new ComboBox { Location = new Point(190, contentTop + 187), Width = 210, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             cmbAspectRatio.Items.AddRange(new[] { "1:1 (Médias sociaux)", "16:9 (Widescreen)", "9:16 (Stories/Reels)", "4:3 (Standard)", "3:2 (Photographie)", "20:9 (Panoramique cellulaire)" });
             cmbAspectRatio.SelectedIndex = 1; // 16:9 par défaut
@@ -172,9 +210,12 @@ namespace ImageGeneratorApp
                 AutoSize = true,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
+        }
 
+        private void InitializeActionButtons(int contentTop)
+        {
             // Boutons
-            btnGenerate = new Button { Text = "Générer l\'image", Location = new Point(190, contentTop + 230), Width = 160, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnGenerate = new Button { Text = "Générer l'image", Location = new Point(190, contentTop + 230), Width = 160, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnGenerate.Click += BtnGenerate_Click;
             btnGenerate.MouseEnter += BtnGenerate_MouseEnter;
 
@@ -189,7 +230,7 @@ namespace ImageGeneratorApp
                 ReshowDelay = 100
             };
 
-            btnSave = new Button { Text = "📥 Enregistrer l\'image (haute rés.)", Location = new Point(370, contentTop + 230), Width = 250, Height = 40, Enabled = false, Anchor = AnchorStyles.Top | AnchorStyles.Left };
+            btnSave = new Button { Text = "📥 Enregistrer l'image (haute rés.)", Location = new Point(370, contentTop + 230), Width = 250, Height = 40, Enabled = false, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnSave.Click += BtnSave_Click;
 
             btnClear = new Button { Text = "Effacer", Location = new Point(640, contentTop + 230), Width = 100, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
@@ -197,9 +238,25 @@ namespace ImageGeneratorApp
 
             btnHistory = new Button { Text = "📜 Historique", Location = new Point(750, contentTop + 230), Width = 130, Height = 40, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnHistory.Click += BtnHistory_Click;
+        }
 
+        private void InitializeStatusAndImage(int contentTop)
+        {
             // Status
-            lblStatus = new Label { Location = new Point(20, contentTop + 280), Width = 750, Height = 30, ForeColor = Color.DarkBlue, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
+            lblStatus = new Label { Location = new Point(20, contentTop + 280), Width = 730, Height = 30, ForeColor = Color.DarkBlue, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
+
+            btnCopyError = new Button
+            {
+                Text = "📋 Copier",
+                Location = new Point(760, contentTop + 276),
+                Width = 100,
+                Height = 28,
+                Visible = false,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                UseVisualStyleBackColor = true
+            };
+            btnCopyError.Click += BtnCopyError_Click;
+            toolTipGenerate.SetToolTip(btnCopyError, "Copier le message d'erreur dans le presse-papier");
 
             // PictureBox
             pictureBox = new PictureBox
@@ -211,7 +268,10 @@ namespace ImageGeneratorApp
                 BackColor = Color.Black,
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
             };
+        }
 
+        private void InitializeTemplateControls(int contentTop)
+        {
             // Prompt Template System UI controls
             btnManageTemplates = new Button
             {
@@ -254,7 +314,7 @@ namespace ImageGeneratorApp
             lstAutocomplete.DoubleClick += (s, ev) => InsertSelectedTemplate();
 
             this.Controls.AddRange(new Control[] { lblKey, txtApiKey, lblPrompt, txtPrompt, lblModel, cmbModel, lblRes, cmbResolution, btnAddImages, lblRatio, cmbAspectRatio, chkMultiTurnEditing,
-                btnGenerate, btnSave, btnClear, btnHistory, lblStatus, pictureBox, btnManageTemplates, chkEnableTemplates, lstAutocomplete });
+                btnGenerate, btnSave, btnClear, btnHistory, lblStatus, btnCopyError, pictureBox, btnManageTemplates, chkEnableTemplates, lstAutocomplete });
 
             lstAutocomplete.BringToFront();
 
@@ -379,6 +439,8 @@ namespace ImageGeneratorApp
             _isGenerating = true;
             _ = UpdateGenerateButtonStateAsync();
             btnSave.Enabled = false;
+            _lastErrorMessage = null;
+            btnCopyError.Visible = false;
             lblStatus.Text = "⏳ Génération en cours...";
             DisposeCurrentImage();
             currentBase64Image = null;
@@ -519,6 +581,8 @@ namespace ImageGeneratorApp
                 pictureBox.Image = Image.FromStream(ms);
             }
 
+            _lastErrorMessage = null;
+            btnCopyError.Visible = false;
             lblStatus.Text = $"✅ Image générée avec {model} ({resolution})";
             btnSave.Enabled = true;
 
@@ -545,42 +609,72 @@ namespace ImageGeneratorApp
             });
         }
 
+        private void BtnCopyError_Click(object? sender, EventArgs e)
+        {
+            if (!string.IsNullOrEmpty(_lastErrorMessage))
+            {
+                try
+                {
+                    Clipboard.SetText(_lastErrorMessage);
+                    toolTipGenerate.Show("Message d'erreur copié !", btnCopyError, 0, -30, 2000);
+                }
+                catch (Exception)
+                {
+                    // Fallback if Clipboard access fails
+                }
+            }
+        }
+
         private void HandleGenerationException(Exception ex)
         {
             if (ex is KeyNotFoundException)
             {
                 _hasPromptError = true;
                 this.Invalidate();
+                _lastErrorMessage = ex.Message;
+                btnCopyError.Visible = true;
                 MessageBox.Show("Le gabarit demandé n'est pas reconnu ou introuvable.", "Modèle non reconnu", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else if (ex is FormatException)
             {
                 _hasPromptError = true;
                 this.Invalidate();
+                _lastErrorMessage = ex.Message;
+                btnCopyError.Visible = true;
                 MessageBox.Show("Une erreur de syntaxe a été détectée dans le gabarit.", "Erreur de modèles", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else if (ex is InvalidOperationException && ex.Message.Contains("récursion"))
             {
                 _hasPromptError = true;
                 this.Invalidate();
+                _lastErrorMessage = ex.Message;
+                btnCopyError.Visible = true;
                 MessageBox.Show("Une boucle de récursion infinie a été détectée dans les gabarits.", "Erreur de récursion", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else if (ex is ArgumentException)
             {
+                _lastErrorMessage = ex.Message;
+                btnCopyError.Visible = true;
                 MessageBox.Show("Une erreur de validation est survenue. Veuillez vérifier vos entrées.", "Erreur de validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             else if (ex is ImageGeneratorException generatorEx)
             {
+                _lastErrorMessage = generatorEx.Message;
+                btnCopyError.Visible = true;
                 lblStatus.Text = $"❌ Erreur {generatorEx.StatusCode}";
                 MessageBox.Show($"Erreur API :\n{generatorEx.Message}", "Erreur API", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else if (ex is TaskCanceledException)
             {
+                _lastErrorMessage = "La requête a mis trop de temps à répondre. Veuillez réessayer plus tard.";
+                btnCopyError.Visible = true;
                 lblStatus.Text = "❌ Délai d'attente dépassé";
                 MessageBox.Show("La requête a mis trop de temps à répondre. Veuillez réessayer plus tard.", "Erreur de délai d'attente", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else
             {
+                _lastErrorMessage = ex.Message;
+                btnCopyError.Visible = true;
                 lblStatus.Text = "❌ Erreur inattendue";
                 MessageBox.Show("Une erreur inattendue est survenue lors de la génération.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
@@ -646,6 +740,8 @@ namespace ImageGeneratorApp
             currentImageBytes = null;
             currentImageMetadata = null;
             btnSave.Enabled = false;
+            _lastErrorMessage = null;
+            btnCopyError.Visible = false;
             lblStatus.Text = "";
             selectedImages.Clear();
             UpdateImageButtonText();
