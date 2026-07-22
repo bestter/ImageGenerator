@@ -88,3 +88,67 @@
 **Learning:** Using LINQ chains like `.Cast<Match>().Select(m => m.Value).Distinct().ToList()` inside a parsing loop allocates multiple intermediate enumerators, arrays, and closures per iteration. In a hot loop (like a recursive template parser), this creates massive garbage collection pressure.
 **Action:** Always replace LINQ collection extraction chains with a `HashSet<string>` populated via a simple `for` loop to eliminate intermediate allocations and enumerator overhead completely.
 
+## 2026-07-15 - Remove redundant database queries and Task allocations in UI validation
+**Learning:** Performing a heavy, asynchronous database query (`await ProcessPromptAsync`) inside a debounced UI text validation method (`UpdateGenerateButtonStateAsync`) causes massive I/O overhead on every keystroke. Furthermore, keeping an `async Task` signature when no `await` is actually needed forces the compiler to build a state machine and allocate a `Task` on the heap, causing GC pressure.
+**Action:** When UI validation only needs to check basic syntax, avoid making database calls if the downstream process already handles missing data gracefully. Ensure synchronous UI methods do not use the `async Task` signature to avoid unnecessary state machine and heap allocations.
+
+## 2026-07-20 - Avoid exceptions for control flow in UI validation
+**Learning:** Throwing exceptions (like `FormatException`) for expected control flow during rapid UI text validation (e.g. checking syntax during user typing) causes massive CPU overhead, large stack trace allocations, and heavy GC pressure, severely degrading the real-time UI typing experience.
+**Action:** Always extract syntax validation into dedicated `bool`-returning helper methods (e.g., `IsPromptSyntaxValid`) and return `false` instead of throwing exceptions for fast-scan checks.
+
+## 2026-06-27 - Optimize UI list filtering allocations
+**Learning:** Using LINQ chains like `.Where().ToList()` combined with `.Cast<object>().ToArray()` inside rapid UI events (like debounced autocomplete typing) creates multiple intermediate arrays and enumerators, causing heavy Garbage Collection pressure on the main UI thread.
+**Action:** Replace LINQ extraction chains on rapid UI paths with standard `foreach` loops and generic `List<T>` that can be converted directly with `.ToArray()` to eliminate intermediate allocations completely.
+
+## 2026-06-29 - Avoid LINQ on rapid UI paths
+**Learning:** Using LINQ chains like `.Where()` inside rapid UI events (like debounced search filtering) creates multiple intermediate enumerators and closure allocations, causing Garbage Collection pressure on the main UI thread.
+**Action:** Replace LINQ chains with standard `foreach` loops containing `if` conditions when modifying UI collections to completely eliminate intermediate allocations.
+## 2026-07-22 - Avoid string array allocations when parsing simple combo box values
+**Learning:** Using `string.Split(' ')[0]` to extract a substring before a delimiter (like extracting "16:9" from "16:9 (Landscape)") allocates an array that is immediately thrown away. On the UI thread, this causes unnecessary intermediate array allocations and Garbage Collection pressure.
+**Action:** Use `string.IndexOf` combined with `string.Substring` to extract substrings without array allocations. Handle the case where the delimiter isn't found by checking if `IndexOf` returns `-1`.
+## 2026-06-30 - In-memory filtering instead of database queries for loaded collections
+**Learning:** If a UI form completely loads all records into memory at startup (e.g. `LoadHistoryAsync`), firing an asynchronous SQLite database query (`SearchAsync` with `LIKE`) on every debounced keystroke introduces massive, redundant I/O overhead and negates the value of loading the data in the first place.
+**Action:** Always maintain a local `List<T>` cache of the fully-loaded dataset in the Form. When the user searches, loop over the local list using `string.Contains` and a `foreach` loop instead of making any database calls. This guarantees instant, stutter-free list filtering and eliminates DB thread bottlenecks.
+
+## 2026-07-23 - Avoid chaining string.Replace() for multiple character replacements
+**Learning:** Chaining multiple `string.Replace()` calls (e.g., for XML or HTML escaping) allocates a new string for each replace operation, which creates significant intermediate garbage, leading to GC pressure when run frequently or on large strings.
+**Action:** Use a single `StringBuilder` initialized with a slightly larger capacity (e.g., `length + 10`) and a `switch` statement inside a `foreach` loop to perform multi-character escaping in a single pass without intermediate string allocations.
+## 2024-08-05 - Avoid LINQ collection extraction chains on the UI thread for ComboBox population
+**Learning:** Using chained LINQ methods (`.Select().Where().Distinct().OrderBy()`) on the UI thread to prepare data for `ComboBox.Items.AddRange()` creates multiple intermediate enumerators, closures, and arrays. This leads to heavy Garbage Collection pressure, especially when the underlying master collection is large.
+**Action:** Always replace LINQ collection extraction chains with a `HashSet<string>` populated via a standard `foreach` loop, followed by an explicit `List<T>.Sort()`. This eliminates all intermediate allocations and ensures smooth UI responsiveness.
+## 2026-07-25 - Use array instead of HashSet for small distinct collections
+**Learning:** Using a `HashSet` inside a hot loop (like a recursive template parser) to extract unique matches from a Regex collection causes unnecessary allocations, as the number of matches is typically very small.
+**Action:** Always replace `HashSet` with a simple array and a standard `for` loop to eliminate the memory allocation and hashing overhead completely.
+
+## 2026-10-27 - Avoid string array allocations when parsing template parameters
+**Learning:** Using `string.Split(':')` inside the `TemplateParser.cs` parameter processing loop to extract arguments from placeholders like `{tag:arg1:arg2}` allocates string arrays. Inside a recursive hot loop, these intermediate array allocations cause severe garbage collection pressure and affect performance.
+**Action:** Always replace `.Split()` inside hot loops with an iterative parsing approach using `string.IndexOf()` and `string.Substring()` to process delimited parts without allocating intermediate arrays.
+## 2026-11-15 - Avoid unnecessary string.Trim() allocations in rapid UI validation events
+**Learning:** Calling `.Trim()` on a large `TextBox.Text` property (e.g., up to 4000 characters) inside a frequently fired UI event (like `TextChanged` or debounced validation) creates a new string allocation on every keystroke, causing significant Garbage Collection pressure and UI thread overhead.
+**Action:** Instead of trimming large strings just to check if they are empty or valid, use `string.IsNullOrWhiteSpace()` and pass the raw untrimmed text to validation helpers that can handle leading/trailing spaces (like `IsPromptSyntaxValid` which only checks brace balance).
+
+## 2026-07-28 - Optimize DataGridView bulk updates with BindingList reassignment
+**Learning:** Using `BindingList.Add()` sequentially in a loop (even after setting `RaiseListChangedEvents = false`) inside UI filtering operations incurs per-item virtual method and event-checking overhead. Furthermore, starting with an empty `BindingList` and adding items causes its internal array to resize repeatedly, leading to Garbage Collection pressure on the UI thread.
+**Action:** When filtering or bulk loading data into a `DataGridView`, always collect the results into a pre-allocated `List<T>` (e.g., `new List<T>(totalCount)`). Once populated, instantiate a new `BindingList<T>` around this list and assign it directly to the `DataGridView.DataSource`. This completely eliminates sequential overhead, intermediate reallocations, and manual event suspension logic.
+
+## 2026-11-20 - Use array covariance to avoid LINQ Cast on ComboBox population
+**Learning:** Using `.Cast<object>().ToArray()` to convert a `List<string>` to an `object[]` for `ComboBox.Items.AddRange()` creates an unnecessary enumerator and intermediate array. Because C# supports array covariance, a `string[]` can be implicitly passed as an `object[]`.
+**Action:** Always use `.ToArray()` directly on the generic list (e.g. `categoriesList.ToArray()`) and rely on array covariance instead of using `.Cast<object>()` when populating UI collections that expect `object[]`.
+
+## 2026-11-20 - Avoid LINQ Select and ToArray chains when scheduling asynchronous tasks
+**Learning:** Using `LINQ .Select().ToArray()` or similar methods to construct and dispatch asynchronous tasks (e.g. `Task.Run` over a collection of items) allocates intermediate enumerators and arrays, introducing closure overhead. On rapid UI events or operations processing multiple items simultaneously, this causes unnecessary Garbage Collection pressure and performance degradation.
+**Action:** Always replace `LINQ .Select().ToArray()` when projecting lists of Tasks with a standard `foreach` loop iterating over the source collection, combined with an explicitly pre-allocated `List<Task<T>>` to track and await the executions.
+## 2023-10-27 - Avoid string allocation when checking file extensions
+**Learning:** Using chained methods like `.ToLowerInvariant().TrimStart('.')` on strings (e.g., file extensions) creates multiple intermediate string allocations. When done frequently or inside data-mapping tasks, this unnecessarily adds to Garbage Collection (GC) pressure.
+**Action:** Avoid allocating new strings when checking extensions by directly comparing the raw extension using `string.Equals(rawExt, ".ext", StringComparison.OrdinalIgnoreCase)`. Handle variants or fallback dynamically without allocating intermediate trimmed strings.
+## 2026-11-20 - Avoid LINQ Select and ToArray chains when scheduling asynchronous tasks
+**Learning:** Using `LINQ .Select().ToArray()` or similar methods to construct and dispatch asynchronous tasks (e.g. `Task.Run` over a collection of items) allocates intermediate enumerators and arrays, introducing closure overhead. On rapid UI events or operations processing multiple items simultaneously, this causes unnecessary Garbage Collection pressure and performance degradation.
+**Action:** Always replace `LINQ .Select().ToArray()` when projecting lists of Tasks with a standard `foreach` loop iterating over the source collection, combined with an explicitly pre-allocated `List<Task<T>>` to track and await the executions. To prevent closure allocations per iteration, extract the loop's inner logic into a separate private method or local function rather than using an inline lambda (e.g., `Task.Run(async () => ...)`) that captures the loop variable.
+
+## 2026-11-20 - Ensure SQLite connection pooling is not added redundantly
+**Learning:** In standard .NET SQLite providers (such as `Microsoft.Data.Sqlite` or `System.Data.SQLite`), connection pooling is enabled by default. Explicitly adding `Pooling=True;` to the connection string provides no actual performance benefit and should be avoided as a placebo optimization.
+**Action:** Do not append `Pooling=True` to SQLite connection strings if the underlying provider already handles pooling implicitly.
+
+## 2026-11-20 - Cache System.Drawing.Image instances and avoid GDI+ leaks
+**Learning:** When implementing in-memory caching for `System.Drawing.Image` instances in C# WinForms (e.g., an MRU cache) to avoid disk I/O, explicitly call `.Dispose()` on the old image only if it is no longer referenced in the cache (e.g., `!cache.ContainsValue(oldImage)`) to prevent GDI+ unmanaged memory leaks.
+**Action:** Always verify cache membership before disposing `System.Drawing.Image` instances in WinForms applications that implement an MRU caching strategy for images.
