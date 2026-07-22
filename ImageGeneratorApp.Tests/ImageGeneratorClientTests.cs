@@ -738,5 +738,20 @@ namespace ImageGeneratorApp.Tests
             // Assert
             await act.Should().ThrowAsync<OperationCanceledException>().WithMessage("*Request timed out*");
         }
+
+        [Theory]
+        [InlineData("grok-imagine-image", 32767)]
+        [InlineData("grok-imagine-image-quality", 32767)]
+        [InlineData("nano-banana-pro", 32767)]
+        [InlineData(null, 32767)]
+        [InlineData("unknown-model", 32767)]
+        public void GetMaxPromptLength_ReturnsExpectedMaxPromptLength(string? model, int expectedMaxLength)
+        {
+            // Act
+            int maxLength = ImageGeneratorClient.GetMaxPromptLength(model);
+
+            // Assert
+            maxLength.Should().Be(expectedMaxLength);
+        }
     }
 }

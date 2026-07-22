@@ -77,13 +77,15 @@ L'application suit une structure modulaire séparant l'UI de la logique réseau 
 
 - **`Form1.cs`** : Fichier gérant exclusivement la couche UI (Interface Utilisateur).
   - Gère les contrôles de l'interface (clés API, prompt, sélection de modèle, résolution, aspect ratio).
+  - Gère la longueur maximale dynamique du champ prompt (`txtPrompt.MaxLength`) ajustée selon le modèle sélectionné via `ImageGeneratorClient.GetMaxPromptLength(model)` (32 767 caractères) et avertit l'utilisateur si la longueur d'un prompt existant dépasse la limite du modèle lors du changement d'API.
   - Gère l'affichage, la mise en cache (Base64) et la sauvegarde locale asynchrone non bloquante des images.
-  - Gère le moteur de validation visuelle (bordure rouge de 2px autour du prompt sur perte de focus ou survol du bouton de génération, réinitialisation instantanée lors de la saisie).
+  - Gère le moteur de validation visuelle (bordure rouge de 2px autour du prompt sur perte de focus, dépassement de limite, ou survol du bouton de génération, réinitialisation instantanée lors de la saisie).
   - Gère le bouton de génération (activation/désactivation dynamique selon l'API key, le prompt, la validité des gabarits ou l'état de génération).
-  - Intègre une autocomplétion mid-string flottante au caret (`lstAutocomplete`) et un aperçu au survol via info-bulle (`toolTipGenerate`).
+  - Intègre une autocomplétion mid-string flottante au caret (`lstAutocomplete`) et un aperçu au survol via info-bulle (`toolTipGenerate`), tronqué à 300 caractères max lors de l'utilisation de gabarits et supprimé en l'absence de balises pour éviter l'occultation du bouton de génération ou le clignotement d'écran.
   - Structuré de manière modulaire : le gestionnaire de clic `BtnGenerate_Click` est subdivisé en méthodes spécialisées (`PrepareReferenceImagesAsync`, `UpdateUIWithGeneratedImage`, `HandleGenerationException`).
   - Délègue la logique métier et les appels réseau à la couche client.
 - **`ImageGeneratorClient.cs`** : Implémente la communication HTTP (via `HttpClient`) avec les endpoints des différents providers et gère le parsing JSON.
+  - Offre la méthode utilitaire statique `GetMaxPromptLength(model)` définissant la limite maximale de caractères du prompt par modèle (32 767 par défaut).
   - **xAI (Grok Imagine)** : `https://api.x.ai/v1/images/generations` (génération) et `https://api.x.ai/v1/images/edits` (édition multi-tour).
   - **Google (Nano Banana Pro)** : `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent`.
   - **Refactorisation propre** : La méthode principale `GenerateImageAsync` fait moins de 40 lignes et délègue les tâches à des helpers dédiés (`PrepareRequest`, `ParseErrorResponseAsync`, `ParseSuccessResponseAsync`) assurant modularité et performance.

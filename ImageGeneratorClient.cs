@@ -35,6 +35,19 @@ namespace ImageGeneratorApp
         // 50 MB provides generous headroom for high-resolution outputs while preventing abuse.
         private const long MaxGeneratedImageBytes = 50 * 1024 * 1024;
 
+        public const int DefaultMaxPromptLength = 32767;
+
+        /// <summary>
+        /// Gets the maximum prompt length allowed for the specified model.
+        /// </summary>
+        /// <param name="model">The model identifier.</param>
+        /// <returns>The maximum character count allowed for the prompt.</returns>
+        public static int GetMaxPromptLength(string? model)
+        {
+            // Currently all models (Grok Imagine and Nano Banana Pro) use the standard 32,767 max prompt length.
+            return DefaultMaxPromptLength;
+        }
+
         public ImageGeneratorClient(HttpClient httpClient)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));

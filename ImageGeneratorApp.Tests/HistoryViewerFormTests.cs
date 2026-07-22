@@ -69,6 +69,19 @@ namespace ImageGeneratorApp.Tests
             form.ModelToLoad.Should().BeNull();
         }
 
+        [Fact]
+        public void GenerationHistoryModel_CreatedAtLocal_ConvertsUtcToLocalTime()
+        {
+            var utcTime = new DateTime(2026, 7, 22, 14, 30, 0, DateTimeKind.Utc);
+            var model = new GenerationHistoryModel
+            {
+                CreatedAt = utcTime
+            };
+
+            var expectedLocalTime = utcTime.ToLocalTime();
+            model.CreatedAtLocal.Should().Be(expectedLocalTime);
+        }
+
 
         public void Dispose()
         {
