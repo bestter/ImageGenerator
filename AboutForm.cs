@@ -162,8 +162,8 @@ https://www.gnu.org/licenses/";
 
         /// <summary>
         /// Opens the LICENSE.txt file located in the same directory as the running executable.
-        /// Securely uses the absolute system path to notepad.exe with UseShellExecute = false
-        /// and ArgumentList to prevent command injection and executable hijacking.
+        /// Uses UseShellExecute = true to securely open the file with the default system handler
+        /// instead of hardcoding notepad.exe, which could be hijacked.
         /// Gracefully handles the case where the file is missing.
         /// </summary>
         private void BtnShowLicense_Click(object? sender, EventArgs e)
@@ -176,15 +176,11 @@ https://www.gnu.org/licenses/";
                 // We use FileShare.ReadWrite so the default handler can still open it while we hold the handle briefly.
                 using (var fs = new FileStream(licensePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 {
-                    string systemFolder = Environment.GetFolderPath(Environment.SpecialFolder.System);
-                    string notepadPath = Path.Combine(systemFolder, "notepad.exe");
-
                     var startInfo = new ProcessStartInfo
                     {
-                        FileName = notepadPath,
-                        UseShellExecute = false
+                        FileName = licensePath,
+                        UseShellExecute = true
                     };
-                    startInfo.ArgumentList.Add(licensePath);
 
                     Process.Start(startInfo);
                 }

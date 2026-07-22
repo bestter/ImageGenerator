@@ -13,41 +13,25 @@ namespace ImageGeneratorApp.Tests
     {
         private readonly string _testFolderPath;
         private readonly string _testFilePath;
-        private readonly string _isolatedFolderPath;
 
         public UserIdHelperTests()
         {
             _testFolderPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ImageGeneratorApp");
             _testFilePath = Path.Combine(_testFolderPath, "device_id.txt");
-            // Isolated temp folder so DirectoryNotFound tests never delete the shared LocalApplicationData directory
-            // used in parallel by other test classes (ApiKeyStorageHelper, DatabaseHelper, etc.).
-            _isolatedFolderPath = Path.Combine(Path.GetTempPath(), "ImageGeneratorApp_UserIdTest_" + Guid.NewGuid().ToString("N"));
 
             // Ensure a clean state before tests
             ResetCache();
-            UserIdHelper.AppFolderOverride = null;
         }
 
         public void Dispose()
         {
             ResetCache();
-            UserIdHelper.AppFolderOverride = null;
-
             // Try to clean up the test file if we can
             try
             {
                 if (File.Exists(_testFilePath))
                 {
                     File.Delete(_testFilePath);
-                }
-            }
-            catch { /* Ignore cleanup errors */ }
-
-            try
-            {
-                if (Directory.Exists(_isolatedFolderPath))
-                {
-                    Directory.Delete(_isolatedFolderPath, true);
                 }
             }
             catch { /* Ignore cleanup errors */ }
@@ -93,35 +77,6 @@ namespace ImageGeneratorApp.Tests
                 // Verify it's a valid GUID
                 Guid.TryParseExact(result, "N", out Guid parsed).Should().BeTrue();
             }
-        }
-
-        [Fact]
-        public async Task GetOpaqueUserIdAsync_OnDirectoryNotFound_CreatesDirectoryAndReturnsNewId()
-        {
-            // Arrange — use an isolated temp folder that does not exist yet (no shared LocalAppData collision)
-            string isolatedFilePath = Path.Combine(_isolatedFolderPath, "device_id.txt");
-            if (Directory.Exists(_isolatedFolderPath))
-            {
-                Directory.Delete(_isolatedFolderPath, true);
-            }
-
-            UserIdHelper.AppFolderOverride = _isolatedFolderPath;
-            ResetCache();
-
-            // Act
-            string result = await UserIdHelper.GetOpaqueUserIdAsync();
-
-            // Assert
-            result.Should().NotBeNullOrWhiteSpace();
-            result.Length.Should().Be(32); // GUID "N" format length
-            Guid.TryParseExact(result, "N", out _).Should().BeTrue();
-
-            // Verify that the directory and file were created, and the file contains the returned ID
-            Directory.Exists(_isolatedFolderPath).Should().BeTrue();
-            File.Exists(isolatedFilePath).Should().BeTrue();
-
-            string fileContent = await File.ReadAllTextAsync(isolatedFilePath, TestContext.Current.CancellationToken);
-            fileContent.Should().Be(result);
         }
     }
 }

@@ -148,5 +148,5 @@ namespace ImageGeneratorApp.Tests
             await act6.Should().ThrowAsync<ArgumentException>().WithMessage("*Model name*");
         }
 
-    }
+            }
 }

@@ -114,23 +114,3 @@
 **Vulnerability:** While SQL wildcard characters like `%` and `_` were properly escaped for `LIKE` clauses, the opening bracket `[` was omitted. In certain SQL environments or when using specific collations, an unescaped `[` can act as a wildcard, leading to unexpected query results or potential Denial of Service (DoS).
 **Learning:** Standard SQL parameters do not escape wildcard characters within a string used for a `LIKE` operator, and `[` must be included in the sanitization chain along with `%` and `_`.
 **Prevention:** Always explicitly escape `\`, `%`, `_`, and `[` characters in user input and append `ESCAPE '\'` to the SQL query when constructing parameterized `LIKE` queries.
-## 2026-06-19 - Prevent Command Injection via Process.Start
-**Vulnerability:** The application used `Process.Start` with `UseShellExecute = true` to open local files (like `LICENSE.txt`). If an attacker could control or manipulate the target path or environment variables, `UseShellExecute = true` could allow executing unintended shell commands or opening malicious applications instead of just reading the text file.
-**Learning:** `UseShellExecute = true` inherently passes strings to the Windows shell (cmd.exe or similar), which applies its own parsing rules, making it dangerous for dynamic paths.
-**Prevention:** Always invoke the specific target executable (e.g., `notepad.exe`) with `UseShellExecute = false`, and securely pass file paths or arguments using the `ArgumentList` property instead of string concatenation.
-## 2026-06-25 - Prevent Path Traversal in DPAPI Key Storage
-**Vulnerability:** The API Key storage helper used `provider.Split(Path.GetInvalidFileNameChars())` to sanitize the provider name before writing the local file. While this strips `\` and `/`, it does not inherently guarantee safe extraction of the filename if a path is supplied, potentially leaving other traversal patterns or misinterpretations.
-**Learning:** `Path.GetInvalidFileNameChars()` is meant for invalidating characters, not extracting safe filenames from potentially malicious paths.
-**Prevention:** Always use `Path.GetFileName()` to definitively isolate the final file component from a user-provided or potentially tainted path before performing any further character sanitization or path combinations.
-## 2026-07-02 - Prevent TOCTOU via EAFP
-**Vulnerability:** Checking `Directory.Exists` before attempting to create a directory or save a file creates a TOCTOU race condition.
-**Learning:** In async file writing methods where you also want to avoid blocking the thread-pool with synchronous `Directory.CreateDirectory` checks, relying on `Directory.Exists` is insecure.
-**Prevention:** Use the EAFP (Easier to Ask for Forgiveness than Permission) pattern: try to write the file first, catch `DirectoryNotFoundException`, and only then execute `Directory.CreateDirectory` before retrying.
-## 2026-07-08 - Prevent Memory Scraping of Sensitive Secrets
-**Vulnerability:** The `ApiKeyStorageHelper` successfully encrypted API keys using `ProtectedData`, but it left the intermediate `plainBytes` array holding the unencrypted key in memory until garbage collected. This increases the risk of the secret being extracted via memory scraping, crash dumps, or side-channel attacks.
-**Learning:** Secrets loaded into byte arrays should be explicitly destroyed as soon as they are no longer needed to minimize their exposure window in memory.
-**Prevention:** Always wrap cryptographic operations involving plaintext secrets in a `try...finally` block and use `CryptographicOperations.ZeroMemory()` to explicitly clear the sensitive byte array from memory before the method returns.
-## 2026-07-21 - Prevent Shoulder Surfing of Secrets in UI
-**Vulnerability:** The API key `TextBox` (`txtApiKey`) was manually masked using `PasswordChar = '•'`. While this obfuscates the text, relying on `UseSystemPasswordChar = true` is the recommended, more robust standard in Windows Forms to defer to OS-level secure credential masking.
-**Learning:** Hardcoding password characters can be visually inconsistent or lead to edge cases across different environments compared to native OS-level masking.
-**Prevention:** To securely mask sensitive input (like API keys) in Windows Forms and prevent shoulder surfing, use `TextBox.UseSystemPasswordChar = true` rather than manually setting a `PasswordChar`. This defers to the OS's default masking character for a secure and consistent UI.

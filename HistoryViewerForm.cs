@@ -17,12 +17,9 @@ namespace ImageGeneratorApp
     /// </summary>
     public class HistoryViewerForm : Form
     {
-        private static readonly JsonSerializerOptions _jsonIndentedOptions = new JsonSerializerOptions { WriteIndented = true };
-
         private readonly GenerationHistoryRepository _historyRepository;
         private readonly ImageProcessingService _imageProcessingService;
-        private BindingList<GenerationHistoryModel> _historyList = new();
-        private List<GenerationHistoryModel> _allHistory = new();
+        private readonly BindingList<GenerationHistoryModel> _historyList = new();
 
         // UI Controls
         private SplitContainer splitContainer = null!;
@@ -443,13 +440,23 @@ namespace ImageGeneratorApp
                 this.UseWaitCursor = true;
                 var records = await _historyRepository.GetAllAsync();
 
-                // Cache all records locally to prevent redundant database queries during search filtering
-                _allHistory = records.ToList();
-
-                // ⚡ Bolt Optimization: Use a pre-allocated List to instantiate the BindingList in one shot,
-                // completely bypassing the need to suspend events or add items sequentially, drastically
-                // improving UI performance on initial load.
-                _historyList = new BindingList<GenerationHistoryModel>(new List<GenerationHistoryModel>(_allHistory));
+                try
+                {
+                    // ⚡ Bolt Optimization: Suspend DataGridView BindingList events during bulk inserts
+                    // This avoids expensive UI layout and redraw operations on every single addition,
+                    // heavily improving performance and preventing the UI from freezing.
+                    _historyList.RaiseListChangedEvents = false;
+                    _historyList.Clear();
+                    foreach (var record in records)
+                    {
+                        _historyList.Add(record);
+                    }
+                }
+                finally
+                {
+                    _historyList.RaiseListChangedEvents = true;
+                    _historyList.ResetBindings();
+                }
 
                 dataGridViewHistory.DataSource = _historyList;
                 UpdateSelectionDetails();
@@ -474,40 +481,40 @@ namespace ImageGeneratorApp
             _searchDebounceTimer.Start();
         }
 
-        private void SearchDebounceTimer_Tick(object? sender, EventArgs e)
+        private async void SearchDebounceTimer_Tick(object? sender, EventArgs e)
         {
             _searchDebounceTimer.Stop();
 
             var searchTerm = txtSearch.Text;
-
-            // ⚡ Bolt: [performance improvement]
-            // 💡 What: Replaced asynchronous SQLite database query (`SearchAsync`) with in-memory filtering of `_allHistory`.
-            // 🎯 Why: Since `LoadHistoryAsync()` already eagerly loads all history summaries into memory, making a new `LIKE` query to the database for every keystroke adds massive I/O overhead and negates the cache.
-            // 📊 Impact: Eliminates database IPC latency entirely during searches, providing instant, stutter-free list filtering and preventing DB thread bottlenecks.
-            // 🔬 Measurement: O(N) memory scan takes <1ms locally vs 20-50ms+ for SQLite query execution.
-
-            // ⚡ Bolt Optimization: Use a pre-allocated List to collect the filtered results, then assign
-            // it directly to a new BindingList to avoid sequential UI additions and event suppression overhead.
-            var filteredList = new List<GenerationHistoryModel>(_allHistory.Count);
-
-            bool hasSearchText = !string.IsNullOrWhiteSpace(searchTerm);
-
-            foreach (var record in _allHistory)
+            try
             {
-                bool matchesSearch = !hasSearchText ||
-                                     (record.Prompt != null && record.Prompt.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
-                                     (record.ModelName != null && record.ModelName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+                var filtered = await _historyRepository.SearchAsync(searchTerm);
 
-                if (matchesSearch)
+                try
                 {
-                    filteredList.Add(record);
+                    // ⚡ Bolt Optimization: Suspend DataGridView BindingList events during bulk inserts
+                    // This avoids expensive UI layout and redraw operations on every single addition,
+                    // heavily improving performance and preventing the UI from freezing.
+                    _historyList.RaiseListChangedEvents = false;
+                    _historyList.Clear();
+                    foreach (var record in filtered)
+                    {
+                        _historyList.Add(record);
+                    }
                 }
+                finally
+                {
+                    _historyList.RaiseListChangedEvents = true;
+                    _historyList.ResetBindings();
+                }
+
+                UpdateSelectionDetails();
             }
-
-            _historyList = new BindingList<GenerationHistoryModel>(filteredList);
-            dataGridViewHistory.DataSource = _historyList;
-
-            UpdateSelectionDetails();
+            catch (Exception)
+            {
+                // 🛡️ Sentinel: Present a generic error message and avoid leaking raw exceptions.
+                lblImageStatus.Text = "❌ Erreur inattendue lors de la recherche.";
+            }
         }
 
         /// <summary>
@@ -662,11 +669,10 @@ namespace ImageGeneratorApp
             try
             {
                 using var jsonDoc = JsonDocument.Parse(rawJson);
-                // ⚡ Bolt: [performance improvement]
-                // 💡 What: Cached JsonSerializerOptions in a static readonly field instead of instantiating it per call.
-                // 🎯 Why: JsonSerializerOptions is thread-safe and relatively expensive to create. Doing it for every row selection wastes CPU cycles and memory.
-                // 📊 Impact: Formatting JSON metadata is now ~75% faster (804ms -> 204ms over 100k iterations).
-                return JsonSerializer.Serialize(jsonDoc, _jsonIndentedOptions);
+                return JsonSerializer.Serialize(jsonDoc, new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
             }
             catch
             {
