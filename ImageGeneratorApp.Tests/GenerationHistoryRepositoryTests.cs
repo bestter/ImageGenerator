@@ -217,5 +217,36 @@ namespace ImageGeneratorApp.Tests
             var listUnderscore = System.Linq.Enumerable.ToList(searchUnderscore);
             listUnderscore.Should().ContainSingle().Which.ImagePath.Should().Be("p2.webp");
         }
+    
+        [Fact]
+        public async Task SearchAsync_ShouldSafelyHandleSqlWildcards()
+        {
+            // Arrange
+            var recordWithPercent = new GenerationHistoryModel { ImagePath = "p1.webp", Prompt = "Prompt with 100% completion", ModelName = "model1" };
+            var recordWithUnderscore = new GenerationHistoryModel { ImagePath = "p2.webp", Prompt = "Prompt with_underscore", ModelName = "model2" };
+            var normalRecord = new GenerationHistoryModel { ImagePath = "p3.webp", Prompt = "A normal prompt", ModelName = "model3" };
+
+            await _repository.InsertAsync(recordWithPercent);
+            await _repository.InsertAsync(recordWithUnderscore);
+            await _repository.InsertAsync(normalRecord);
+
+            // Act - Search for literal %
+            var searchPercent = await _repository.SearchAsync("%");
+
+            // Assert
+            // It should only match the literal %, not act as a wildcard for everything
+            var percentList = System.Linq.Enumerable.ToList(searchPercent);
+            percentList.Should().ContainSingle();
+            percentList[0].Prompt.Should().Be("Prompt with 100% completion");
+
+            // Act - Search for literal _
+            var searchUnderscore = await _repository.SearchAsync("_");
+
+            // Assert
+            // It should only match the literal _, not act as a wildcard for a single character
+            var underscoreList = System.Linq.Enumerable.ToList(searchUnderscore);
+            underscoreList.Should().ContainSingle();
+            underscoreList[0].Prompt.Should().Be("Prompt with_underscore");
+        }
     }
-}
+}
