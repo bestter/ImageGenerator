@@ -144,3 +144,11 @@
 ## 2026-11-20 - Avoid LINQ Select and ToArray chains when scheduling asynchronous tasks
 **Learning:** Using `LINQ .Select().ToArray()` or similar methods to construct and dispatch asynchronous tasks (e.g. `Task.Run` over a collection of items) allocates intermediate enumerators and arrays, introducing closure overhead. On rapid UI events or operations processing multiple items simultaneously, this causes unnecessary Garbage Collection pressure and performance degradation.
 **Action:** Always replace `LINQ .Select().ToArray()` when projecting lists of Tasks with a standard `foreach` loop iterating over the source collection, combined with an explicitly pre-allocated `List<Task<T>>` to track and await the executions. To prevent closure allocations per iteration, extract the loop's inner logic into a separate private method or local function rather than using an inline lambda (e.g., `Task.Run(async () => ...)`) that captures the loop variable.
+
+## 2026-11-20 - Ensure SQLite connection pooling is not added redundantly
+**Learning:** In standard .NET SQLite providers (such as `Microsoft.Data.Sqlite` or `System.Data.SQLite`), connection pooling is enabled by default. Explicitly adding `Pooling=True;` to the connection string provides no actual performance benefit and should be avoided as a placebo optimization.
+**Action:** Do not append `Pooling=True` to SQLite connection strings if the underlying provider already handles pooling implicitly.
+
+## 2026-11-20 - Cache System.Drawing.Image instances and avoid GDI+ leaks
+**Learning:** When implementing in-memory caching for `System.Drawing.Image` instances in C# WinForms (e.g., an MRU cache) to avoid disk I/O, explicitly call `.Dispose()` on the old image only if it is no longer referenced in the cache (e.g., `!cache.ContainsValue(oldImage)`) to prevent GDI+ unmanaged memory leaks.
+**Action:** Always verify cache membership before disposing `System.Drawing.Image` instances in WinForms applications that implement an MRU caching strategy for images.

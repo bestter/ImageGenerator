@@ -40,6 +40,11 @@ namespace ImageGeneratorApp
         private Button btnCopyPrompt = null!;
         private GenerationHistoryModel? _currentHistoryItem;
 
+        // ⚡ Bolt Optimization: MRU Cache for recently decoded images
+        private readonly Dictionary<string, System.Drawing.Image> _imageCache = new(StringComparer.OrdinalIgnoreCase);
+        private readonly List<string> _imageCacheOrder = new();
+        private const int MaxImageCacheSize = 10;
+
         /// <summary>
         /// Gets the prompt text to paste into the main form's prompt field when the user activates the copy button in history.
         /// Set only when the copy action is triggered; consumed by the owner form after ShowDialog returns.
@@ -559,7 +564,12 @@ namespace ImageGeneratorApp
             // Clean up the old image before rendering a new one to prevent GDI+ memory leaks
             var oldImage = pictureBoxImage.Image;
             pictureBoxImage.Image = null;
-            oldImage?.Dispose();
+
+            // Only dispose if the image is NOT in our cache
+            if (oldImage != null && !_imageCache.ContainsValue(oldImage))
+            {
+                oldImage.Dispose();
+            }
 
             if (string.IsNullOrWhiteSpace(history.ImagePath))
             {
@@ -573,7 +583,42 @@ namespace ImageGeneratorApp
 
             try
             {
-                var gdiImage = await _imageProcessingService.LoadWebpForWinFormsAsync(history.ImagePath);
+                System.Drawing.Image gdiImage;
+
+                // Check MRU cache first
+                if (_imageCache.TryGetValue(history.ImagePath, out var cachedImage))
+                {
+                    gdiImage = cachedImage;
+
+                    // Move to end of MRU list (most recently used)
+                    _imageCacheOrder.Remove(history.ImagePath);
+                    _imageCacheOrder.Add(history.ImagePath);
+                }
+                else
+                {
+                    gdiImage = await _imageProcessingService.LoadWebpForWinFormsAsync(history.ImagePath);
+
+                    // Add to cache
+                    _imageCache[history.ImagePath] = gdiImage;
+                    _imageCacheOrder.Add(history.ImagePath);
+
+                    // Evict oldest if cache is too large
+                    if (_imageCacheOrder.Count > MaxImageCacheSize)
+                    {
+                        var oldestPath = _imageCacheOrder[0];
+                        _imageCacheOrder.RemoveAt(0);
+
+                        if (_imageCache.TryGetValue(oldestPath, out var oldestImage))
+                        {
+                            _imageCache.Remove(oldestPath);
+                            // Ensure we don't dispose the image currently being displayed
+                            if (pictureBoxImage.Image != oldestImage)
+                            {
+                                oldestImage.Dispose();
+                            }
+                        }
+                    }
+                }
 
                 // Ensure the selection has not changed during the file load and decode task
                 if (token == _currentSelectionToken)
@@ -582,9 +627,10 @@ namespace ImageGeneratorApp
                     lblImageStatus.Text = "";
                     lblImageStatus.Visible = false; // Hide text when successfully loaded
                 }
-                else
+                else if (!_imageCache.ContainsValue(gdiImage))
                 {
                     // Selection changed in the meantime, discard the loaded image resources
+                    // ONLY if it wasn't added to our cache
                     gdiImage.Dispose();
                 }
             }
@@ -619,7 +665,10 @@ namespace ImageGeneratorApp
 
             var oldImage = pictureBoxImage.Image;
             pictureBoxImage.Image = null;
-            oldImage?.Dispose();
+            if (oldImage != null && !_imageCache.ContainsValue(oldImage))
+            {
+                oldImage.Dispose();
+            }
 
             txtPrompt.Clear();
             lblModelValue.Text = string.Empty;
@@ -687,7 +736,19 @@ namespace ImageGeneratorApp
 
                 var oldImage = pictureBoxImage.Image;
                 pictureBoxImage.Image = null;
-                oldImage?.Dispose();
+
+                if (oldImage != null && !_imageCache.ContainsValue(oldImage))
+                {
+                    oldImage.Dispose();
+                }
+
+                // Dispose all cached images
+                foreach (var img in _imageCache.Values)
+                {
+                    img?.Dispose();
+                }
+                _imageCache.Clear();
+                _imageCacheOrder.Clear();
             }
             base.Dispose(disposing);
         }
