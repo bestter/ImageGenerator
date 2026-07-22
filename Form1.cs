@@ -48,6 +48,8 @@ namespace ImageGeneratorApp
         private Button btnSave = null!;
         private Button btnClear = null!;
         private Label lblStatus = null!;
+        private Button btnCopyError = null!;
+        private string? _lastErrorMessage = null;
         private CheckBox chkMultiTurnEditing = null!;
         private string? currentBase64Image = null;
         private byte[]? currentImageBytes = null;
@@ -244,7 +246,20 @@ namespace ImageGeneratorApp
         private void InitializeStatusAndImage(int contentTop)
         {
             // Status
-            lblStatus = new Label { Location = new Point(20, contentTop + 280), Width = 750, Height = 30, ForeColor = Color.DarkBlue, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
+            lblStatus = new Label { Location = new Point(20, contentTop + 280), Width = 730, Height = 30, ForeColor = Color.DarkBlue, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
+
+            btnCopyError = new Button
+            {
+                Text = "📋 Copier",
+                Location = new Point(760, contentTop + 276),
+                Width = 100,
+                Height = 28,
+                Visible = false,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                UseVisualStyleBackColor = true
+            };
+            btnCopyError.Click += BtnCopyError_Click;
+            toolTipGenerate.SetToolTip(btnCopyError, "Copier le message d'erreur dans le presse-papier");
 
             // PictureBox
             pictureBox = new PictureBox
@@ -300,6 +315,19 @@ namespace ImageGeneratorApp
                 Font = new Font("Segoe UI", 9F, FontStyle.Regular)
             };
             lstAutocomplete.DoubleClick += (s, ev) => InsertSelectedTemplate();
+
+            this.Controls.AddRange(new Control[] { lblKey, txtApiKey, lblPrompt, txtPrompt, lblModel, cmbModel, lblRes, cmbResolution, btnAddImages, lblRatio, cmbAspectRatio, chkMultiTurnEditing,
+                btnGenerate, btnSave, btnClear, btnHistory, lblStatus, btnCopyError, pictureBox, btnManageTemplates, chkEnableTemplates, lstAutocomplete });
+
+            lstAutocomplete.BringToFront();
+
+            // Apply initial model-dependent state now that all controls are created
+            UpdateModelDependentControls();
+
+            this.Paint += Form1_Paint;
+            this.Resize += Form1_Resize;
+
+            UpdateGenerateButtonState();
         }
 
         private async void BtnManageTemplates_Click(object? sender, EventArgs e)
@@ -414,6 +442,8 @@ namespace ImageGeneratorApp
             _isGenerating = true;
             UpdateGenerateButtonState();
             btnSave.Enabled = false;
+            _lastErrorMessage = null;
+            btnCopyError.Visible = false;
             lblStatus.Text = "⏳ Génération en cours...";
             DisposeCurrentImage();
             currentBase64Image = null;
@@ -590,6 +620,8 @@ namespace ImageGeneratorApp
                 pictureBox.Image = Image.FromStream(ms);
             }
 
+            _lastErrorMessage = null;
+            btnCopyError.Visible = false;
             lblStatus.Text = $"✅ Image générée avec {model} ({resolution})";
             btnSave.Enabled = true;
 
@@ -617,42 +649,72 @@ namespace ImageGeneratorApp
             });
         }
 
+        private void BtnCopyError_Click(object? sender, EventArgs e)
+        {
+            if (!string.IsNullOrEmpty(_lastErrorMessage))
+            {
+                try
+                {
+                    Clipboard.SetText(_lastErrorMessage);
+                    toolTipGenerate.Show("Message d'erreur copié !", btnCopyError, 0, -30, 2000);
+                }
+                catch (Exception)
+                {
+                    // Fallback if Clipboard access fails
+                }
+            }
+        }
+
         private void HandleGenerationException(Exception ex)
         {
             if (ex is KeyNotFoundException)
             {
                 _hasPromptError = true;
                 this.Invalidate();
+                _lastErrorMessage = ex.Message;
+                btnCopyError.Visible = true;
                 MessageBox.Show("Le gabarit demandé n'est pas reconnu ou introuvable.", "Modèle non reconnu", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else if (ex is FormatException)
             {
                 _hasPromptError = true;
                 this.Invalidate();
+                _lastErrorMessage = ex.Message;
+                btnCopyError.Visible = true;
                 MessageBox.Show("Une erreur de syntaxe a été détectée dans le gabarit.", "Erreur de modèles", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else if (ex is InvalidOperationException && ex.Message.Contains("récursion"))
             {
                 _hasPromptError = true;
                 this.Invalidate();
+                _lastErrorMessage = ex.Message;
+                btnCopyError.Visible = true;
                 MessageBox.Show("Une boucle de récursion infinie a été détectée dans les gabarits.", "Erreur de récursion", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else if (ex is ArgumentException)
             {
+                _lastErrorMessage = ex.Message;
+                btnCopyError.Visible = true;
                 MessageBox.Show("Une erreur de validation est survenue. Veuillez vérifier vos entrées.", "Erreur de validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             else if (ex is ImageGeneratorException generatorEx)
             {
+                _lastErrorMessage = generatorEx.Message;
+                btnCopyError.Visible = true;
                 lblStatus.Text = $"❌ Erreur {generatorEx.StatusCode}";
                 MessageBox.Show($"Erreur API :\n{generatorEx.Message}", "Erreur API", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else if (ex is TaskCanceledException)
             {
+                _lastErrorMessage = "La requête a mis trop de temps à répondre. Veuillez réessayer plus tard.";
+                btnCopyError.Visible = true;
                 lblStatus.Text = "❌ Délai d'attente dépassé";
                 MessageBox.Show("La requête a mis trop de temps à répondre. Veuillez réessayer plus tard.", "Erreur de délai d'attente", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else
             {
+                _lastErrorMessage = ex.Message;
+                btnCopyError.Visible = true;
                 lblStatus.Text = "❌ Erreur inattendue";
                 MessageBox.Show("Une erreur inattendue est survenue lors de la génération.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
@@ -718,6 +780,8 @@ namespace ImageGeneratorApp
             currentImageBytes = null;
             currentImageMetadata = null;
             btnSave.Enabled = false;
+            _lastErrorMessage = null;
+            btnCopyError.Visible = false;
             lblStatus.Text = "";
             selectedImages.Clear();
             UpdateImageButtonText();
