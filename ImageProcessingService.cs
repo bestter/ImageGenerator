@@ -96,6 +96,12 @@ namespace ImageGeneratorApp
                     throw new ArgumentException("File is empty.", nameof(webpFilePath));
                 }
 
+                // 🛡️ Sentinel: Enforce maximum file size limit (20 MB) to prevent memory exhaustion (DoS)
+                if (fs.Length > 20 * 1024 * 1024)
+                {
+                    throw new ArgumentException("File is too large.", nameof(webpFilePath));
+                }
+
                 MemoryStream? memoryStream = null;
 
                 try
