@@ -152,3 +152,6 @@
 ## 2026-11-20 - Cache System.Drawing.Image instances and avoid GDI+ leaks
 **Learning:** When implementing in-memory caching for `System.Drawing.Image` instances in C# WinForms (e.g., an MRU cache) to avoid disk I/O, explicitly call `.Dispose()` on the old image only if it is no longer referenced in the cache (e.g., `!cache.ContainsValue(oldImage)`) to prevent GDI+ unmanaged memory leaks.
 **Action:** Always verify cache membership before disposing `System.Drawing.Image` instances in WinForms applications that implement an MRU caching strategy for images.
+## 2026-11-20 - Avoid string array allocations when parsing template parameters
+**Learning:** Using `string.Split(':')` inside the `TemplateParser.cs` parameter processing loop to extract arguments from placeholders like `{tag:arg1:arg2}` allocates string arrays. Inside a recursive hot loop, these intermediate array allocations cause severe garbage collection pressure and affect performance.
+**Action:** Always replace `.Split()` inside hot loops with an iterative parsing approach using `string.IndexOf()` and `string.Substring()` to process delimited parts without allocating intermediate arrays.
