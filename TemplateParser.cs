@@ -36,6 +36,12 @@ namespace ImageGeneratorApp
         [GeneratedRegex(@" {2,}")]
         private static partial Regex MultipleSpacesRegex();
 
+        private static string ExtractKey(string innerContent)
+        {
+            int colonIndex = innerContent.IndexOf(':');
+            return colonIndex == -1 ? innerContent.Trim() : innerContent.Substring(0, colonIndex).Trim();
+        }
+
         /// <summary>
         /// Recursively resolves template placeholders within a prompt, formats them with any provided parameters,
         /// and post-processes the final output by trimming and clearing double spaces.
@@ -98,7 +104,7 @@ namespace ImageGeneratorApp
             var initialMatches = TemplateRegex().Matches(inputPrompt);
             foreach (System.Text.RegularExpressions.Match match in initialMatches)
             {
-                var key = match.Value[1..^1].Split(':')[0].Trim();
+                var key = ExtractKey(match.Value[1..^1]);
                 keysToFetch.Add(key);
             }
 
@@ -117,7 +123,7 @@ namespace ImageGeneratorApp
                     var templateMatches = TemplateRegex().Matches(template.Value);
                     foreach (System.Text.RegularExpressions.Match match in templateMatches)
                     {
-                        var innerKey = match.Value[1..^1].Split(':')[0].Trim();
+                        var innerKey = ExtractKey(match.Value[1..^1]);
                         if (!localCache.ContainsKey(innerKey))
                         {
                             keysToFetch.Add(innerKey);
@@ -171,12 +177,21 @@ namespace ImageGeneratorApp
                     if (colonIndex != -1)
                     {
                         var paramString = innerContent.Substring(colonIndex + 1);
-                        var paramParts = paramString.Split(':');
-                        // ⚡ Bolt Optimization: Avoid LINQ and intermediate array allocations during template resolution
-                        for (int i = 0; i < paramParts.Length; i++)
+                        int i = 0;
+                        int startIndex = 0;
+                        int nextColonIndex;
+
+                        while ((nextColonIndex = paramString.IndexOf(':', startIndex)) != -1)
                         {
-                            templateValue = templateValue.Replace($"{{{i}}}", paramParts[i].Trim());
+                            var paramPart = paramString.Substring(startIndex, nextColonIndex - startIndex).Trim();
+                            templateValue = templateValue.Replace($"{{{i}}}", paramPart);
+                            startIndex = nextColonIndex + 1;
+                            i++;
                         }
+
+                        // process the last part
+                        var lastPart = paramString.Substring(startIndex).Trim();
+                        templateValue = templateValue.Replace($"{{{i}}}", lastPart);
                     }
 
                     // Update the prompt replacing all occurrences of this specific tag expression
