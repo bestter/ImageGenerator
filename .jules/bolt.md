@@ -155,3 +155,6 @@
 ## 2026-11-20 - Avoid string array allocations when parsing template parameters
 **Learning:** Using `string.Split(':')` inside the `TemplateParser.cs` parameter processing loop to extract arguments from placeholders like `{tag:arg1:arg2}` allocates string arrays. Inside a recursive hot loop, these intermediate array allocations cause severe garbage collection pressure and affect performance.
 **Action:** Always replace `.Split()` inside hot loops with an iterative parsing approach using `string.IndexOf()` and `string.Substring()` to process delimited parts without allocating intermediate arrays.
+## 2026-06-17 - Eliminate UI Thread Exceptions for Control Flow
+**Learning:** Using exceptions like `FormatException` for expected control flow during rapid UI text validation (e.g., `TextChanged` events) creates massive Garbage Collection (GC) pressure and CPU overhead on the UI thread, causing potential UI freezes.
+**Action:** Always extract string parsing validation logic into `bool`-returning helper methods (like `TryValidateSyntax`) instead of relying on `try-catch` blocks for validation loops or debounced events.

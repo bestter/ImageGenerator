@@ -43,6 +43,53 @@ namespace ImageGeneratorApp
         }
 
         /// <summary>
+        /// Validates the syntax of the template placeholders in the given prompt.
+        /// </summary>
+        /// <param name="inputPrompt">The prompt to validate.</param>
+        /// <param name="errorMessage">When this method returns, contains the error message if validation failed; otherwise, null.</param>
+        /// <returns>True if the syntax is valid; otherwise, false.</returns>
+        public bool TryValidateSyntax(string inputPrompt, out string? errorMessage)
+        {
+            errorMessage = null;
+            if (string.IsNullOrWhiteSpace(inputPrompt))
+            {
+                return true;
+            }
+
+            int braceCount = 0;
+            for (int i = 0; i < inputPrompt.Length; i++)
+            {
+                char c = inputPrompt[i];
+                if (c == '{')
+                {
+                    braceCount++;
+                    if (braceCount > 1)
+                    {
+                        errorMessage = "Accolades imbriquées non supportées dans le prompt.";
+                        return false;
+                    }
+                }
+                else if (c == '}')
+                {
+                    braceCount--;
+                    if (braceCount < 0)
+                    {
+                        errorMessage = "Accolade fermante '}' inattendue ou non ouverte.";
+                        return false;
+                    }
+                }
+            }
+
+            if (braceCount != 0)
+            {
+                errorMessage = "Accolade ouvrante '{' non fermée.";
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// Recursively resolves template placeholders within a prompt, formats them with any provided parameters,
         /// and post-processes the final output by trimming and clearing double spaces.
         /// </summary>
@@ -57,30 +104,9 @@ namespace ImageGeneratorApp
             }
 
             // Validate braces matching (fast-scan) to prevent syntax errors
-            int braceCount = 0;
-            for (int i = 0; i < inputPrompt.Length; i++)
+            if (!TryValidateSyntax(inputPrompt, out string? errorMessage))
             {
-                char c = inputPrompt[i];
-                if (c == '{')
-                {
-                    braceCount++;
-                    if (braceCount > 1)
-                    {
-                        throw new FormatException("Accolades imbriquées non supportées dans le prompt.");
-                    }
-                }
-                else if (c == '}')
-                {
-                    braceCount--;
-                    if (braceCount < 0)
-                    {
-                        throw new FormatException("Accolade fermante '}' inattendue ou non ouverte.");
-                    }
-                }
-            }
-            if (braceCount != 0)
-            {
-                throw new FormatException("Accolade ouvrante '{' non fermée.");
+                throw new FormatException(errorMessage);
             }
 
             var currentPrompt = inputPrompt;
