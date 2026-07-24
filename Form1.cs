@@ -1363,14 +1363,21 @@ namespace ImageGeneratorApp
                 string rawPrompt = txtPrompt.Text.Trim();
                 if (!string.IsNullOrEmpty(rawPrompt))
                 {
-                    try
+                    if (!_templateParser.TryValidateSyntax(rawPrompt, out string? syntaxError))
                     {
-                        // Dry-run process without usage count increments
-                        await _templateParser.ProcessPromptAsync(rawPrompt, incrementUsageStats: false);
+                        errorMsg = syntaxError ?? "Erreur de syntaxe dans le prompt.";
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        errorMsg = ex.Message;
+                        try
+                        {
+                            // Dry-run process without usage count increments
+                            await _templateParser.ProcessPromptAsync(rawPrompt, incrementUsageStats: false);
+                        }
+                        catch (Exception ex)
+                        {
+                            errorMsg = ex.Message;
+                        }
                     }
                 }
             }
@@ -1419,26 +1426,7 @@ namespace ImageGeneratorApp
             // Fast-scan syntax check (sync) to avoid async database queries for basic syntax issues
             if (chkEnableTemplates != null && chkEnableTemplates.Checked)
             {
-                try
-                {
-                    int braceCount = 0;
-                    for (int i = 0; i < prompt.Length; i++)
-                    {
-                        char c = prompt[i];
-                        if (c == '{')
-                        {
-                            braceCount++;
-                            if (braceCount > 1) throw new FormatException();
-                        }
-                        else if (c == '}')
-                        {
-                            braceCount--;
-                            if (braceCount < 0) throw new FormatException();
-                        }
-                    }
-                    if (braceCount != 0) throw new FormatException();
-                }
-                catch
+                if (!_templateParser.TryValidateSyntax(prompt, out _))
                 {
                     btnGenerate.Enabled = false;
                     return;
