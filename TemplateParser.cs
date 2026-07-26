@@ -207,17 +207,23 @@ namespace ImageGeneratorApp
                         int startIndex = 0;
                         int nextColonIndex;
 
+                        // ⚡ Bolt Optimization: Use a StringBuilder instead of chaining string.Replace() to avoid
+                        // creating excessive intermediate string allocations and reducing Garbage Collection (GC) pressure.
+                        var sb = new System.Text.StringBuilder(templateValue, templateValue.Length + 50);
+
                         while ((nextColonIndex = paramString.IndexOf(':', startIndex)) != -1)
                         {
                             var paramPart = paramString.Substring(startIndex, nextColonIndex - startIndex).Trim();
-                            templateValue = templateValue.Replace($"{{{i}}}", paramPart);
+                            sb.Replace($"{{{i}}}", paramPart);
                             startIndex = nextColonIndex + 1;
                             i++;
                         }
 
                         // process the last part
                         var lastPart = paramString.Substring(startIndex).Trim();
-                        templateValue = templateValue.Replace($"{{{i}}}", lastPart);
+                        sb.Replace($"{{{i}}}", lastPart);
+
+                        templateValue = sb.ToString();
                     }
 
                     // Update the prompt replacing all occurrences of this specific tag expression
