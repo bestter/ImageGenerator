@@ -194,11 +194,14 @@ https://www.gnu.org/licenses/";
                     // Validation succeeded; stream handle disposed at end of block
                 }
 
+                // 🛡️ Sentinel: Prevent command injection by explicitly launching notepad.exe
+                // with UseShellExecute = false, and passing the target path securely as an argument.
                 var startInfo = new ProcessStartInfo
                 {
-                    FileName = licensePath,
-                    UseShellExecute = true
+                    FileName = "notepad.exe",
+                    UseShellExecute = false
                 };
+                startInfo.ArgumentList.Add(licensePath);
 
                 Process.Start(startInfo);
             }
