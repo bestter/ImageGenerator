@@ -713,6 +713,44 @@ namespace ImageGeneratorApp
             }
         }
 
+        private async Task<ImageUrlObject?> ProcessImageAsync(string imgPath)
+        {
+            var ext = Path.GetExtension(imgPath).ToLower().TrimStart('.');
+            if (ext == "jpg") ext = "jpeg";
+
+            byte[] b64Bytes;
+            using (var fs = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
+            {
+                // 🛡️ Sentinel: Prevent TOCTOU race condition by checking length on the opened handle
+                if (fs.Length > MaxFileSizeBytes)
+                {
+                    this.Invoke(() =>
+                    {
+                        lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(imgPath)}";
+                        MessageBox.Show($"L'image '{Path.GetFileName(imgPath)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    });
+                    return null;
+                }
+
+                // ⚡ Bolt Optimization: Pre-allocate and read directly to avoid MemoryStream chunking
+                b64Bytes = new byte[(int)fs.Length];
+                await fs.ReadExactlyAsync(b64Bytes, 0, b64Bytes.Length);
+            }
+
+            // ⚡ Bolt Optimization: Use string.Create to build the data URI directly into a pre-allocated string.
+            // This eliminates the intermediate base64 string allocation (~26MB chars for a 20MB file),
+            // significantly reducing Large Object Heap (LOH) fragmentation and memory pressure.
+            string prefix = $"data:image/{ext};base64,";
+            int b64Length = ((b64Bytes.Length + 2) / 3) * 4;
+            string url = string.Create(prefix.Length + b64Length, (prefix, b64Bytes), (span, state) =>
+            {
+                state.prefix.AsSpan().CopyTo(span);
+                Convert.TryToBase64Chars(state.b64Bytes, span.Slice(state.prefix.Length), out _);
+            });
+
+            return new ImageUrlObject { Type = "image_url", Url = url };
+        }
+
         private async Task<List<ImageUrlObject>> PrepareReferenceImagesAsync(string? imageToEditBase64)
         {
             var imagesList = new List<ImageUrlObject>();
@@ -724,43 +762,12 @@ namespace ImageGeneratorApp
                     imagesList.Add(new ImageUrlObject { Type = "image_url", Url = $"data:image/png;base64,{imageToEditBase64}" });
                 }
 
-                var tasks = selectedImages.Select(async imgPath =>
+                // ⚡ Bolt Optimization: Avoid LINQ Select and ToArray chains when scheduling asynchronous tasks
+                var tasks = new List<Task<ImageUrlObject?>>();
+                foreach (var imgPath in selectedImages)
                 {
-                    var ext = Path.GetExtension(imgPath).ToLower().TrimStart('.');
-                    if (ext == "jpg") ext = "jpeg";
-
-                    byte[] b64Bytes;
-                    using (var fs = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
-                    {
-                        // 🛡️ Sentinel: Prevent TOCTOU race condition by checking length on the opened handle
-                        if (fs.Length > MaxFileSizeBytes)
-                        {
-                            this.Invoke(() =>
-                            {
-                                lblStatus.Text = $"❌ Image trop grande : {Path.GetFileName(imgPath)}";
-                                MessageBox.Show($"L'image '{Path.GetFileName(imgPath)}' dépasse la limite de 20 Mo.", "Fichier trop volumineux", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            });
-                            return null;
-                        }
-
-                        // ⚡ Bolt Optimization: Pre-allocate and read directly to avoid MemoryStream chunking
-                        b64Bytes = new byte[(int)fs.Length];
-                        await fs.ReadExactlyAsync(b64Bytes, 0, b64Bytes.Length);
-                    }
-
-                    // ⚡ Bolt Optimization: Use string.Create to build the data URI directly into a pre-allocated string.
-                    // This eliminates the intermediate base64 string allocation (~26MB chars for a 20MB file),
-                    // significantly reducing Large Object Heap (LOH) fragmentation and memory pressure.
-                    string prefix = $"data:image/{ext};base64,";
-                    int b64Length = ((b64Bytes.Length + 2) / 3) * 4;
-                    string url = string.Create(prefix.Length + b64Length, (prefix, b64Bytes), (span, state) =>
-                    {
-                        state.prefix.AsSpan().CopyTo(span);
-                        Convert.TryToBase64Chars(state.b64Bytes, span.Slice(state.prefix.Length), out _);
-                    });
-
-                    return new ImageUrlObject { Type = "image_url", Url = url };
-                }).ToArray();
+                    tasks.Add(ProcessImageAsync(imgPath));
+                }
 
                 var results = await Task.WhenAll(tasks);
                 foreach (var res in results)
@@ -1283,7 +1290,8 @@ namespace ImageGeneratorApp
                     lstAutocomplete.Items.Clear();
                     // ⚡ Bolt Optimization: Batch insert autocomplete items using .AddRange() instead of a foreach loop
                     // This prevents repeated array resizing and layout recalculations, optimizing rendering performance
-                    lstAutocomplete.Items.AddRange(matched.Cast<object>().ToArray());
+                    // ⚡ Bolt Optimization: Use array covariance to avoid LINQ Cast on ComboBox population
+                    lstAutocomplete.Items.AddRange(matched.ToArray());
                     lstAutocomplete.SelectedIndex = 0;
                     lstAutocomplete.EndUpdate();
 
