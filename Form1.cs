@@ -1290,7 +1290,9 @@ namespace ImageGeneratorApp
                     lstAutocomplete.Items.Clear();
                     // ⚡ Bolt Optimization: Batch insert autocomplete items using .AddRange() instead of a foreach loop
                     // This prevents repeated array resizing and layout recalculations, optimizing rendering performance
-                    // ⚡ Bolt Optimization: Use array covariance to avoid LINQ Cast on ComboBox population
+                    // ⚡ Bolt Optimization: Leverage array covariance instead of Cast<object>()
+                    // Using .ToArray() directly creates a string[], which can implicitly be passed to ComboBox/ListBox.Items.AddRange(object[])
+                    // This prevents LINQ from allocating an extra enumerator and a second object[] array.
                     lstAutocomplete.Items.AddRange(matched.ToArray());
                     lstAutocomplete.SelectedIndex = 0;
                     lstAutocomplete.EndUpdate();

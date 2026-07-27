@@ -158,3 +158,6 @@
 ## 2026-06-17 - Eliminate UI Thread Exceptions for Control Flow
 **Learning:** Using exceptions like `FormatException` for expected control flow during rapid UI text validation (e.g., `TextChanged` events) creates massive Garbage Collection (GC) pressure and CPU overhead on the UI thread, causing potential UI freezes.
 **Action:** Always extract string parsing validation logic into `bool`-returning helper methods (like `TryValidateSyntax`) instead of relying on `try-catch` blocks for validation loops or debounced events.
+## 2024-05-18 - ImageSharp Async IO and UI Freezing
+**Learning:** In .NET WinForms, when using ImageSharp to encode and save images (e.g., to WebP), do not execute `SaveAsync()` directly on the UI thread to "optimize" I/O. ImageSharp's `SaveAsync()` performs highly CPU-intensive encoding synchronously on the caller's thread before the asynchronous I/O phase.
+**Action:** To prevent UI freezing, offload the entire process (loading, encoding, and saving) to a background thread using `await Task.Run(async () => { ... await image.SaveAsync(...); });`.
