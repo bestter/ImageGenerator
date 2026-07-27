@@ -155,3 +155,7 @@
 **Vulnerability:** The API Key storage helper used `string.Concat(provider.Split(Path.GetInvalidFileNameChars()))` to sanitize the provider string before embedding it in a file path. An attacker passing `../../` as a provider would bypass this since it only strips the slashes, allowing directory traversal to unintended locations (e.g. `ApiKey_....dat`).
 **Learning:** Stripping invalid characters does not strip path traversal structures effectively if they are built purely from valid characters like `.`.
 **Prevention:** Always first extract the base file name using `Path.GetFileName(input)` from any untrusted or potentially tampered string before applying character sanitization.
+## 2026-07-29 - Prevent TOCTOU via EAFP
+**Vulnerability:** Checking `Directory.Exists` or unconditionally calling `Directory.CreateDirectory` before attempting to create a directory or save a file blocks thread-pool threads and creates a TOCTOU race condition.
+**Learning:** In async file writing methods where you also want to avoid blocking the thread-pool with synchronous `Directory.CreateDirectory` checks, relying on `Directory.Exists` is insecure.
+**Prevention:** Use the EAFP (Easier to Ask for Forgiveness than Permission) pattern: try to write the file first, catch `DirectoryNotFoundException`, and only then execute `Directory.CreateDirectory` before retrying.
