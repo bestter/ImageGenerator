@@ -297,15 +297,22 @@ namespace ImageGeneratorApp
             cmbCategory.Items.Clear();
             cmbCategory.Items.Add("Toutes les catégories");
 
-            var categories = _allTemplates
-                .Select(t => t.Category)
-                .Where(c => !string.IsNullOrWhiteSpace(c))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(c => c);
+            // ⚡ Bolt Optimization: Avoid LINQ collection extraction chains on the UI thread for ComboBox population
+            var categoriesSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var t in _allTemplates)
+            {
+                if (!string.IsNullOrWhiteSpace(t.Category))
+                {
+                    categoriesSet.Add(t.Category);
+                }
+            }
+            var categoriesList = new List<string>(categoriesSet);
+            categoriesList.Sort(StringComparer.OrdinalIgnoreCase);
 
             // ⚡ Bolt Optimization: Batch insert categories using .AddRange() instead of a foreach loop
             // This reduces internal recalculations within the ComboBox collection when filtering the master list
-            cmbCategory.Items.AddRange(categories.Cast<object>().ToArray());
+            // ⚡ Bolt Optimization: Use array covariance to avoid LINQ Cast on ComboBox population
+            cmbCategory.Items.AddRange(categoriesList.ToArray());
 
             if (previousSelection != null && cmbCategory.Items.Contains(previousSelection))
             {
