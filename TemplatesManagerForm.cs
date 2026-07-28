@@ -314,7 +314,7 @@ namespace ImageGeneratorApp
             // ⚡ Bolt Optimization: Leverage array covariance instead of Cast<object>()
             // Using .ToArray() directly creates a string[], which can implicitly be passed to ComboBox.Items.AddRange(object[])
             // This prevents LINQ from allocating an extra enumerator and a second object[] array.
-            cmbCategory.Items.AddRange(categories.ToArray()!);
+            cmbCategory.Items.AddRange(categoriesList.ToArray()!);
 
             if (previousSelection != null && cmbCategory.Items.Contains(previousSelection))
             {
