@@ -19,8 +19,7 @@ namespace ImageGeneratorApp
     {
         private readonly GenerationHistoryRepository _historyRepository;
         private readonly ImageProcessingService _imageProcessingService;
-        private BindingList<GenerationHistoryModel> _historyList = new();
-        private readonly List<GenerationHistoryModel> _fullHistoryCache = new();
+        private readonly BindingList<GenerationHistoryModel> _historyList = new();
 
         // UI Controls
         private SplitContainer splitContainer = null!;
@@ -111,12 +110,12 @@ namespace ImageGeneratorApp
             this.Size = new Size(1100, 700);
             this.StartPosition = FormStartPosition.CenterParent;
             this.MinimumSize = new Size(800, 500);
-            this.BackColor = Color.FromArgb(18, 19, 22); // Bauhaus Obsidian Ink
-            this.ForeColor = Color.FromArgb(240, 242, 248);
+            this.BackColor = Color.FromArgb(20, 20, 20); // Deep background dark mode
+            this.ForeColor = Color.White;
 
             // Custom typography
             var mainFont = new Font("Segoe UI", 9.5F);
-            var titleFont = new Font("Segoe UI", 10F, FontStyle.Bold);
+            var titleFont = new Font("Segoe UI Semibold", 10F);
             this.Font = mainFont;
 
             // SplitContainer for left-side (search/list) and right-side (preview/details)
@@ -142,24 +141,24 @@ namespace ImageGeneratorApp
             var leftPanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(25, 27, 34),
+                BackColor = Color.FromArgb(28, 28, 28),
                 Padding = new Padding(15)
             };
-            leftPanel.Paint += (s, e) => DrawRoundedBorder(leftPanel, e.Graphics, Color.FromArgb(45, 48, 60), 6);
+            leftPanel.Paint += (s, e) => DrawRoundedBorder(leftPanel, e.Graphics, Color.FromArgb(45, 45, 45), 8);
 
             var lblSearch = new Label
             {
                 Text = "Rechercher (Prompt / Modèle) :",
                 Dock = DockStyle.Top,
                 Height = 22,
-                ForeColor = Color.FromArgb(220, 225, 235),
+                ForeColor = Color.FromArgb(200, 200, 200),
                 Font = titleFont
             };
 
             txtSearch = new TextBox
             {
                 Dock = DockStyle.Top,
-                BackColor = Color.FromArgb(18, 19, 24),
+                BackColor = Color.FromArgb(40, 40, 40),
                 ForeColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle,
                 Height = 28,
@@ -181,10 +180,10 @@ namespace ImageGeneratorApp
                 AllowUserToDeleteRows = false,
                 AllowUserToOrderColumns = false,
                 RowHeadersVisible = false,
-                BackgroundColor = Color.FromArgb(18, 19, 24),
+                BackgroundColor = Color.FromArgb(30, 30, 30),
                 ForeColor = Color.White,
                 BorderStyle = BorderStyle.None,
-                GridColor = Color.FromArgb(40, 44, 56),
+                GridColor = Color.FromArgb(45, 45, 45),
                 EnableHeadersVisualStyles = false,
                 RowTemplate = { Height = 40 }
             };
@@ -193,21 +192,21 @@ namespace ImageGeneratorApp
             // Grid header style
             dataGridViewHistory.ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
             {
-                BackColor = Color.FromArgb(32, 35, 46),
+                BackColor = Color.FromArgb(40, 40, 40),
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
-                SelectionBackColor = Color.FromArgb(32, 35, 46),
+                Font = new Font("Segoe UI Semibold", 9.5F),
+                SelectionBackColor = Color.FromArgb(40, 40, 40),
                 Alignment = DataGridViewContentAlignment.MiddleLeft
             };
             dataGridViewHistory.ColumnHeadersHeight = 35;
             dataGridViewHistory.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
 
-            // Grid row cell styles (Bauhaus Red selection highlight)
+            // Grid row cell styles
             dataGridViewHistory.RowsDefaultCellStyle = new DataGridViewCellStyle
             {
-                BackColor = Color.FromArgb(25, 27, 34),
+                BackColor = Color.FromArgb(30, 30, 30),
                 ForeColor = Color.White,
-                SelectionBackColor = Color.FromArgb(217, 56, 30), // Bauhaus Vermilion Red
+                SelectionBackColor = Color.FromArgb(0, 120, 215), // Sky blue accent
                 SelectionForeColor = Color.White,
                 Font = mainFont,
                 Alignment = DataGridViewContentAlignment.MiddleLeft
@@ -215,9 +214,9 @@ namespace ImageGeneratorApp
 
             dataGridViewHistory.AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle
             {
-                BackColor = Color.FromArgb(20, 22, 28),
+                BackColor = Color.FromArgb(35, 35, 35),
                 ForeColor = Color.White,
-                SelectionBackColor = Color.FromArgb(217, 56, 30),
+                SelectionBackColor = Color.FromArgb(0, 120, 215),
                 SelectionForeColor = Color.White,
                 Font = mainFont
             };
@@ -225,7 +224,7 @@ namespace ImageGeneratorApp
             // DataGridView Columns
             var colDate = new DataGridViewTextBoxColumn
             {
-                DataPropertyName = "CreatedAtLocal",
+                DataPropertyName = "CreatedAt",
                 HeaderText = "Date",
                 Width = 120,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "yyyy-MM-dd HH:mm" }
@@ -453,16 +452,25 @@ namespace ImageGeneratorApp
                 this.UseWaitCursor = true;
                 var records = await _historyRepository.GetAllAsync();
 
-                _fullHistoryCache.Clear();
-                _fullHistoryCache.AddRange(records);
+                try
+                {
+                    // ⚡ Bolt Optimization: Suspend DataGridView BindingList events during bulk inserts
+                    // This avoids expensive UI layout and redraw operations on every single addition,
+                    // heavily improving performance and preventing the UI from freezing.
+                    _historyList.RaiseListChangedEvents = false;
+                    _historyList.Clear();
+                    foreach (var record in records)
+                    {
+                        _historyList.Add(record);
+                    }
+                }
+                finally
+                {
+                    _historyList.RaiseListChangedEvents = true;
+                    _historyList.ResetBindings();
+                }
 
-                // ⚡ Bolt Optimization: Optimize DataGridView bulk updates with BindingList reassignment
-                var resultsList = new List<GenerationHistoryModel>(_fullHistoryCache.Count);
-                resultsList.AddRange(_fullHistoryCache);
-
-                _historyList = new BindingList<GenerationHistoryModel>(resultsList);
                 dataGridViewHistory.DataSource = _historyList;
-
                 UpdateSelectionDetails();
             }
             catch (Exception)
@@ -492,32 +500,25 @@ namespace ImageGeneratorApp
             var searchTerm = txtSearch.Text;
             try
             {
-                // ⚡ Bolt Optimization: In-memory filtering instead of database queries for loaded collections
-                var resultsList = await Task.Run(() =>
+                var filtered = await _historyRepository.SearchAsync(searchTerm);
+
+                try
                 {
-                    if (string.IsNullOrWhiteSpace(searchTerm))
+                    // ⚡ Bolt Optimization: Suspend DataGridView BindingList events during bulk inserts
+                    // This avoids expensive UI layout and redraw operations on every single addition,
+                    // heavily improving performance and preventing the UI from freezing.
+                    _historyList.RaiseListChangedEvents = false;
+                    _historyList.Clear();
+                    foreach (var record in filtered)
                     {
-                        var allResults = new List<GenerationHistoryModel>(_fullHistoryCache.Count);
-                        allResults.AddRange(_fullHistoryCache);
-                        return allResults;
+                        _historyList.Add(record);
                     }
-
-                    var term = searchTerm.Trim();
-                    var results = new List<GenerationHistoryModel>(_fullHistoryCache.Count);
-                    foreach (var record in _fullHistoryCache)
-                    {
-                        if ((record.Prompt != null && record.Prompt.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
-                            (record.ModelName != null && record.ModelName.Contains(term, StringComparison.OrdinalIgnoreCase)))
-                        {
-                            results.Add(record);
-                        }
-                    }
-                    return results;
-                });
-
-                // ⚡ Bolt Optimization: Optimize DataGridView bulk updates with BindingList reassignment
-                _historyList = new BindingList<GenerationHistoryModel>(resultsList);
-                dataGridViewHistory.DataSource = _historyList;
+                }
+                finally
+                {
+                    _historyList.RaiseListChangedEvents = true;
+                    _historyList.ResetBindings();
+                }
 
                 UpdateSelectionDetails();
             }

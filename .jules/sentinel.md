@@ -147,15 +147,3 @@
 **Learning:** String manipulation loops that replace small tokens with larger contents can cause exponential memory growth if unconstrained.
 **Prevention:** Always enforce a strict maximum length limit on the actively resolved string (`currentPrompt.Length > 100000`) before processing further replacements to prevent memory exhaustion and crash the app gracefully instead.
 
-## 2026-07-23 - Prevent memory exhaustion on file loading
-**Vulnerability:** Unbounded file reads like loading image data into ImageSharp without checking length first can cause memory exhaustion (DoS).
-**Learning:** The application was not limiting the size of WebP image files before attempting to load them, making it vulnerable to denial of service if a user replaced the file with a massive one.
-**Prevention:** Before reading or loading the file contents with libraries, check the `FileStream.Length` property against a reasonable hard limit (e.g., 20 * 1024 * 1024) to gracefully reject files that are too large.
-## 2026-07-24 - Prevent Path Traversal in DPAPI Key Storage using Path.GetFileName
-**Vulnerability:** The API Key storage helper used `string.Concat(provider.Split(Path.GetInvalidFileNameChars()))` to sanitize the provider string before embedding it in a file path. An attacker passing `../../` as a provider would bypass this since it only strips the slashes, allowing directory traversal to unintended locations (e.g. `ApiKey_....dat`).
-**Learning:** Stripping invalid characters does not strip path traversal structures effectively if they are built purely from valid characters like `.`.
-**Prevention:** Always first extract the base file name using `Path.GetFileName(input)` from any untrusted or potentially tampered string before applying character sanitization.
-## 2026-07-29 - Prevent TOCTOU via EAFP
-**Vulnerability:** Checking `Directory.Exists` or unconditionally calling `Directory.CreateDirectory` before attempting to create a directory or save a file blocks thread-pool threads and creates a TOCTOU race condition.
-**Learning:** In async file writing methods where you also want to avoid blocking the thread-pool with synchronous `Directory.CreateDirectory` checks, relying on `Directory.Exists` is insecure.
-**Prevention:** Use the EAFP (Easier to Ask for Forgiveness than Permission) pattern: try to write the file first, catch `DirectoryNotFoundException`, and only then execute `Directory.CreateDirectory` before retrying.

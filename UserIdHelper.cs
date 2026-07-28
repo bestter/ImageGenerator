@@ -37,6 +37,7 @@ namespace ImageGeneratorApp
             {
                 // 🛡️ Sentinel: Prevent PII leakage by using a stable GUID instead of Environment.UserName
                 string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ImageGeneratorApp");
+                Directory.CreateDirectory(folder);
                 string filePath = Path.Combine(folder, "device_id.txt");
 
                 try
@@ -64,16 +65,7 @@ namespace ImageGeneratorApp
                 if (string.IsNullOrEmpty(_cachedDefaultUserId))
                 {
                     _cachedDefaultUserId = Guid.NewGuid().ToString("N");
-
-                    try
-                    {
-                        await File.WriteAllTextAsync(filePath, _cachedDefaultUserId);
-                    }
-                    catch (DirectoryNotFoundException)
-                    {
-                        await Task.Run(() => Directory.CreateDirectory(folder));
-                        await File.WriteAllTextAsync(filePath, _cachedDefaultUserId);
-                    }
+                    await File.WriteAllTextAsync(filePath, _cachedDefaultUserId);
                 }
             }
             catch
