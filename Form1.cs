@@ -719,7 +719,7 @@ namespace ImageGeneratorApp
             if (ext == "jpg") ext = "jpeg";
 
             byte[] b64Bytes;
-            using (var fs = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
+            using (var fs = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, true))
             {
                 // 🛡️ Sentinel: Prevent TOCTOU race condition by checking length on the opened handle
                 if (fs.Length > MaxFileSizeBytes)
@@ -995,7 +995,7 @@ namespace ImageGeneratorApp
                         try
                         {
                             // 🛡️ Sentinel: Prevent TOCTOU race condition by keeping the file handle open during check
-                            using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                             {
                                 if (fs.Length > MaxFileSizeBytes)
                                 {
