@@ -503,7 +503,7 @@ namespace ImageGeneratorApp
                     }
 
                     var term = searchTerm.Trim();
-                    var results = new List<GenerationHistoryModel>(_fullHistoryCache.Count);
+                    var results = new List<GenerationHistoryModel>(); // ⚡ Bolt Optimization: Removed unneeded initial capacity allocation to avoid memory waste and GC pressure
                     foreach (var record in _fullHistoryCache)
                     {
                         if ((record.Prompt != null && record.Prompt.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
