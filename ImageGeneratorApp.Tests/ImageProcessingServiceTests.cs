@@ -151,4 +151,3 @@ namespace ImageGeneratorApp.Tests
         }
     }
 }
-

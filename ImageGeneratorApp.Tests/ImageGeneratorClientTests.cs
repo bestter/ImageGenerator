@@ -739,4 +739,4 @@ namespace ImageGeneratorApp.Tests
             await act.Should().ThrowAsync<OperationCanceledException>().WithMessage("*Request timed out*");
         }
     }
-}
+}

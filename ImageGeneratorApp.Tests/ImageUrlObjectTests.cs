@@ -1,6 +1,6 @@
+using FluentAssertions;
 using System.Text.Json;
 using Xunit;
-using FluentAssertions;
 
 namespace ImageGeneratorApp.Tests;
 
