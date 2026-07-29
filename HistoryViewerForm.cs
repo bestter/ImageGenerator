@@ -146,15 +146,18 @@ namespace ImageGeneratorApp
             };
             leftPanel.Paint += (s, e) => DrawRoundedBorder(leftPanel, e.Graphics, Color.FromArgb(45, 45, 45), 8);
 
-            var lblSearch = new Label
-            {
-                Text = "Rechercher (Prompt / Modèle) :",
-                Dock = DockStyle.Top,
-                Height = 22,
-                ForeColor = Color.FromArgb(200, 200, 200),
-                Font = titleFont
-            };
+            SetupListPanel(leftPanel, mainFont);
 
+            var spacer = new Panel { Dock = DockStyle.Top, Height = 15 };
+            leftPanel.Controls.Add(spacer);
+
+            SetupSearchPanel(leftPanel, mainFont, titleFont);
+
+            splitContainer.Panel1.Controls.Add(leftPanel);
+        }
+
+        private void SetupSearchPanel(Panel parentPanel, Font mainFont, Font titleFont)
+        {
             txtSearch = new TextBox
             {
                 Dock = DockStyle.Top,
@@ -167,8 +170,21 @@ namespace ImageGeneratorApp
             };
             txtSearch.TextChanged += TxtSearch_TextChanged;
 
-            var spacer = new Panel { Dock = DockStyle.Top, Height = 15 };
+            var lblSearch = new Label
+            {
+                Text = "Rechercher (Prompt / Modèle) :",
+                Dock = DockStyle.Top,
+                Height = 22,
+                ForeColor = Color.FromArgb(220, 225, 235),
+                Font = titleFont
+            };
 
+            parentPanel.Controls.Add(txtSearch);
+            parentPanel.Controls.Add(lblSearch);
+        }
+
+        private void SetupListPanel(Panel parentPanel, Font mainFont)
+        {
             dataGridViewHistory = new DataGridView
             {
                 Dock = DockStyle.Fill,
@@ -246,11 +262,7 @@ namespace ImageGeneratorApp
 
             dataGridViewHistory.Columns.AddRange(colDate, colModel, colPrompt);
 
-            leftPanel.Controls.Add(dataGridViewHistory);
-            leftPanel.Controls.Add(spacer);
-            leftPanel.Controls.Add(txtSearch);
-            leftPanel.Controls.Add(lblSearch);
-            splitContainer.Panel1.Controls.Add(leftPanel);
+            parentPanel.Controls.Add(dataGridViewHistory);
         }
 
         private void SetupRightPanel(Font mainFont, Font titleFont)
@@ -263,6 +275,14 @@ namespace ImageGeneratorApp
             };
             rightPanel.Paint += (s, e) => DrawRoundedBorder(rightPanel, e.Graphics, Color.FromArgb(45, 45, 45), 8);
 
+            SetupPreviewPanel(rightPanel);
+            SetupDetailsPanel(rightPanel, mainFont, titleFont);
+
+            splitContainer.Panel2.Controls.Add(rightPanel);
+        }
+
+        private void SetupPreviewPanel(Panel parentPanel)
+        {
             // PictureBox Card
             var pictureCard = new Panel
             {
@@ -291,6 +311,11 @@ namespace ImageGeneratorApp
             };
             pictureCard.Controls.Add(lblImageStatus);
 
+            parentPanel.Controls.Add(pictureCard);
+        }
+
+        private void SetupDetailsPanel(Panel parentPanel, Font mainFont, Font titleFont)
+        {
             // Details Container
             var detailsContainer = new Panel
             {
@@ -409,9 +434,7 @@ namespace ImageGeneratorApp
                 txtMetadata, lblMeta, detailSpacer2, modelInfoPanel, detailSpacer1, txtPrompt, promptHeaderPanel
             });
 
-            rightPanel.Controls.Add(pictureCard);
-            rightPanel.Controls.Add(detailsContainer);
-            splitContainer.Panel2.Controls.Add(rightPanel);
+            parentPanel.Controls.Add(detailsContainer);
         }
 
         // Draw an elegant thin anti-aliased border around container panels

@@ -89,7 +89,8 @@ namespace ImageGeneratorApp
             return await Task.Run(async () =>
             {
                 // 🛡️ Sentinel: Prevent TOCTOU race condition and handle file existence securely
-                using var fs = new FileStream(webpFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                // ⚡ Bolt Optimization: Enable asynchronous OS-level I/O to prevent Thread Pool starvation during async reads
+                using var fs = new FileStream(webpFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true);
 
                 if (fs.Length == 0)
                 {
