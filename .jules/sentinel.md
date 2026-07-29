@@ -147,3 +147,7 @@
 **Learning:** String manipulation loops that replace small tokens with larger contents can cause exponential memory growth if unconstrained.
 **Prevention:** Always enforce a strict maximum length limit on the actively resolved string (`currentPrompt.Length > 100000`) before processing further replacements to prevent memory exhaustion and crash the app gracefully instead.
 
+## 2026-07-21 - Prevent Shoulder Surfing of Secrets in UI
+**Vulnerability:** The API key `TextBox` (`txtApiKey`) was manually masked using `PasswordChar = '•'`. While this obfuscates the text, relying on `UseSystemPasswordChar = true` is the recommended, more robust standard in Windows Forms to defer to OS-level secure credential masking.
+**Learning:** Hardcoding password characters can be visually inconsistent or lead to edge cases across different environments compared to native OS-level masking.
+**Prevention:** To securely mask sensitive input (like API keys) in Windows Forms and prevent shoulder surfing, use `TextBox.UseSystemPasswordChar = true` rather than manually setting a `PasswordChar`. This defers to the OS's default masking character for a secure and consistent UI.
