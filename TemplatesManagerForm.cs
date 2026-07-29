@@ -32,7 +32,7 @@ namespace ImageGeneratorApp
     {
         private readonly TemplateRepository _repository;
         private List<TemplateModel> _allTemplates = new();
-        private readonly BindingList<TemplateModel> _filteredTemplates = new();
+        private BindingList<TemplateModel> _filteredTemplates = new();
 
         // UI Controls
         private TextBox txtSearch = null!;
@@ -341,17 +341,10 @@ namespace ImageGeneratorApp
                 filtered = filtered.Where(t => string.Equals(t.Category, selectedCategory, StringComparison.OrdinalIgnoreCase));
             }
 
-            // Temporarily suspend events to prevent excessive DataGridView repaints
-            _filteredTemplates.RaiseListChangedEvents = false;
-            _filteredTemplates.Clear();
-
-            foreach (var template in filtered)
-            {
-                _filteredTemplates.Add(template);
-            }
-
-            _filteredTemplates.RaiseListChangedEvents = true;
-            _filteredTemplates.ResetBindings();
+            // ⚡ Bolt Optimization: Bulk update DataGridView by reassigning BindingList
+            // Avoids sequential internal array reallocations and manual event suspension
+            _filteredTemplates = new BindingList<TemplateModel>(filtered.ToList());
+            dataGridViewTemplates.DataSource = _filteredTemplates;
 
             ConfigureGridColumns();
         }
