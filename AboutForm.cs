@@ -69,8 +69,6 @@ https://www.gnu.org/licenses/";
             this.StartPosition = FormStartPosition.CenterParent;
             this.Size = new Size(520, 400);
             this.Padding = new Padding(0);
-            this.BackColor = Color.FromArgb(18, 19, 22);
-            this.ForeColor = Color.FromArgb(240, 242, 248);
 
             // Retrieve version dynamically from assembly metadata to stay in sync with csproj
             string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "2.0.1";
@@ -82,7 +80,7 @@ https://www.gnu.org/licenses/";
                 Location = new Point(20, 18),
                 AutoSize = true,
                 Font = new Font("Segoe UI", 16F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(217, 56, 30) // Bauhaus Vermilion Red
+                ForeColor = Color.FromArgb(30, 30, 30)
             };
 
             // Version
@@ -91,8 +89,7 @@ https://www.gnu.org/licenses/";
                 Text = $"Version {version}",
                 Location = new Point(20, 50),
                 AutoSize = true,
-                Font = new Font("Segoe UI", 10F, FontStyle.Regular),
-                ForeColor = Color.FromArgb(200, 205, 215)
+                Font = new Font("Segoe UI", 10F, FontStyle.Regular)
             };
 
             // Copyright
@@ -102,7 +99,7 @@ https://www.gnu.org/licenses/";
                 Location = new Point(20, 74),
                 AutoSize = true,
                 Font = new Font("Segoe UI", 9F, FontStyle.Regular),
-                ForeColor = Color.FromArgb(160, 165, 175)
+                ForeColor = Color.FromArgb(80, 80, 80)
             };
 
             // License notice title
@@ -111,8 +108,7 @@ https://www.gnu.org/licenses/";
                 Text = "Avis de licence :",
                 Location = new Point(20, 104),
                 AutoSize = true,
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(220, 225, 235)
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold)
             };
 
             // Read-only multi-line TextBox containing the exact official French GPL v3 notice
@@ -125,8 +121,7 @@ https://www.gnu.org/licenses/";
                 ReadOnly = true,
                 ScrollBars = ScrollBars.Vertical,
                 Font = new Font("Segoe UI", 9F, FontStyle.Regular),
-                BackColor = Color.FromArgb(28, 30, 38),
-                ForeColor = Color.FromArgb(220, 225, 235),
+                BackColor = SystemColors.Window,
                 BorderStyle = BorderStyle.FixedSingle,
                 WordWrap = true
             };
@@ -136,15 +131,10 @@ https://www.gnu.org/licenses/";
             {
                 Text = "Afficher la licence complète (GPL v3)",
                 Location = new Point(20, 312),
-                Size = new Size(280, 34),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(37, 40, 50),
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 9F, FontStyle.Regular),
-                Cursor = Cursors.Hand
+                Size = new Size(280, 32),
+                UseVisualStyleBackColor = true,
+                Font = new Font("Segoe UI", 9F, FontStyle.Regular)
             };
-            btnShowLicense.FlatAppearance.BorderColor = Color.FromArgb(60, 65, 80);
-            btnShowLicense.FlatAppearance.BorderSize = 1;
             btnShowLicense.Click += BtnShowLicense_Click;
 
             // Standard OK button (AcceptButton for Enter key and dialog result)
@@ -152,15 +142,10 @@ https://www.gnu.org/licenses/";
             {
                 Text = "OK",
                 Location = new Point(400, 312),
-                Size = new Size(90, 34),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(217, 56, 30), // Bauhaus Vermilion Red
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                Cursor = Cursors.Hand,
+                Size = new Size(90, 32),
+                UseVisualStyleBackColor = true,
                 DialogResult = DialogResult.OK
             };
-            btnOk.FlatAppearance.BorderSize = 0;
 
             this.AcceptButton = btnOk;
             this.Controls.AddRange(new Control[]
@@ -191,19 +176,14 @@ https://www.gnu.org/licenses/";
                 // We use FileShare.ReadWrite so the default handler can still open it while we hold the handle briefly.
                 using (var fs = new FileStream(licensePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 {
-                    // Validation succeeded; stream handle disposed at end of block
+                    var startInfo = new ProcessStartInfo
+                    {
+                        FileName = licensePath,
+                        UseShellExecute = true
+                    };
+
+                    Process.Start(startInfo);
                 }
-
-                // 🛡️ Sentinel: Prevent command injection by explicitly launching notepad.exe
-                // with UseShellExecute = false, and passing the target path securely as an argument.
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = "notepad.exe",
-                    UseShellExecute = false
-                };
-                startInfo.ArgumentList.Add(licensePath);
-
-                Process.Start(startInfo);
             }
             catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException)
             {

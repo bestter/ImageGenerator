@@ -217,7 +217,7 @@ namespace ImageGeneratorApp.Tests
             var listUnderscore = System.Linq.Enumerable.ToList(searchUnderscore);
             listUnderscore.Should().ContainSingle().Which.ImagePath.Should().Be("p2.webp");
         }
-    
+
         [Fact]
         public async Task SearchAsync_ShouldSafelyHandleSqlWildcards()
         {

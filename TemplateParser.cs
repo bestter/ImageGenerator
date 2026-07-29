@@ -36,59 +36,6 @@ namespace ImageGeneratorApp
         [GeneratedRegex(@" {2,}")]
         private static partial Regex MultipleSpacesRegex();
 
-        private static string ExtractKey(string innerContent)
-        {
-            int colonIndex = innerContent.IndexOf(':');
-            return colonIndex == -1 ? innerContent.Trim() : innerContent.Substring(0, colonIndex).Trim();
-        }
-
-        /// <summary>
-        /// Validates the syntax of the template placeholders in the given prompt.
-        /// </summary>
-        /// <param name="inputPrompt">The prompt to validate.</param>
-        /// <param name="errorMessage">When this method returns, contains the error message if validation failed; otherwise, null.</param>
-        /// <returns>True if the syntax is valid; otherwise, false.</returns>
-        public bool TryValidateSyntax(string inputPrompt, out string? errorMessage)
-        {
-            errorMessage = null;
-            if (string.IsNullOrWhiteSpace(inputPrompt))
-            {
-                return true;
-            }
-
-            int braceCount = 0;
-            for (int i = 0; i < inputPrompt.Length; i++)
-            {
-                char c = inputPrompt[i];
-                if (c == '{')
-                {
-                    braceCount++;
-                    if (braceCount > 1)
-                    {
-                        errorMessage = "Accolades imbriquées non supportées dans le prompt.";
-                        return false;
-                    }
-                }
-                else if (c == '}')
-                {
-                    braceCount--;
-                    if (braceCount < 0)
-                    {
-                        errorMessage = "Accolade fermante '}' inattendue ou non ouverte.";
-                        return false;
-                    }
-                }
-            }
-
-            if (braceCount != 0)
-            {
-                errorMessage = "Accolade ouvrante '{' non fermée.";
-                return false;
-            }
-
-            return true;
-        }
-
         /// <summary>
         /// Recursively resolves template placeholders within a prompt, formats them with any provided parameters,
         /// and post-processes the final output by trimming and clearing double spaces.
@@ -104,9 +51,30 @@ namespace ImageGeneratorApp
             }
 
             // Validate braces matching (fast-scan) to prevent syntax errors
-            if (!TryValidateSyntax(inputPrompt, out string? errorMessage))
+            int braceCount = 0;
+            for (int i = 0; i < inputPrompt.Length; i++)
             {
-                throw new FormatException(errorMessage);
+                char c = inputPrompt[i];
+                if (c == '{')
+                {
+                    braceCount++;
+                    if (braceCount > 1)
+                    {
+                        throw new FormatException("Accolades imbriquées non supportées dans le prompt.");
+                    }
+                }
+                else if (c == '}')
+                {
+                    braceCount--;
+                    if (braceCount < 0)
+                    {
+                        throw new FormatException("Accolade fermante '}' inattendue ou non ouverte.");
+                    }
+                }
+            }
+            if (braceCount != 0)
+            {
+                throw new FormatException("Accolade ouvrante '{' non fermée.");
             }
 
             var currentPrompt = inputPrompt;
@@ -130,7 +98,7 @@ namespace ImageGeneratorApp
             var initialMatches = TemplateRegex().Matches(inputPrompt);
             foreach (System.Text.RegularExpressions.Match match in initialMatches)
             {
-                var key = ExtractKey(match.Value[1..^1]);
+                var key = match.Value[1..^1].Split(':')[0].Trim();
                 keysToFetch.Add(key);
             }
 
@@ -149,7 +117,7 @@ namespace ImageGeneratorApp
                     var templateMatches = TemplateRegex().Matches(template.Value);
                     foreach (System.Text.RegularExpressions.Match match in templateMatches)
                     {
-                        var innerKey = ExtractKey(match.Value[1..^1]);
+                        var innerKey = match.Value[1..^1].Split(':')[0].Trim();
                         if (!localCache.ContainsKey(innerKey))
                         {
                             keysToFetch.Add(innerKey);
@@ -203,27 +171,12 @@ namespace ImageGeneratorApp
                     if (colonIndex != -1)
                     {
                         var paramString = innerContent.Substring(colonIndex + 1);
-                        int i = 0;
-                        int startIndex = 0;
-                        int nextColonIndex;
-
-                        // ⚡ Bolt Optimization: Use a StringBuilder instead of chaining string.Replace() to avoid
-                        // creating excessive intermediate string allocations and reducing Garbage Collection (GC) pressure.
-                        var sb = new System.Text.StringBuilder(templateValue, templateValue.Length + 50);
-
-                        while ((nextColonIndex = paramString.IndexOf(':', startIndex)) != -1)
+                        var paramParts = paramString.Split(':');
+                        // ⚡ Bolt Optimization: Avoid LINQ and intermediate array allocations during template resolution
+                        for (int i = 0; i < paramParts.Length; i++)
                         {
-                            var paramPart = paramString.Substring(startIndex, nextColonIndex - startIndex).Trim();
-                            sb.Replace($"{{{i}}}", paramPart);
-                            startIndex = nextColonIndex + 1;
-                            i++;
+                            templateValue = templateValue.Replace($"{{{i}}}", paramParts[i].Trim());
                         }
-
-                        // process the last part
-                        var lastPart = paramString.Substring(startIndex).Trim();
-                        sb.Replace($"{{{i}}}", lastPart);
-
-                        templateValue = sb.ToString();
                     }
 
                     // Update the prompt replacing all occurrences of this specific tag expression
