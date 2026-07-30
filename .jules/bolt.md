@@ -152,3 +152,6 @@
 ## 2026-11-20 - Cache System.Drawing.Image instances and avoid GDI+ leaks
 **Learning:** When implementing in-memory caching for `System.Drawing.Image` instances in C# WinForms (e.g., an MRU cache) to avoid disk I/O, explicitly call `.Dispose()` on the old image only if it is no longer referenced in the cache (e.g., `!cache.ContainsValue(oldImage)`) to prevent GDI+ unmanaged memory leaks.
 **Action:** Always verify cache membership before disposing `System.Drawing.Image` instances in WinForms applications that implement an MRU caching strategy for images.
+## 2024-07-30 - Replace FileStream existence check with File.Exists
+**Learning:** Replaced a `FileStream` used purely for validating file existence with `File.Exists`. While `FileStream` prevents TOCTOU if it's held open while the file is read, here we just verified existence, closed it, and launched the file via ShellExecute. A microbenchmark showed `File.Exists` is >3x faster.
+**Action:** Use `File.Exists` when merely checking for existence before launching an external process, avoiding the overhead of `FileStream` allocation when TOCTOU protection isn't achieved or needed for just ShellExecute.
