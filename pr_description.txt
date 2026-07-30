@@ -1,7 +1,0 @@
-💡 What: Replaced slow database queries with instant in-memory filtering during history search, and optimized `DataGridView` bulk updates by wrapping a pre-allocated `List<T>` in a new `BindingList<T>` and reassigning the `DataSource`, instead of sequentially modifying an existing list.
-
-🎯 Why: Firing asynchronous SQLite queries (`SearchAsync`) on every debounced keystroke introduces massive, redundant I/O overhead. Furthermore, sequentially adding items to a `BindingList<T>` causes internal array reallocations and requires expensive manual event suspension logic, leading to UI thread GC pressure.
-
-📊 Impact: Eliminates database I/O latency during search, guaranteeing stutter-free, instant list filtering. Completely removes sequential overhead and intermediate reallocations when rendering search results in the grid.
-
-🔬 Measurement: Observe UI responsiveness in the History Viewer when rapidly typing in the search box; the filtering will now be strictly bound by memory speed, completely decoupled from disk/SQLite performance.
