@@ -146,12 +146,12 @@ namespace ImageGeneratorApp
             };
             leftPanel.Paint += (s, e) => DrawRoundedBorder(leftPanel, e.Graphics, Color.FromArgb(45, 45, 45), 8);
 
-            SetupListPanel(leftPanel, mainFont);
+            SetupSearchPanel(leftPanel, mainFont, titleFont);
 
             var spacer = new Panel { Dock = DockStyle.Top, Height = 15 };
             leftPanel.Controls.Add(spacer);
 
-            SetupSearchPanel(leftPanel, mainFont, titleFont);
+            SetupListPanel(leftPanel, mainFont);
 
             splitContainer.Panel1.Controls.Add(leftPanel);
         }
@@ -179,8 +179,8 @@ namespace ImageGeneratorApp
                 Font = titleFont
             };
 
-            parentPanel.Controls.Add(txtSearch);
             parentPanel.Controls.Add(lblSearch);
+            parentPanel.Controls.Add(txtSearch);
         }
 
         private void SetupListPanel(Panel parentPanel, Font mainFont)
@@ -275,8 +275,8 @@ namespace ImageGeneratorApp
             };
             rightPanel.Paint += (s, e) => DrawRoundedBorder(rightPanel, e.Graphics, Color.FromArgb(45, 45, 45), 8);
 
-            SetupPreviewPanel(rightPanel);
             SetupDetailsPanel(rightPanel, mainFont, titleFont);
+            SetupPreviewPanel(rightPanel);
 
             splitContainer.Panel2.Controls.Add(rightPanel);
         }
@@ -298,7 +298,6 @@ namespace ImageGeneratorApp
                 SizeMode = PictureBoxSizeMode.Zoom,
                 BackColor = Color.FromArgb(20, 20, 20)
             };
-            pictureCard.Controls.Add(pictureBoxImage);
 
             lblImageStatus = new Label
             {
@@ -309,7 +308,9 @@ namespace ImageGeneratorApp
                 ForeColor = Color.FromArgb(150, 150, 150),
                 Font = new Font("Segoe UI", 9.0F, FontStyle.Italic)
             };
+
             pictureCard.Controls.Add(lblImageStatus);
+            pictureCard.Controls.Add(pictureBoxImage);
 
             parentPanel.Controls.Add(pictureCard);
         }
@@ -431,7 +432,7 @@ namespace ImageGeneratorApp
             };
 
             detailsContainer.Controls.AddRange(new Control[] {
-                txtMetadata, lblMeta, detailSpacer2, modelInfoPanel, detailSpacer1, txtPrompt, promptHeaderPanel
+                promptHeaderPanel, txtPrompt, detailSpacer1, modelInfoPanel, detailSpacer2, lblMeta, txtMetadata
             });
 
             parentPanel.Controls.Add(detailsContainer);
