@@ -102,5 +102,62 @@ namespace ImageGeneratorApp.Tests
             json.Should().NotContain("\"image\":");
             json.Should().NotContain("\"images\":");
         }
+
+        [Fact]
+        public void Deserialize_ShouldBindCorrectly()
+        {
+            // Arrange
+            var json = @"{
+                ""model"": ""test-model"",
+                ""prompt"": ""test prompt"",
+                ""n"": 2,
+                ""resolution"": ""512x512"",
+                ""aspect_ratio"": ""1:1"",
+                ""user"": ""user123"",
+                ""response_format"": ""b64_json"",
+                ""image"": { ""url"": ""url1"" },
+                ""images"": [ { ""url"": ""url2"" } ]
+            }";
+
+            // Act
+            var request = JsonSerializer.Deserialize<ImageGeneratorRequest>(json);
+
+            // Assert
+            request.Should().NotBeNull();
+            request!.Model.Should().Be("test-model");
+            request.Prompt.Should().Be("test prompt");
+            request.N.Should().Be(2);
+            request.Resolution.Should().Be("512x512");
+            request.AspectRatio.Should().Be("1:1");
+            request.User.Should().Be("user123");
+            request.ResponseFormat.Should().Be("b64_json");
+            request.Image.Should().NotBeNull();
+            request.Image!.Url.Should().Be("url1");
+            request.Images.Should().NotBeNull();
+            request.Images.Should().HaveCount(1);
+            request.Images![0].Url.Should().Be("url2");
+        }
+
+        [Fact]
+        public void Deserialize_EmptyJson_ShouldUseDefaultValues()
+        {
+            // Arrange
+            var json = "{}";
+
+            // Act
+            var request = JsonSerializer.Deserialize<ImageGeneratorRequest>(json);
+
+            // Assert
+            request.Should().NotBeNull();
+            request!.Model.Should().BeEmpty();
+            request.Prompt.Should().BeEmpty();
+            request.N.Should().Be(1);
+            request.Resolution.Should().BeEmpty();
+            request.AspectRatio.Should().BeEmpty();
+            request.User.Should().BeEmpty();
+            request.ResponseFormat.Should().Be("b64_json");
+            request.Image.Should().BeNull();
+            request.Images.Should().BeNull();
+        }
     }
 }
