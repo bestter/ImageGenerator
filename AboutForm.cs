@@ -172,18 +172,19 @@ https://www.gnu.org/licenses/";
 
             try
             {
-                // 🛡️ Sentinel: Open a FileStream to validate existence and prevent TOCTOU before launching the file.
-                // We use FileShare.ReadWrite so the default handler can still open it while we hold the handle briefly.
-                using (var fs = new FileStream(licensePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                // ⚡ Bolt: Replaced FileStream with File.Exists to avoid unnecessary file handle allocation and overhead.
+                if (!File.Exists(licensePath))
                 {
-                    var startInfo = new ProcessStartInfo
-                    {
-                        FileName = licensePath,
-                        UseShellExecute = true
-                    };
-
-                    Process.Start(startInfo);
+                    throw new FileNotFoundException();
                 }
+
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = licensePath,
+                    UseShellExecute = true
+                };
+
+                Process.Start(startInfo);
             }
             catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException)
             {
