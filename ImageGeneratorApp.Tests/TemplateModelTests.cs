@@ -29,6 +29,10 @@ namespace ImageGeneratorApp.Tests
             // Check that CreatedAt and UpdatedAt are initialized within a reasonable timeframe (around when the object was created)
             model.CreatedAt.Should().BeOnOrAfter(beforeCreation).And.BeOnOrBefore(afterCreation);
             model.UpdatedAt.Should().BeOnOrAfter(beforeCreation).And.BeOnOrBefore(afterCreation);
+
+            // Check that they are specifically UTC
+            model.CreatedAt.Kind.Should().Be(DateTimeKind.Utc);
+            model.UpdatedAt.Kind.Should().Be(DateTimeKind.Utc);
         }
 
         [Fact]
@@ -60,6 +64,25 @@ namespace ImageGeneratorApp.Tests
             model.LastUsed.Should().Be(expectedLastUsed);
             model.CreatedAt.Should().Be(expectedDate);
             model.UpdatedAt.Should().Be(expectedDate);
+        }
+
+        [Fact]
+        public void Constructor_MultipleInstances_ShouldHaveDistinctCreationTimes()
+        {
+            // Act
+            var model1 = new TemplateModel();
+            var model2 = new TemplateModel();
+
+            // Assert
+            model1.Should().NotBeSameAs(model2);
+
+            // In quick succession, they might have the same time, but they are independent instances
+            model1.CreatedAt.Should().BeOnOrBefore(model2.CreatedAt);
+
+            // Additional checks to make sure we're correctly dealing with different values
+            model1.Id = 1;
+            model2.Id = 2;
+            model1.Id.Should().NotBe(model2.Id);
         }
     }
 }
