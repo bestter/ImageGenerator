@@ -19,7 +19,7 @@ namespace ImageGeneratorApp
     {
         private readonly GenerationHistoryRepository _historyRepository;
         private readonly ImageProcessingService _imageProcessingService;
-        private readonly BindingList<GenerationHistoryModel> _historyList = new();
+        private readonly List<GenerationHistoryModel> _allHistoryCache = new();
 
         // UI Controls
         private SplitContainer splitContainer = null!;
@@ -475,25 +475,13 @@ namespace ImageGeneratorApp
                 this.UseWaitCursor = true;
                 var records = await _historyRepository.GetAllAsync();
 
-                try
-                {
-                    // ⚡ Bolt Optimization: Suspend DataGridView BindingList events during bulk inserts
-                    // This avoids expensive UI layout and redraw operations on every single addition,
-                    // heavily improving performance and preventing the UI from freezing.
-                    _historyList.RaiseListChangedEvents = false;
-                    _historyList.Clear();
-                    foreach (var record in records)
-                    {
-                        _historyList.Add(record);
-                    }
-                }
-                finally
-                {
-                    _historyList.RaiseListChangedEvents = true;
-                    _historyList.ResetBindings();
-                }
+                _allHistoryCache.Clear();
+                _allHistoryCache.AddRange(records);
 
-                dataGridViewHistory.DataSource = _historyList;
+                // ⚡ Bolt Optimization: Optimize DataGridView bulk updates with BindingList reassignment.
+                // Instead of clearing and sequentially adding items to an existing BindingList, we wrap a pre-allocated
+                // List<T> in a new BindingList<T> and reassign the DataSource.
+                dataGridViewHistory.DataSource = new BindingList<GenerationHistoryModel>(_allHistoryCache.ToList());
                 UpdateSelectionDetails();
             }
             catch (Exception)
@@ -516,31 +504,35 @@ namespace ImageGeneratorApp
             _searchDebounceTimer.Start();
         }
 
-        private async void SearchDebounceTimer_Tick(object? sender, EventArgs e)
+        private void SearchDebounceTimer_Tick(object? sender, EventArgs e)
         {
             _searchDebounceTimer.Stop();
 
             var searchTerm = txtSearch.Text;
             try
             {
-                var filtered = await _historyRepository.SearchAsync(searchTerm);
-
-                try
+                if (string.IsNullOrWhiteSpace(searchTerm))
                 {
-                    // ⚡ Bolt Optimization: Suspend DataGridView BindingList events during bulk inserts
-                    // This avoids expensive UI layout and redraw operations on every single addition,
-                    // heavily improving performance and preventing the UI from freezing.
-                    _historyList.RaiseListChangedEvents = false;
-                    _historyList.Clear();
-                    foreach (var record in filtered)
-                    {
-                        _historyList.Add(record);
-                    }
+                    dataGridViewHistory.DataSource = new BindingList<GenerationHistoryModel>(_allHistoryCache.ToList());
                 }
-                finally
+                else
                 {
-                    _historyList.RaiseListChangedEvents = true;
-                    _historyList.ResetBindings();
+                    // ⚡ Bolt Optimization: In-memory filtering instead of database queries for loaded collections.
+                    // This eliminates massive, redundant I/O overhead on every debounced keystroke and guarantees instant filtering.
+                    var filtered = new List<GenerationHistoryModel>();
+                    foreach (var record in _allHistoryCache)
+                    {
+                        if (record.Prompt.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                            record.ModelName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                        {
+                            filtered.Add(record);
+                        }
+                    }
+
+                    // ⚡ Bolt Optimization: Optimize DataGridView bulk updates with BindingList reassignment.
+                    // Instead of clearing and sequentially adding items to an existing BindingList, we wrap a pre-allocated
+                    // List<T> in a new BindingList<T> and reassign the DataSource.
+                    dataGridViewHistory.DataSource = new BindingList<GenerationHistoryModel>(filtered);
                 }
 
                 UpdateSelectionDetails();

@@ -1,11 +1,7 @@
-💡 What:
-Enabled asynchronous OS-level I/O by passing `useAsync: true` to the `FileStream` constructor in `ImageProcessingService.LoadWebpForWinFormsAsync`.
+💡 What: Replaced slow database queries with instant in-memory filtering during history search, and optimized `DataGridView` bulk updates by wrapping a pre-allocated `List<T>` in a new `BindingList<T>` and reassigning the `DataSource`, instead of sequentially modifying an existing list.
 
-🎯 Why:
-The `Image.LoadAsync(fs)` method reads from the stream asynchronously. If the `FileStream` is not opened with `useAsync: true`, .NET performs standard blocking I/O on thread pool threads (sync-over-async), which blocks threads while waiting for the OS to complete the disk read. Under heavy load or in environments with limited thread pools, this leads to thread pool starvation, drastically degrading application performance and responsiveness. Enabling `useAsync: true` delegates the I/O off the thread pool (using overlapped I/O on Windows or equivalent mechanisms on Linux), allowing threads to process other work while the disk read completes.
+🎯 Why: Firing asynchronous SQLite queries (`SearchAsync`) on every debounced keystroke introduces massive, redundant I/O overhead. Furthermore, sequentially adding items to a `BindingList<T>` causes internal array reallocations and requires expensive manual event suspension logic, leading to UI thread GC pressure.
 
-📊 Impact:
-Eliminates thread pool exhaustion caused by synchronous reads during asynchronous ImageSharp loading.
+📊 Impact: Eliminates database I/O latency during search, guaranteeing stutter-free, instant list filtering. Completely removes sequential overhead and intermediate reallocations when rendering search results in the grid.
 
-🔬 Measurement:
-A standalone benchmark reading a 10MB file 100 times concurrently with a constrained thread pool (`ThreadPool.SetMaxThreads(10, 10)`) demonstrated the impact. While raw disk I/O time variations exist across sandbox environments, the key optimization is reducing thread pool queue wait times. In a constrained environment, `useAsync: true` ensures threads are yielded immediately rather than blocking synchronously on I/O.
+🔬 Measurement: Observe UI responsiveness in the History Viewer when rapidly typing in the search box; the filtering will now be strictly bound by memory speed, completely decoupled from disk/SQLite performance.
