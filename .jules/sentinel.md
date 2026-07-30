@@ -151,3 +151,8 @@
 **Vulnerability:** The API key `TextBox` (`txtApiKey`) was manually masked using `PasswordChar = '•'`. While this obfuscates the text, relying on `UseSystemPasswordChar = true` is the recommended, more robust standard in Windows Forms to defer to OS-level secure credential masking.
 **Learning:** Hardcoding password characters can be visually inconsistent or lead to edge cases across different environments compared to native OS-level masking.
 **Prevention:** To securely mask sensitive input (like API keys) in Windows Forms and prevent shoulder surfing, use `TextBox.UseSystemPasswordChar = true` rather than manually setting a `PasswordChar`. This defers to the OS's default masking character for a secure and consistent UI.
+
+## 2026-07-28 - Prevent Path Traversal in DPAPI Key Storage
+**Vulnerability:** The API Key storage helper used `provider.Split(Path.GetInvalidFileNameChars())` to sanitize the provider name before writing the local file. While this strips `\` and `/`, it does not inherently guarantee safe extraction of the filename if a path is supplied, potentially leaving other traversal patterns or misinterpretations.
+**Learning:** `Path.GetInvalidFileNameChars()` is meant for invalidating characters, not extracting safe filenames from potentially malicious paths.
+**Prevention:** Always use `Path.GetFileName()` to definitively isolate the final file component from a user-provided or potentially tainted path before performing any further character sanitization or path combinations.
