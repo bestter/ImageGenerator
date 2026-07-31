@@ -155,3 +155,6 @@
 ## 2024-07-30 - Replace FileStream existence check with File.Exists
 **Learning:** Replaced a `FileStream` used purely for validating file existence with `File.Exists`. While `FileStream` prevents TOCTOU if it's held open while the file is read, here we just verified existence, closed it, and launched the file via ShellExecute. A microbenchmark showed `File.Exists` is >3x faster.
 **Action:** Use `File.Exists` when merely checking for existence before launching an external process, avoiding the overhead of `FileStream` allocation when TOCTOU protection isn't achieved or needed for just ShellExecute.
+## 2024-05-18 - Reduce GC Pressure with StringBuilder for Multiple Replacements
+**Learning:** In C#, chaining multiple `string.Replace` calls inside a loop creates excessive intermediate string allocations because strings are immutable. This leads to high memory churn and Garbage Collection (GC) pressure, which is particularly detrimental in hot paths or recursive parsing algorithms.
+**Action:** Always use a `StringBuilder` when performing multiple substring replacements on the same string within a loop. Initialize the `StringBuilder` with an adequate capacity to prevent internal array resizing, perform the `.Replace()` operations on the builder, and call `.ToString()` only once at the end.
