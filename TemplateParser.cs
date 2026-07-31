@@ -172,11 +172,14 @@ namespace ImageGeneratorApp
                     {
                         var paramString = innerContent.Substring(colonIndex + 1);
                         var paramParts = paramString.Split(':');
-                        // ⚡ Bolt Optimization: Avoid LINQ and intermediate array allocations during template resolution
+                        // ⚡ Bolt Optimization: Use StringBuilder for multiple substring replacements instead of chaining immutable string.Replace calls
+                        // to reduce intermediate allocations and Garbage Collection (GC) pressure.
+                        var sb = new System.Text.StringBuilder(templateValue, templateValue.Length + 100);
                         for (int i = 0; i < paramParts.Length; i++)
                         {
-                            templateValue = templateValue.Replace($"{{{i}}}", paramParts[i].Trim());
+                            sb.Replace($"{{{i}}}", paramParts[i].Trim());
                         }
+                        templateValue = sb.ToString();
                     }
 
                     // Update the prompt replacing all occurrences of this specific tag expression
