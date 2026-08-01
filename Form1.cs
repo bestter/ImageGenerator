@@ -1044,9 +1044,14 @@ namespace ImageGeneratorApp
             var (triggerIndex, query, active) = GetActiveTrigger();
             if (active)
             {
-                var matched = _templateKeysCache
-                    .Where(k => k.Contains(query, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
+                var matched = new List<string>();
+                foreach (var k in _templateKeysCache)
+                {
+                    if (k.Contains(query, StringComparison.OrdinalIgnoreCase))
+                    {
+                        matched.Add(k);
+                    }
+                }
 
                 if (matched.Count > 0)
                 {
@@ -1054,7 +1059,8 @@ namespace ImageGeneratorApp
                     lstAutocomplete.Items.Clear();
                     // ⚡ Bolt Optimization: Batch insert autocomplete items using .AddRange() instead of a foreach loop
                     // This prevents repeated array resizing and layout recalculations, optimizing rendering performance
-                    lstAutocomplete.Items.AddRange(matched.Cast<object>().ToArray());
+                    // ⚡ Bolt Optimization: Use array covariance with string[] instead of Cast<object>()
+                    lstAutocomplete.Items.AddRange(matched.ToArray());
                     lstAutocomplete.SelectedIndex = 0;
                     lstAutocomplete.EndUpdate();
 
