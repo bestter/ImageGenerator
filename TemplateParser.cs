@@ -98,7 +98,9 @@ namespace ImageGeneratorApp
             var initialMatches = TemplateRegex().Matches(inputPrompt);
             foreach (System.Text.RegularExpressions.Match match in initialMatches)
             {
-                var key = match.Value[1..^1].Split(':')[0].Trim();
+                var rawInner = match.Value[1..^1];
+                int colonIdx = rawInner.IndexOf(':');
+                var key = colonIdx == -1 ? rawInner.Trim() : rawInner.Substring(0, colonIdx).Trim();
                 keysToFetch.Add(key);
             }
 
@@ -117,7 +119,9 @@ namespace ImageGeneratorApp
                     var templateMatches = TemplateRegex().Matches(template.Value);
                     foreach (System.Text.RegularExpressions.Match match in templateMatches)
                     {
-                        var innerKey = match.Value[1..^1].Split(':')[0].Trim();
+                        var rawInner = match.Value[1..^1];
+                        int colonIdx = rawInner.IndexOf(':');
+                        var innerKey = colonIdx == -1 ? rawInner.Trim() : rawInner.Substring(0, colonIdx).Trim();
                         if (!localCache.ContainsKey(innerKey))
                         {
                             keysToFetch.Add(innerKey);
@@ -171,13 +175,27 @@ namespace ImageGeneratorApp
                     if (colonIndex != -1)
                     {
                         var paramString = innerContent.Substring(colonIndex + 1);
-                        var paramParts = paramString.Split(':');
                         // ⚡ Bolt Optimization: Use StringBuilder for multiple substring replacements instead of chaining immutable string.Replace calls
                         // to reduce intermediate allocations and Garbage Collection (GC) pressure.
                         var sb = new System.Text.StringBuilder(templateValue, templateValue.Length + 100);
-                        for (int i = 0; i < paramParts.Length; i++)
+
+                        // ⚡ Bolt Optimization: Avoid string array allocations by iteratively finding the colon separator
+                        int paramIndex = 0;
+                        int currentPos = 0;
+                        while (currentPos <= paramString.Length)
                         {
-                            sb.Replace($"{{{i}}}", paramParts[i].Trim());
+                            int nextColon = paramString.IndexOf(':', currentPos);
+                            if (nextColon == -1)
+                            {
+                                sb.Replace($"{{{paramIndex}}}", paramString.Substring(currentPos).Trim());
+                                break;
+                            }
+                            else
+                            {
+                                sb.Replace($"{{{paramIndex}}}", paramString.Substring(currentPos, nextColon - currentPos).Trim());
+                                currentPos = nextColon + 1;
+                                paramIndex++;
+                            }
                         }
                         templateValue = sb.ToString();
                     }
