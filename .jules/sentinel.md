@@ -156,6 +156,10 @@
 **Vulnerability:** The API Key storage helper used `provider.Split(Path.GetInvalidFileNameChars())` to sanitize the provider name before writing the local file. While this strips `\` and `/`, it does not inherently guarantee safe extraction of the filename if a path is supplied, potentially leaving other traversal patterns or misinterpretations.
 **Learning:** `Path.GetInvalidFileNameChars()` is meant for invalidating characters, not extracting safe filenames from potentially malicious paths.
 **Prevention:** Always use `Path.GetFileName()` to definitively isolate the final file component from a user-provided or potentially tainted path before performing any further character sanitization or path combinations.
+## 2026-07-29 - Prevent DoS via Unbounded File Stream Read
+**Vulnerability:** The application was loading WebP images into ImageSharp directly from a `FileStream` without enforcing a maximum file size limit. An attacker or user could supply a massive file, leading to memory exhaustion and an `OutOfMemoryException` (Denial of Service) when ImageSharp attempts to parse it.
+**Learning:** Even when securely opening a `FileStream` to prevent TOCTOU, the size of the stream must be validated against a reasonable limit before passing it to parsers or loaders that buffer data in memory.
+**Prevention:** Always enforce a strict maximum file size limit (e.g., checking `fs.Length > 20 * 1024 * 1024`) on the opened `FileStream` before reading its contents or passing it to the parser.
 ## 2026-07-28 - Prevent Memory Exhaustion via File Size Limits on Load
 **Vulnerability:** The application was loading potentially large WEBP history files directly from disk into memory via ImageSharp without any file size constraints. This creates a Denial of Service (DoS) vulnerability via memory exhaustion if an attacker provides a massive, compressed file.
 **Learning:** Checking `fs.Length == 0` is insufficient. Applications parsing user-provided files (even locally) must place an upper bound on file size before processing to prevent `OutOfMemoryException`.
