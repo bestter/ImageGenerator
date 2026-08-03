@@ -72,6 +72,36 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
+        public async Task LoadWebpForWinFormsAsync_OversizedFile_ThrowsArgumentException()
+        {
+            // Arrange
+            var oversizedFilePath = Path.Combine(Path.GetTempPath(), $"oversized_{Guid.NewGuid():N}.webp");
+            using (var fs = new FileStream(oversizedFilePath, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                // Simulate a file slightly larger than 20MB using sparse allocation
+                fs.SetLength((20 * 1024 * 1024) + 1);
+            }
+            _createdWebpPath = oversizedFilePath; // Register for cleanup
+
+            try
+            {
+                // Act
+                Func<Task> act = async () => await _imageProcessingService.LoadWebpForWinFormsAsync(oversizedFilePath);
+
+                // Assert
+                await act.Should().ThrowAsync<ArgumentException>()
+                    .WithMessage("L'image dépasse la limite de taille autorisée de 20 Mo.*");
+            }
+            finally
+            {
+                if (File.Exists(oversizedFilePath))
+                {
+                    File.Delete(oversizedFilePath);
+                }
+            }
+        }
+
+        [Fact]
         public async Task LoadWebpForWinFormsAsync_EmptyFile_ThrowsArgumentException()
         {
             // Arrange
