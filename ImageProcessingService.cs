@@ -40,7 +40,6 @@ namespace ImageGeneratorApp
                 "ImageGeneratorApp",
                 "HistoryImages"
             );
-            Directory.CreateDirectory(historyFolder);
 
             // Clean the base file name, strip any existing extension, and append .webp
             var safeBaseName = Path.GetFileName(baseFileName);
@@ -63,7 +62,17 @@ namespace ImageGeneratorApp
                     Quality = 80
                 };
 
-                image.Save(fullPath, encoder);
+                // 🛡️ Sentinel: Prevent TOCTOU race condition and avoid blocking the thread pool.
+                // Use EAFP (Easier to Ask for Forgiveness than Permission) pattern.
+                try
+                {
+                    image.Save(fullPath, encoder);
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    Directory.CreateDirectory(historyFolder);
+                    image.Save(fullPath, encoder);
+                }
             });
 
             return fullPath;
