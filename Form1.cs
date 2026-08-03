@@ -541,7 +541,13 @@ namespace ImageGeneratorApp
                     imagesList.Add(new ImageUrlObject { Type = "image_url", Url = $"data:image/png;base64,{imageToEditBase64}" });
                 }
 
-                var tasks = selectedImages.Select(imgPath => ProcessImageAsync(imgPath)).ToArray();
+                // ⚡ Bolt Optimization: Avoid LINQ Select and ToArray chains when scheduling asynchronous tasks
+                // to prevent allocating intermediate enumerators, arrays, and closures.
+                var tasks = new List<Task<ImageUrlObject?>>(selectedImages.Count);
+                foreach (var imgPath in selectedImages)
+                {
+                    tasks.Add(ProcessImageAsync(imgPath));
+                }
 
                 var results = await Task.WhenAll(tasks);
                 foreach (var res in results)
