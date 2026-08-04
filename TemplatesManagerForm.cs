@@ -242,18 +242,27 @@ namespace ImageGeneratorApp
             cmbCategory.Items.Clear();
             cmbCategory.Items.Add("Toutes les catégories");
 
-            var categories = _allTemplates
-                .Select(t => t.Category)
-                .Where(c => !string.IsNullOrWhiteSpace(c))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(c => c);
+            // ⚡ Bolt Optimization: Replace LINQ collection extraction chain with a HashSet and explicit Sort
+            // This eliminates multiple intermediate enumerators, closures, and arrays, significantly reducing
+            // Garbage Collection pressure on the UI thread when the underlying master collection is large.
+            var uniqueCategories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var template in _allTemplates)
+            {
+                if (!string.IsNullOrWhiteSpace(template.Category))
+                {
+                    uniqueCategories.Add(template.Category);
+                }
+            }
+
+            var categories = new List<string>(uniqueCategories);
+            categories.Sort(StringComparer.OrdinalIgnoreCase);
 
             // ⚡ Bolt Optimization: Batch insert categories using .AddRange() instead of a foreach loop
             // This reduces internal recalculations within the ComboBox collection when filtering the master list
             // ⚡ Bolt Optimization: Leverage array covariance instead of Cast<object>()
             // Using .ToArray() directly creates a string[], which can implicitly be passed to ComboBox.Items.AddRange(object[])
             // This prevents LINQ from allocating an extra enumerator and a second object[] array.
-            cmbCategory.Items.AddRange(categories.ToArray()!);
+            cmbCategory.Items.AddRange(categories.ToArray());
 
             if (previousSelection != null && cmbCategory.Items.Contains(previousSelection))
             {
