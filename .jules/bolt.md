@@ -161,3 +161,7 @@
 ## 2025-02-12 - string.Split() Emulation Edge Cases
 **Learning:** When replacing `string.Split()` with an iterative `string.IndexOf()` and `string.Substring()` loop to reduce array allocations and GC pressure, using the condition `while (currentPos < sourceString.Length)` introduces a regression for trailing delimiters. `Split("a:b:")` produces `["a", "b", ""]`, but a strict `<` loop skips the trailing empty parameter.
 **Action:** Always use `while (currentPos <= sourceString.Length)` to ensure the final iteration executes even if the string ends precisely with the delimiter, correctly extracting the trailing empty element and preserving 1:1 behavioral parity with `Split()`.
+
+## 2026-11-20 - Optimize multiple character checks using IndexOfAny
+**Learning:** Using multiple `string.Contains(char)` clauses joined by logical ORs (e.g., `str.Contains('\r') || str.Contains('\n')`) performs multiple complete O(N) passes over the string.
+**Action:** Replace multiple single-character `Contains` checks with a single `string.IndexOfAny(new[] { ... }) != -1`. This reduces the CPU overhead from multiple O(N) scans to just one O(N) scan.
