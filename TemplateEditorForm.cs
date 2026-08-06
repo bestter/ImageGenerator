@@ -198,7 +198,8 @@ namespace ImageGeneratorApp
             }
 
             // Key formatting validation (should not contain curly braces or colons since they are delimiters)
-            if (key.Contains('{') || key.Contains('}') || key.Contains(':'))
+            // ⚡ Bolt Optimization: Replace multiple string.Contains calls with string.IndexOfAny for a single O(N) scan
+            if (key.IndexOfAny(new[] { '{', '}', ':' }) != -1)
             {
                 MessageBox.Show("Le nom de clé ne peut pas contenir d'accolades { } ni de deux-points (:).", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtKey.Focus();

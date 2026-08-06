@@ -935,7 +935,8 @@ namespace ImageGeneratorApp
             string query = text.Substring(lastBrace + 1, caretIndex - (lastBrace + 1));
 
             // Prevent matching if trigger query contains characters that are invalid key syntax (newline, colon)
-            if (query.Contains('\r') || query.Contains('\n') || query.Contains(':'))
+            // ⚡ Bolt Optimization: Replace multiple string.Contains calls with string.IndexOfAny for a single O(N) scan
+            if (query.IndexOfAny(new[] { '\r', '\n', ':' }) != -1)
             {
                 return (-1, string.Empty, false);
             }
