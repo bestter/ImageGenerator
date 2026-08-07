@@ -450,7 +450,10 @@ namespace ImageGeneratorApp
             try
             {
                 string selectedRatioText = cmbAspectRatio.SelectedItem?.ToString() ?? "16:9";
-                string aspectRatioValue = selectedRatioText.Split(' ')[0];
+                // ⚡ Bolt Optimization: Avoid string array allocations when parsing simple combo box values.
+                // Replace Split(' ')[0] with IndexOf and Substring to avoid intermediate array allocations.
+                int spaceIndex = selectedRatioText.IndexOf(' ');
+                string aspectRatioValue = spaceIndex == -1 ? selectedRatioText : selectedRatioText.Substring(0, spaceIndex);
                 string opaqueUserId = await UserIdHelper.GetOpaqueUserIdAsync();
 
                 List<ImageUrlObject> imagesList = await PrepareReferenceImagesAsync(imageToEditBase64);
