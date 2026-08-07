@@ -165,3 +165,7 @@
 ## 2026-11-20 - Avoid over-allocating capacity when building collections for filtered search results from a larger dataset
 **Learning:** Initializing `List<T>` with a capacity equal to the full source dataset size (e.g., `new List<T>(cache.Count)`) when building filtered search results causes memory over-allocation and GC pressure for small result sets.
 **Action:** Let `List<T>` manage its own capacity dynamically for filtered search results instead of pre-allocating to the full dataset size, unless the expected result set is consistently close to the source size.
+
+## 2026-11-20 - Optimize multiple character checks using IndexOfAny
+**Learning:** Using multiple `string.Contains(char)` clauses joined by logical ORs (e.g., `str.Contains('\r') || str.Contains('\n')`) performs multiple complete O(N) passes over the string.
+**Action:** Replace multiple single-character `Contains` checks with a single `string.IndexOfAny(new[] { ... }) != -1`. This reduces the CPU overhead from multiple O(N) scans to just one O(N) scan.
