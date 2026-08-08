@@ -497,8 +497,13 @@ namespace ImageGeneratorApp
 
         private async Task<ImageUrlObject?> ProcessImageAsync(string imgPath)
         {
-            var ext = Path.GetExtension(imgPath).ToLower().TrimStart('.');
-            if (ext == "jpg") ext = "jpeg";
+            // ⚡ Bolt Optimization: Avoid chained string allocations (.ToLower().TrimStart('.')) for file extension parsing
+            var rawExt = Path.GetExtension(imgPath);
+            var ext = string.Equals(rawExt, ".jpg", StringComparison.OrdinalIgnoreCase) ||
+                      string.Equals(rawExt, ".jpeg", StringComparison.OrdinalIgnoreCase) ? "jpeg" :
+                      string.Equals(rawExt, ".png", StringComparison.OrdinalIgnoreCase) ? "png" :
+                      string.Equals(rawExt, ".webp", StringComparison.OrdinalIgnoreCase) ? "webp" :
+                      rawExt.TrimStart('.').ToLowerInvariant();
 
             byte[] b64Bytes;
             using (var fs = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, true))
