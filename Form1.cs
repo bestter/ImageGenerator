@@ -85,6 +85,9 @@ namespace ImageGeneratorApp
         private bool _hasPromptError = false;
         private bool _isGenerating = false;
         private System.Windows.Forms.Timer _validationDebounceTimer = null!;
+        // ⚡ Bolt Optimization: Cache the invalid query characters array to avoid
+        // repeated heap allocations on every key press in the UI thread.
+        private static readonly char[] InvalidQueryChars = { '\r', '\n', ':' };
 
         public Form1()
         {
@@ -944,7 +947,8 @@ namespace ImageGeneratorApp
 
             // Prevent matching if trigger query contains characters that are invalid key syntax (newline, colon)
             // ⚡ Bolt Optimization: Replace multiple string.Contains calls with string.IndexOfAny for a single O(N) scan
-            if (query.IndexOfAny(new[] { '\r', '\n', ':' }) != -1)
+            // We use the cached InvalidQueryChars array to prevent GC pressure.
+            if (query.IndexOfAny(InvalidQueryChars) != -1)
             {
                 return (-1, string.Empty, false);
             }
