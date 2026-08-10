@@ -169,3 +169,6 @@
 ## 2026-11-20 - Optimize multiple character checks using IndexOfAny
 **Learning:** Using multiple `string.Contains(char)` clauses joined by logical ORs (e.g., `str.Contains('\r') || str.Contains('\n')`) performs multiple complete O(N) passes over the string.
 **Action:** Replace multiple single-character `Contains` checks with a single `string.IndexOfAny(new[] { ... }) != -1`. This reduces the CPU overhead from multiple O(N) scans to just one O(N) scan.
+## 2024-05-19 - Avoid intermediate string allocations when parsing file extensions
+**Learning:** Using chained methods like `.ToLowerInvariant().TrimStart('.')` on strings (e.g., file extensions returned by `Path.GetExtension`) creates multiple intermediate string allocations. Inside frequently executed methods, this unnecessarily increases Garbage Collection (GC) pressure.
+**Action:** Replace string allocations when checking file extensions by using `string.Equals(rawExt, ".ext", StringComparison.OrdinalIgnoreCase)` directly on the raw extension string. Use a ternary operator to handle multiple common extensions cleanly before falling back to allocation.
