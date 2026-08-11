@@ -35,6 +35,10 @@ namespace ImageGeneratorApp
         // 50 MB provides generous headroom for high-resolution outputs while preventing abuse.
         private const long MaxGeneratedImageBytes = 50 * 1024 * 1024;
 
+        // ⚡ Bolt Optimization: Cache the invalid query characters array to avoid
+        // repeated heap allocations on every request.
+        private static readonly char[] InvalidApiKeyChars = { '\r', '\n' };
+
         public ImageGeneratorClient(HttpClient httpClient)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
@@ -99,7 +103,8 @@ namespace ImageGeneratorApp
             if (string.IsNullOrWhiteSpace(apiKey))
                 throw new ArgumentException("La clé API est requise.", nameof(apiKey));
 
-            if (apiKey.Contains("\r") || apiKey.Contains("\n"))
+            // ⚡ Bolt Optimization: Replace multiple string.Contains calls with string.IndexOfAny for a single O(N) scan
+            if (apiKey.IndexOfAny(InvalidApiKeyChars) != -1)
                 throw new ArgumentException("La clé API ne doit pas contenir de retours à la ligne.", nameof(apiKey));
 
             if (string.IsNullOrWhiteSpace(prompt))
