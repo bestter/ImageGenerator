@@ -183,34 +183,18 @@ namespace ImageGeneratorApp.Tests
         [Fact]
         public async Task SaveImageAsWebpAsync_MissingDirectory_CreatesDirectoryAndSavesImage()
         {
-            // Arrange
-            var historyFolder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "ImageGeneratorApp",
-                "HistoryImages"
-            );
-            var appFolder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "ImageGeneratorApp"
-            );
-
-            // Ensure the directory is deleted to trigger the DirectoryNotFoundException
-            if (Directory.Exists(historyFolder))
-            {
-                Directory.Delete(historyFolder, true);
-            }
-            if (Directory.Exists(appFolder))
-            {
-                Directory.Delete(appFolder, true);
-            }
-
+            // Arrange: unique temp folder so this test never touches LocalApplicationData
+            // (templates.db and other parallel tests live there).
+            var historyFolder = Path.Combine(Path.GetTempPath(), $"ImageGenerator_History_{Guid.NewGuid():N}");
+            var isolatedService = new ImageProcessingService(historyFolder);
             var baseFileName = $"test_missing_dir_{Guid.NewGuid():N}";
 
             try
             {
+                Directory.Exists(historyFolder).Should().BeFalse();
+
                 // Act
-                var savedPath = await _imageProcessingService.SaveImageAsWebpAsync(ValidPngBytes, baseFileName);
-                _createdWebpPath = savedPath;
+                var savedPath = await isolatedService.SaveImageAsWebpAsync(ValidPngBytes, baseFileName);
 
                 // Assert
                 Directory.Exists(historyFolder).Should().BeTrue();
@@ -218,14 +202,9 @@ namespace ImageGeneratorApp.Tests
             }
             finally
             {
-                // Clean up the created directory to leave the environment clean
                 if (Directory.Exists(historyFolder))
                 {
                     try { Directory.Delete(historyFolder, true); } catch { }
-                }
-                if (Directory.Exists(appFolder))
-                {
-                    try { Directory.Delete(appFolder, true); } catch { }
                 }
             }
         }
