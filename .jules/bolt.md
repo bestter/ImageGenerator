@@ -172,3 +172,7 @@
 ## 2024-05-19 - Avoid intermediate string allocations when parsing file extensions
 **Learning:** Using chained methods like `.ToLowerInvariant().TrimStart('.')` on strings (e.g., file extensions returned by `Path.GetExtension`) creates multiple intermediate string allocations. Inside frequently executed methods, this unnecessarily increases Garbage Collection (GC) pressure.
 **Action:** Replace string allocations when checking file extensions by using `string.Equals(rawExt, ".ext", StringComparison.OrdinalIgnoreCase)` directly on the raw extension string. Use a ternary operator to handle multiple common extensions cleanly before falling back to allocation.
+
+## 2024-05-20 - Avoid unnecessary string conversion and equality checks for static ComboBox items
+**Learning:** Checking `cmbModel.SelectedItem?.ToString() == "expected-value"` in a frequently triggered UI event like `SelectedIndexChanged` incurs unnecessary overhead. First, `ToString()` may cause a virtual method call or memory allocation (depending on the type), and second, string equality checks are more expensive than integer comparison.
+**Action:** When a `ComboBox` contains a known, static list of items, optimize the condition by directly checking the `SelectedIndex` property (e.g., `cmbModel.SelectedIndex == 2`). This avoids string manipulation entirely and is significantly faster, reducing GC pressure.

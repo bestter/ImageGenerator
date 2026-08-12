@@ -844,7 +844,7 @@ namespace ImageGeneratorApp
         // and clear any pending edit state to prevent invalid combinations reaching the client.
         private void UpdateModelDependentControls()
         {
-            bool isNano = cmbModel.SelectedItem?.ToString() == "nano-banana-pro";
+            bool isNano = cmbModel.SelectedIndex == 2; // "nano-banana-pro"
             if (btnAddImages != null)
             {
                 btnAddImages.Enabled = !isNano;
@@ -872,7 +872,7 @@ namespace ImageGeneratorApp
         {
             UpdateModelDependentControls();
 
-            if (cmbModel.SelectedItem?.ToString() == "nano-banana-pro")
+            if (cmbModel.SelectedIndex == 2) // "nano-banana-pro"
             {
                 lblKey.Text = "Clé Google Cloud :";
                 lblKey.ForeColor = Color.FromArgb(26, 115, 232); // Google Blue
