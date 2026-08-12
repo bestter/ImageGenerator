@@ -341,27 +341,25 @@ namespace ImageGeneratorApp
         private void BtnHistory_Click(object? sender, EventArgs e)
         {
             using var historyForm = new HistoryViewerForm(_historyRepo, _imageProcessingService);
-            historyForm.ShowDialog(this);
 
-            // Apply "Copie prompt" result if the user activated the button inside the history viewer.
-            // The history dialog closes itself on copy, so we are immediately back here to paste.
-            // Setting txtPrompt.Text triggers TextChanged (resets red border error state, updates generate button, etc.).
-            // Setting cmbModel.SelectedIndex triggers SelectedIndexChanged (updates model-dependent controls + key label).
-            if (!string.IsNullOrWhiteSpace(historyForm.PromptToLoad))
+            historyForm.HistoryItemCopied += (s, args) =>
             {
-                txtPrompt.Text = historyForm.PromptToLoad;
-
-                if (!string.IsNullOrWhiteSpace(historyForm.ModelToLoad))
+                if (!string.IsNullOrWhiteSpace(args.Prompt))
                 {
-                    int index = cmbModel.Items.IndexOf(historyForm.ModelToLoad);
-                    if (index >= 0)
+                    txtPrompt.Text = args.Prompt;
+
+                    if (!string.IsNullOrWhiteSpace(args.ModelName))
                     {
-                        cmbModel.SelectedIndex = index;
+                        int index = cmbModel.Items.IndexOf(args.ModelName);
+                        if (index >= 0)
+                        {
+                            cmbModel.SelectedIndex = index;
+                        }
                     }
-                    // If the stored model name is not in the current list (e.g. future model), we leave the
-                    // current selection unchanged. This is defensive and keeps behavior minimal.
                 }
-            }
+            };
+
+            historyForm.ShowDialog(this);
         }
 
         /// <summary>
@@ -743,6 +741,18 @@ namespace ImageGeneratorApp
                     lblStatus.Text = "💾 Image sauvegardée avec métadonnées AI intégrées.";
                     MessageBox.Show("Image enregistrée avec succès !", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
+                catch (IOException ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"IO Error saving image: {ex.Message}");
+                    lblStatus.Text = "❌ Erreur d'accès au fichier";
+                    MessageBox.Show("Le fichier est en cours d'utilisation ou l'accès est refusé.", "Erreur de sauvegarde", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Auth Error saving image: {ex.Message}");
+                    lblStatus.Text = "❌ Accès refusé";
+                    MessageBox.Show("Vous n'avez pas les permissions pour sauvegarder à cet emplacement.", "Accès refusé", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"Error saving image: {ex.Message}");
@@ -844,7 +854,7 @@ namespace ImageGeneratorApp
         // and clear any pending edit state to prevent invalid combinations reaching the client.
         private void UpdateModelDependentControls()
         {
-            bool isNano = cmbModel.SelectedItem?.ToString() == "nano-banana-pro";
+            bool isNano = cmbModel.SelectedIndex == 2; // "nano-banana-pro"
             if (btnAddImages != null)
             {
                 btnAddImages.Enabled = !isNano;
@@ -872,7 +882,7 @@ namespace ImageGeneratorApp
         {
             UpdateModelDependentControls();
 
-            if (cmbModel.SelectedItem?.ToString() == "nano-banana-pro")
+            if (cmbModel.SelectedIndex == 2) // "nano-banana-pro"
             {
                 lblKey.Text = "Clé Google Cloud :";
                 lblKey.ForeColor = Color.FromArgb(26, 115, 232); // Google Blue

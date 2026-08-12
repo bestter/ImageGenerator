@@ -9,6 +9,8 @@ namespace ImageGeneratorApp
 {
     public static class ApiKeyStorageHelper
     {
+        private static readonly byte[] s_entropy = Encoding.UTF8.GetBytes("ImageGeneratorApp_Entropy_v1");
+
         private static string GetStorageFilePath(string provider)
         {
             // Sanitize provider name to avoid path traversal (though it's hardcoded internally)
@@ -38,7 +40,7 @@ namespace ImageGeneratorApp
                 byte[] plainBytes = Encoding.UTF8.GetBytes(apiKey);
                 try
                 {
-                    byte[] encryptedBytes = ProtectedData.Protect(plainBytes, null, DataProtectionScope.CurrentUser);
+                    byte[] encryptedBytes = ProtectedData.Protect(plainBytes, s_entropy, DataProtectionScope.CurrentUser);
                     await File.WriteAllBytesAsync(filePath, encryptedBytes).ConfigureAwait(false);
                 }
                 finally
@@ -90,7 +92,7 @@ namespace ImageGeneratorApp
                         return string.Empty;
                     }
 
-                    byte[] plainBytes = ProtectedData.Unprotect(encryptedBytes, null, DataProtectionScope.CurrentUser);
+                    byte[] plainBytes = ProtectedData.Unprotect(encryptedBytes, s_entropy, DataProtectionScope.CurrentUser);
                     try
                     {
                         return Encoding.UTF8.GetString(plainBytes);

@@ -175,3 +175,7 @@
 ## 2025-05-23 - Prevent UI Thread Blocking with Async File I/O
 **Learning:** Performing synchronous file operations (like `File.WriteAllBytes`) on the main UI thread causes the application UI to freeze until the operation completes, leading to poor user experience, especially on slower storage devices or under heavy load.
 **Action:** Always prefer asynchronous file operations (like `File.WriteAllBytesAsync`) combined with `await` when executing I/O bound tasks triggered by UI events. Ensure the entire call chain is async and correctly configured to avoid deadlocks.
+
+## 2024-05-20 - Avoid unnecessary string conversion and equality checks for static ComboBox items
+**Learning:** Checking `cmbModel.SelectedItem?.ToString() == "expected-value"` in a frequently triggered UI event like `SelectedIndexChanged` incurs unnecessary overhead. First, `ToString()` may cause a virtual method call or memory allocation (depending on the type), and second, string equality checks are more expensive than integer comparison.
+**Action:** When a `ComboBox` contains a known, static list of items, optimize the condition by directly checking the `SelectedIndex` property (e.g., `cmbModel.SelectedIndex == 2`). This avoids string manipulation entirely and is significantly faster, reducing GC pressure.

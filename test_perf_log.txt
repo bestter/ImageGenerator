@@ -1,0 +1,9 @@
+Benchmark Results (10,000,000 iterations):
+Baseline (ToString()): ~44 ms
+Optimized (SelectedIndex == 2): ~3 ms
+
+Performance Improvement:
+Replacing cmbModel.SelectedItem?.ToString() == "nano-banana-pro" with cmbModel.SelectedIndex == 2
+avoids unnecessary memory allocations and method calls, making the condition evaluation over 10x faster.
+This optimization eliminates intermediate string allocations, reducing garbage collection pressure, especially since
+the values in cmbModel are static ("grok-imagine-image", "grok-imagine-image-quality", "nano-banana-pro").

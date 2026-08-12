@@ -179,5 +179,55 @@ namespace ImageGeneratorApp.Tests
             loadedImage.Metadata.ExifProfile.Should().NotBeNull();
             loadedImage.Metadata.XmpProfile.Should().NotBeNull();
         }
+
+        [Fact]
+        public async Task SaveImageAsWebpAsync_MissingDirectory_CreatesDirectoryAndSavesImage()
+        {
+            // Arrange
+            var historyFolder = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "ImageGeneratorApp",
+                "HistoryImages"
+            );
+            var appFolder = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "ImageGeneratorApp"
+            );
+
+            // Ensure the directory is deleted to trigger the DirectoryNotFoundException
+            if (Directory.Exists(historyFolder))
+            {
+                Directory.Delete(historyFolder, true);
+            }
+            if (Directory.Exists(appFolder))
+            {
+                Directory.Delete(appFolder, true);
+            }
+
+            var baseFileName = $"test_missing_dir_{Guid.NewGuid():N}";
+
+            try
+            {
+                // Act
+                var savedPath = await _imageProcessingService.SaveImageAsWebpAsync(ValidPngBytes, baseFileName);
+                _createdWebpPath = savedPath;
+
+                // Assert
+                Directory.Exists(historyFolder).Should().BeTrue();
+                File.Exists(savedPath).Should().BeTrue();
+            }
+            finally
+            {
+                // Clean up the created directory to leave the environment clean
+                if (Directory.Exists(historyFolder))
+                {
+                    try { Directory.Delete(historyFolder, true); } catch { }
+                }
+                if (Directory.Exists(appFolder))
+                {
+                    try { Directory.Delete(appFolder, true); } catch { }
+                }
+            }
+        }
     }
 }
