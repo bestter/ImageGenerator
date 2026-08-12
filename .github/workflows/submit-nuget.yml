@@ -1,0 +1,26 @@
+name: "Dependency Submission"
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  submit-nuget:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Run Component Detection
+      uses: actions/component-detection-dependency-submission-action@v3.0.0
+      env:
+        NODE_OPTIONS: "--use-system-ca"
+      with:
+        detectorsCategories: NuGet
