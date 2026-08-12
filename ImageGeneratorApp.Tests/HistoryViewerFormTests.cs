@@ -65,8 +65,6 @@ namespace ImageGeneratorApp.Tests
             form.MinimumSize.Should().Be(new Size(800, 500));
             form.StartPosition.Should().Be(FormStartPosition.CenterParent);
             form.Controls.Count.Should().BeGreaterThan(0);
-            form.PromptToLoad.Should().BeNull();
-            form.ModelToLoad.Should().BeNull();
         }
 
 

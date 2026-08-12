@@ -42,16 +42,7 @@ namespace ImageGeneratorApp
         private readonly List<string> _imageCacheOrder = new();
         private const int MaxImageCacheSize = 10;
 
-        /// <summary>
-        /// Gets the prompt text to paste into the main form's prompt field when the user activates the copy button in history.
-        /// Set only when the copy action is triggered; consumed by the owner form after ShowDialog returns.
-        /// </summary>
-        public string? PromptToLoad { get; private set; }
-
-        /// <summary>
-        /// Gets the model name (exact match for ComboBox items) to select in the main form when the copy action occurs.
-        /// </summary>
-        public string? ModelToLoad { get; private set; }
+        public event EventHandler<HistoryItemCopiedEventArgs>? HistoryItemCopied;
 
         private System.Windows.Forms.Timer _searchDebounceTimer = null!;
 
@@ -709,9 +700,7 @@ namespace ImageGeneratorApp
 
         /// <summary>
         /// Handles the "Copie prompt" button click: captures the current history entry's prompt and model
-        /// into public properties, then closes the dialog immediately. The owner (Form1) applies the
-        /// values to its txtPrompt and cmbModel right after ShowDialog returns, achieving the "immediate paste"
-        /// behavior requested.
+        /// and raises the HistoryItemCopied event, allowing the main form to react immediately.
         /// </summary>
         private void BtnCopyPrompt_Click(object? sender, EventArgs e)
         {
@@ -720,12 +709,7 @@ namespace ImageGeneratorApp
                 return;
             }
 
-            PromptToLoad = _currentHistoryItem.Prompt;
-            ModelToLoad = _currentHistoryItem.ModelName;
-
-            // Close now so caller can transfer values without the user needing to close manually.
-            // This is the minimal, non-refactored way to achieve cross-form immediate copy for a modal dialog.
-            this.Close();
+            HistoryItemCopied?.Invoke(this, new HistoryItemCopiedEventArgs(_currentHistoryItem.Prompt, _currentHistoryItem.ModelName));
         }
 
         /// <summary>
