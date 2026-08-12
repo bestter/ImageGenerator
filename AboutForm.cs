@@ -162,8 +162,7 @@ https://www.gnu.org/licenses/";
 
         /// <summary>
         /// Opens the LICENSE.txt file located in the same directory as the running executable.
-        /// Uses UseShellExecute = true to securely open the file with the default system handler
-        /// instead of hardcoding notepad.exe, which could be hijacked.
+        /// Uses a specific application (notepad.exe) with UseShellExecute = false to securely open the file.
         /// Gracefully handles the case where the file is missing.
         /// </summary>
         private void BtnShowLicense_Click(object? sender, EventArgs e)
@@ -178,11 +177,13 @@ https://www.gnu.org/licenses/";
                     throw new FileNotFoundException();
                 }
 
+                // 🛡️ Sentinel: Mitigate command execution risk by specifying notepad.exe directly and disabling UseShellExecute.
                 var startInfo = new ProcessStartInfo
                 {
-                    FileName = licensePath,
-                    UseShellExecute = true
+                    FileName = "notepad.exe",
+                    UseShellExecute = false
                 };
+                startInfo.ArgumentList.Add(licensePath);
 
                 Process.Start(startInfo);
             }
