@@ -172,3 +172,6 @@
 ## 2024-05-19 - Avoid intermediate string allocations when parsing file extensions
 **Learning:** Using chained methods like `.ToLowerInvariant().TrimStart('.')` on strings (e.g., file extensions returned by `Path.GetExtension`) creates multiple intermediate string allocations. Inside frequently executed methods, this unnecessarily increases Garbage Collection (GC) pressure.
 **Action:** Replace string allocations when checking file extensions by using `string.Equals(rawExt, ".ext", StringComparison.OrdinalIgnoreCase)` directly on the raw extension string. Use a ternary operator to handle multiple common extensions cleanly before falling back to allocation.
+## 2025-05-23 - Prevent UI Thread Blocking with Async File I/O
+**Learning:** Performing synchronous file operations (like `File.WriteAllBytes`) on the main UI thread causes the application UI to freeze until the operation completes, leading to poor user experience, especially on slower storage devices or under heavy load.
+**Action:** Always prefer asynchronous file operations (like `File.WriteAllBytesAsync`) combined with `await` when executing I/O bound tasks triggered by UI events. Ensure the entire call chain is async and correctly configured to avoid deadlocks.
