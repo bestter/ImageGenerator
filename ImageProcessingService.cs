@@ -62,17 +62,8 @@ namespace ImageGeneratorApp
                     Quality = 80
                 };
 
-                // 🛡️ Sentinel: Prevent TOCTOU race condition and avoid blocking the thread pool.
-                // Use EAFP (Easier to Ask for Forgiveness than Permission) pattern.
-                try
-                {
-                    image.Save(fullPath, encoder);
-                }
-                catch (DirectoryNotFoundException)
-                {
-                    Directory.CreateDirectory(historyFolder);
-                    image.Save(fullPath, encoder);
-                }
+                Directory.CreateDirectory(historyFolder);
+                image.Save(fullPath, encoder);
             });
 
             return fullPath;

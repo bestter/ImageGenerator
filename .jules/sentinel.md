@@ -164,3 +164,8 @@
 **Vulnerability:** The application was loading potentially large WEBP history files directly from disk into memory via ImageSharp without any file size constraints. This creates a Denial of Service (DoS) vulnerability via memory exhaustion if an attacker provides a massive, compressed file.
 **Learning:** Checking `fs.Length == 0` is insufficient. Applications parsing user-provided files (even locally) must place an upper bound on file size before processing to prevent `OutOfMemoryException`.
 **Prevention:** Enforce a maximum file size limit (e.g., `fs.Length > 20 * 1024 * 1024`) on the opened `FileStream` before passing it to `Image.LoadAsync`.
+
+## 2026-07-30 - Prevent Security Theater in Directory Creation
+**Vulnerability:** The application was using an EAFP (Easier to Ask for Forgiveness than Permission) pattern by wrapping `image.Save()` in a `try-catch` block that caught `DirectoryNotFoundException` to subsequently call `Directory.CreateDirectory()`. This was intended to prevent a TOCTOU race condition when creating the directory.
+**Learning:** `Directory.CreateDirectory()` in .NET is inherently idempotent and handles race conditions natively. Implementing custom logic to avoid calling it, or using an EAFP pattern to handle directory creation, is security theater. It complicates the code without adding security value and can obscure underlying issues.
+**Prevention:** Unconditionally call `Directory.CreateDirectory()` before performing operations that require the directory to exist, rather than attempting to predict or catch directory-related exceptions as part of the normal flow.
