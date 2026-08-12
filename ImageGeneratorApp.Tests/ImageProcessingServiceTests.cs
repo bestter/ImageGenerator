@@ -183,30 +183,18 @@ namespace ImageGeneratorApp.Tests
         [Fact]
         public async Task SaveImageAsWebpAsync_MissingDirectory_CreatesDirectoryAndSavesImage()
         {
-            // Arrange
-            var historyFolder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "ImageGeneratorApp",
-                "HistoryImages"
-            );
-            var appFolder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "ImageGeneratorApp"
-            );
-
-            // Ensure history directory is deleted to test directory creation
-            if (Directory.Exists(historyFolder))
-            {
-                Directory.Delete(historyFolder, true);
-            }
-
+            // Arrange: unique temp folder so this test never touches LocalApplicationData
+            // (templates.db and other parallel tests live there).
+            var historyFolder = Path.Combine(Path.GetTempPath(), $"ImageGenerator_History_{Guid.NewGuid():N}");
+            var isolatedService = new ImageProcessingService(historyFolder);
             var baseFileName = $"test_missing_dir_{Guid.NewGuid():N}";
 
             try
             {
+                Directory.Exists(historyFolder).Should().BeFalse();
+
                 // Act
-                var savedPath = await _imageProcessingService.SaveImageAsWebpAsync(ValidPngBytes, baseFileName);
-                _createdWebpPath = savedPath;
+                var savedPath = await isolatedService.SaveImageAsWebpAsync(ValidPngBytes, baseFileName);
 
                 // Assert
                 Directory.Exists(historyFolder).Should().BeTrue();
@@ -214,9 +202,9 @@ namespace ImageGeneratorApp.Tests
             }
             finally
             {
-                if (!string.IsNullOrEmpty(_createdWebpPath) && File.Exists(_createdWebpPath))
+                if (Directory.Exists(historyFolder))
                 {
-                    try { File.Delete(_createdWebpPath); } catch { }
+                    try { Directory.Delete(historyFolder, true); } catch { }
                 }
             }
         }
