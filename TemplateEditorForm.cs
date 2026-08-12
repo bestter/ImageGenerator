@@ -39,6 +39,10 @@ namespace ImageGeneratorApp
         private Button btnSave = null!;
         private Button btnCancel = null!;
 
+        // ⚡ Bolt Optimization: Cache the invalid key characters array to avoid
+        // repeated heap allocations on validation.
+        private static readonly char[] InvalidKeyChars = { '{', '}', ':' };
+
         /// <summary>
         /// Initializes a new instance of the <see cref="TemplateEditorForm"/> class in ADD mode.
         /// </summary>
@@ -198,7 +202,9 @@ namespace ImageGeneratorApp
             }
 
             // Key formatting validation (should not contain curly braces or colons since they are delimiters)
-            if (key.Contains('{') || key.Contains('}') || key.Contains(':'))
+            // ⚡ Bolt Optimization: Replace multiple string.Contains calls with string.IndexOfAny for a single O(N) scan
+            // We use the cached InvalidKeyChars array to prevent GC pressure.
+            if (key.IndexOfAny(InvalidKeyChars) != -1)
             {
                 MessageBox.Show("Le nom de clé ne peut pas contenir d'accolades { } ni de deux-points (:).", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtKey.Focus();

@@ -179,5 +179,34 @@ namespace ImageGeneratorApp.Tests
             loadedImage.Metadata.ExifProfile.Should().NotBeNull();
             loadedImage.Metadata.XmpProfile.Should().NotBeNull();
         }
+
+        [Fact]
+        public async Task SaveImageAsWebpAsync_MissingDirectory_CreatesDirectoryAndSavesImage()
+        {
+            // Arrange: unique temp folder so this test never touches LocalApplicationData
+            // (templates.db and other parallel tests live there).
+            var historyFolder = Path.Combine(Path.GetTempPath(), $"ImageGenerator_History_{Guid.NewGuid():N}");
+            var isolatedService = new ImageProcessingService(historyFolder);
+            var baseFileName = $"test_missing_dir_{Guid.NewGuid():N}";
+
+            try
+            {
+                Directory.Exists(historyFolder).Should().BeFalse();
+
+                // Act
+                var savedPath = await isolatedService.SaveImageAsWebpAsync(ValidPngBytes, baseFileName);
+
+                // Assert
+                Directory.Exists(historyFolder).Should().BeTrue();
+                File.Exists(savedPath).Should().BeTrue();
+            }
+            finally
+            {
+                if (Directory.Exists(historyFolder))
+                {
+                    try { Directory.Delete(historyFolder, true); } catch { }
+                }
+            }
+        }
     }
 }

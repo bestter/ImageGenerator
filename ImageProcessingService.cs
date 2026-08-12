@@ -12,6 +12,23 @@ namespace ImageGeneratorApp
     /// </summary>
     public class ImageProcessingService
     {
+        private readonly string _historyFolder;
+
+        /// <summary>
+        /// Creates the service. When <paramref name="historyFolder"/> is omitted, images are saved
+        /// under LocalApplicationData/ImageGeneratorApp/HistoryImages.
+        /// </summary>
+        /// <param name="historyFolder">Optional override used by tests to isolate the filesystem.</param>
+        public ImageProcessingService(string? historyFolder = null)
+        {
+            _historyFolder = string.IsNullOrWhiteSpace(historyFolder)
+                ? Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "ImageGeneratorApp",
+                    "HistoryImages")
+                : historyFolder;
+        }
+
         /// <summary>
         /// Loads an image from a byte array (PNG/JPEG), encodes it to WEBP format at 80% quality,
         /// and saves it to a dedicated history subfolder in LocalApplicationData.
@@ -34,12 +51,7 @@ namespace ImageGeneratorApp
                 throw new ArgumentException("Base file name cannot be null or whitespace.", nameof(baseFileName));
             }
 
-            // Create target history subfolder in local app data: MyApp/HistoryImages
-            var historyFolder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "ImageGeneratorApp",
-                "HistoryImages"
-            );
+            var historyFolder = _historyFolder;
 
             // Clean the base file name, strip any existing extension, and append .webp
             var safeBaseName = Path.GetFileName(baseFileName);

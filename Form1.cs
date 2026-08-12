@@ -85,6 +85,9 @@ namespace ImageGeneratorApp
         private bool _hasPromptError = false;
         private bool _isGenerating = false;
         private System.Windows.Forms.Timer _validationDebounceTimer = null!;
+        // ⚡ Bolt Optimization: Cache the invalid query characters array to avoid
+        // repeated heap allocations on every key press in the UI thread.
+        private static readonly char[] InvalidQueryChars = { '\r', '\n', ':' };
 
         public Form1()
         {
@@ -338,27 +341,25 @@ namespace ImageGeneratorApp
         private void BtnHistory_Click(object? sender, EventArgs e)
         {
             using var historyForm = new HistoryViewerForm(_historyRepo, _imageProcessingService);
-            historyForm.ShowDialog(this);
 
-            // Apply "Copie prompt" result if the user activated the button inside the history viewer.
-            // The history dialog closes itself on copy, so we are immediately back here to paste.
-            // Setting txtPrompt.Text triggers TextChanged (resets red border error state, updates generate button, etc.).
-            // Setting cmbModel.SelectedIndex triggers SelectedIndexChanged (updates model-dependent controls + key label).
-            if (!string.IsNullOrWhiteSpace(historyForm.PromptToLoad))
+            historyForm.HistoryItemCopied += (s, args) =>
             {
-                txtPrompt.Text = historyForm.PromptToLoad;
-
-                if (!string.IsNullOrWhiteSpace(historyForm.ModelToLoad))
+                if (!string.IsNullOrWhiteSpace(args.Prompt))
                 {
-                    int index = cmbModel.Items.IndexOf(historyForm.ModelToLoad);
-                    if (index >= 0)
+                    txtPrompt.Text = args.Prompt;
+
+                    if (!string.IsNullOrWhiteSpace(args.ModelName))
                     {
-                        cmbModel.SelectedIndex = index;
+                        int index = cmbModel.Items.IndexOf(args.ModelName);
+                        if (index >= 0)
+                        {
+                            cmbModel.SelectedIndex = index;
+                        }
                     }
-                    // If the stored model name is not in the current list (e.g. future model), we leave the
-                    // current selection unchanged. This is defensive and keeps behavior minimal.
                 }
-            }
+            };
+
+            historyForm.ShowDialog(this);
         }
 
         /// <summary>
@@ -425,7 +426,7 @@ namespace ImageGeneratorApp
             string apiKey = txtApiKey.Text?.Trim() ?? string.Empty;
 
             string provider = cmbModel.Text == "nano-banana-pro" ? "Google" : "xAI";
-            ApiKeyStorageHelper.SaveApiKey(provider, apiKey);
+            await ApiKeyStorageHelper.SaveApiKeyAsync(provider, apiKey);
 
             string? imageToEditBase64 = null;
             if (chkMultiTurnEditing.Checked && !string.IsNullOrEmpty(currentBase64Image))
@@ -450,7 +451,10 @@ namespace ImageGeneratorApp
             try
             {
                 string selectedRatioText = cmbAspectRatio.SelectedItem?.ToString() ?? "16:9";
-                string aspectRatioValue = selectedRatioText.Split(' ')[0];
+                // ⚡ Bolt Optimization: Avoid string array allocations when parsing simple combo box values.
+                // Replace Split(' ')[0] with IndexOf and Substring to avoid intermediate array allocations.
+                int spaceIndex = selectedRatioText.IndexOf(' ');
+                string aspectRatioValue = spaceIndex == -1 ? selectedRatioText : selectedRatioText.Substring(0, spaceIndex);
                 string opaqueUserId = await UserIdHelper.GetOpaqueUserIdAsync();
 
                 List<ImageUrlObject> imagesList = await PrepareReferenceImagesAsync(imageToEditBase64);
@@ -494,8 +498,13 @@ namespace ImageGeneratorApp
 
         private async Task<ImageUrlObject?> ProcessImageAsync(string imgPath)
         {
-            var ext = Path.GetExtension(imgPath).ToLower().TrimStart('.');
-            if (ext == "jpg") ext = "jpeg";
+            // ⚡ Bolt Optimization: Avoid chained string allocations (.ToLower().TrimStart('.')) for file extension parsing
+            var rawExt = Path.GetExtension(imgPath);
+            var ext = string.Equals(rawExt, ".jpg", StringComparison.OrdinalIgnoreCase) ||
+                      string.Equals(rawExt, ".jpeg", StringComparison.OrdinalIgnoreCase) ? "jpeg" :
+                      string.Equals(rawExt, ".png", StringComparison.OrdinalIgnoreCase) ? "png" :
+                      string.Equals(rawExt, ".webp", StringComparison.OrdinalIgnoreCase) ? "webp" :
+                      rawExt.TrimStart('.').ToLowerInvariant();
 
             byte[] b64Bytes;
             using (var fs = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, true))
@@ -541,7 +550,13 @@ namespace ImageGeneratorApp
                     imagesList.Add(new ImageUrlObject { Type = "image_url", Url = $"data:image/png;base64,{imageToEditBase64}" });
                 }
 
-                var tasks = selectedImages.Select(imgPath => ProcessImageAsync(imgPath)).ToArray();
+                // ⚡ Bolt Optimization: Avoid LINQ Select and ToArray chains when scheduling asynchronous tasks
+                // to prevent allocating intermediate enumerators, arrays, and closures.
+                var tasks = new List<Task<ImageUrlObject?>>(selectedImages.Count);
+                foreach (var imgPath in selectedImages)
+                {
+                    tasks.Add(ProcessImageAsync(imgPath));
+                }
 
                 var results = await Task.WhenAll(tasks);
                 foreach (var res in results)
@@ -726,6 +741,18 @@ namespace ImageGeneratorApp
                     lblStatus.Text = "💾 Image sauvegardée avec métadonnées AI intégrées.";
                     MessageBox.Show("Image enregistrée avec succès !", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
+                catch (IOException ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"IO Error saving image: {ex.Message}");
+                    lblStatus.Text = "❌ Erreur d'accès au fichier";
+                    MessageBox.Show("Le fichier est en cours d'utilisation ou l'accès est refusé.", "Erreur de sauvegarde", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Auth Error saving image: {ex.Message}");
+                    lblStatus.Text = "❌ Accès refusé";
+                    MessageBox.Show("Vous n'avez pas les permissions pour sauvegarder à cet emplacement.", "Accès refusé", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"Error saving image: {ex.Message}");
@@ -827,7 +854,7 @@ namespace ImageGeneratorApp
         // and clear any pending edit state to prevent invalid combinations reaching the client.
         private void UpdateModelDependentControls()
         {
-            bool isNano = cmbModel.SelectedItem?.ToString() == "nano-banana-pro";
+            bool isNano = cmbModel.SelectedIndex == 2; // "nano-banana-pro"
             if (btnAddImages != null)
             {
                 btnAddImages.Enabled = !isNano;
@@ -855,7 +882,7 @@ namespace ImageGeneratorApp
         {
             UpdateModelDependentControls();
 
-            if (cmbModel.SelectedItem?.ToString() == "nano-banana-pro")
+            if (cmbModel.SelectedIndex == 2) // "nano-banana-pro"
             {
                 lblKey.Text = "Clé Google Cloud :";
                 lblKey.ForeColor = Color.FromArgb(26, 115, 232); // Google Blue
@@ -929,7 +956,9 @@ namespace ImageGeneratorApp
             string query = text.Substring(lastBrace + 1, caretIndex - (lastBrace + 1));
 
             // Prevent matching if trigger query contains characters that are invalid key syntax (newline, colon)
-            if (query.Contains('\r') || query.Contains('\n') || query.Contains(':'))
+            // ⚡ Bolt Optimization: Replace multiple string.Contains calls with string.IndexOfAny for a single O(N) scan
+            // We use the cached InvalidQueryChars array to prevent GC pressure.
+            if (query.IndexOfAny(InvalidQueryChars) != -1)
             {
                 return (-1, string.Empty, false);
             }

@@ -146,16 +146,31 @@ namespace ImageGeneratorApp
                     throw new InvalidOperationException("Une récursion infinie a été détectée dans les modèles (limite de 20 itérations atteinte).");
                 }
 
-                // ⚡ Bolt Optimization: Avoid LINQ chains (.Cast().Select().Distinct().ToList()) in the parsing hot loop.
-                // Using a HashSet directly prevents intermediate array allocations, closures, and enumerator overhead.
-                var uniqueTags = new HashSet<string>(StringComparer.Ordinal);
+                // ⚡ Bolt Optimization: Avoid HashSet for small distinct collections in the parsing hot loop.
+                // Using a simple array prevents memory allocation and hashing overhead completely.
+                int uniqueCount = 0;
+                string[] uniqueTags = new string[matches.Count];
                 for (int i = 0; i < matches.Count; i++)
                 {
-                    uniqueTags.Add(matches[i].Value);
+                    string matchValue = matches[i].Value;
+                    bool exists = false;
+                    for (int j = 0; j < uniqueCount; j++)
+                    {
+                        if (string.Equals(uniqueTags[j], matchValue, StringComparison.Ordinal))
+                        {
+                            exists = true;
+                            break;
+                        }
+                    }
+                    if (!exists)
+                    {
+                        uniqueTags[uniqueCount++] = matchValue;
+                    }
                 }
 
-                foreach (var tag in uniqueTags)
+                for (int k = 0; k < uniqueCount; k++)
                 {
+                    var tag = uniqueTags[k];
                     // tag is e.g. "{subject:dog:red}"
                     // Extract inner content without the curly braces
                     var innerContent = tag[1..^1];

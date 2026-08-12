@@ -49,6 +49,7 @@
     <Compile Include="..\TemplateEditorForm.cs" />
     <Compile Include="..\TemplatesManagerForm.cs" />
     <Compile Include="..\HistoryViewerForm.cs" />
+    <Compile Include="..\HistoryItemCopiedEventArgs.cs" />
   </ItemGroup>
 </Project>
 

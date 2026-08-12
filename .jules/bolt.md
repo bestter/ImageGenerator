@@ -123,7 +123,6 @@
 ## 2026-10-27 - Avoid string array allocations when parsing template parameters
 **Learning:** Using `string.Split(':')` inside the `TemplateParser.cs` parameter processing loop to extract arguments from placeholders like `{tag:arg1:arg2}` allocates string arrays. Inside a recursive hot loop, these intermediate array allocations cause severe garbage collection pressure and affect performance.
 **Action:** Always replace `.Split()` inside hot loops with an iterative parsing approach using `string.IndexOf()` and `string.Substring()` to process delimited parts without allocating intermediate arrays.
-## 2026-11-15 - Avoid unnecessary string.Trim() allocations in rapid UI validation events
 **Learning:** Calling `.Trim()` on a large `TextBox.Text` property (e.g., up to 4000 characters) inside a frequently fired UI event (like `TextChanged` or debounced validation) creates a new string allocation on every keystroke, causing significant Garbage Collection pressure and UI thread overhead.
 **Action:** Instead of trimming large strings just to check if they are empty or valid, use `string.IsNullOrWhiteSpace()` and pass the raw untrimmed text to validation helpers that can handle leading/trailing spaces (like `IsPromptSyntaxValid` which only checks brace balance).
 
@@ -161,3 +160,25 @@
 ## 2025-02-12 - string.Split() Emulation Edge Cases
 **Learning:** When replacing `string.Split()` with an iterative `string.IndexOf()` and `string.Substring()` loop to reduce array allocations and GC pressure, using the condition `while (currentPos < sourceString.Length)` introduces a regression for trailing delimiters. `Split("a:b:")` produces `["a", "b", ""]`, but a strict `<` loop skips the trailing empty parameter.
 **Action:** Always use `while (currentPos <= sourceString.Length)` to ensure the final iteration executes even if the string ends precisely with the delimiter, correctly extracting the trailing empty element and preserving 1:1 behavioral parity with `Split()`.
+
+## 2026-11-20 - Avoid over-allocating capacity when building collections for filtered search results from a larger dataset
+**Learning:** Initializing `List<T>` with a capacity equal to the full source dataset size (e.g., `new List<T>(cache.Count)`) when building filtered search results causes memory over-allocation and GC pressure for small result sets.
+**Action:** Let `List<T>` manage its own capacity dynamically for filtered search results instead of pre-allocating to the full dataset size, unless the expected result set is consistently close to the source size.
+
+## 2026-11-20 - Optimize multiple character checks using IndexOfAny
+**Learning:** Using multiple `string.Contains(char)` clauses joined by logical ORs (e.g., `str.Contains('\r') || str.Contains('\n')`) performs multiple complete O(N) passes over the string.
+**Action:** Replace multiple single-character `Contains` checks with a single `string.IndexOfAny(new[] { ... }) != -1`. This reduces the CPU overhead from multiple O(N) scans to just one O(N) scan.
+## 2024-05-19 - Avoid intermediate string allocations when parsing file extensions
+**Learning:** Using chained methods like `.ToLowerInvariant().TrimStart('.')` on strings (e.g., file extensions returned by `Path.GetExtension`) creates multiple intermediate string allocations. Inside frequently executed methods, this unnecessarily increases Garbage Collection (GC) pressure.
+**Action:** Replace string allocations when checking file extensions by using `string.Equals(rawExt, ".ext", StringComparison.OrdinalIgnoreCase)` directly on the raw extension string. Use a ternary operator to handle multiple common extensions cleanly before falling back to allocation.
+## 2025-05-23 - Prevent UI Thread Blocking with Async File I/O
+**Learning:** Performing synchronous file operations (like `File.WriteAllBytes`) on the main UI thread causes the application UI to freeze until the operation completes, leading to poor user experience, especially on slower storage devices or under heavy load.
+**Action:** Always prefer asynchronous file operations (like `File.WriteAllBytesAsync`) combined with `await` when executing I/O bound tasks triggered by UI events. Ensure the entire call chain is async and correctly configured to avoid deadlocks.
+
+## 2024-05-20 - Avoid unnecessary string conversion and equality checks for static ComboBox items
+**Learning:** Checking `cmbModel.SelectedItem?.ToString() == "expected-value"` in a frequently triggered UI event like `SelectedIndexChanged` incurs unnecessary overhead. First, `ToString()` may cause a virtual method call or memory allocation (depending on the type), and second, string equality checks are more expensive than integer comparison.
+**Action:** When a `ComboBox` contains a known, static list of items, optimize the condition by directly checking the `SelectedIndex` property (e.g., `cmbModel.SelectedIndex == 2`). This avoids string manipulation entirely and is significantly faster, reducing GC pressure.
+
+## 2026-11-21 - Avoid HashSet for small distinct collections
+**Learning:** Using a `HashSet` inside a hot loop (like a recursive template parser) to extract unique matches from a Regex collection causes unnecessary allocations, as the number of matches is typically very small.
+**Action:** Always replace `HashSet` with a simple array and a standard `for` loop to eliminate the memory allocation and hashing overhead completely.

@@ -242,18 +242,27 @@ namespace ImageGeneratorApp
             cmbCategory.Items.Clear();
             cmbCategory.Items.Add("Toutes les catégories");
 
-            var categories = _allTemplates
-                .Select(t => t.Category)
-                .Where(c => !string.IsNullOrWhiteSpace(c))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(c => c);
+            // ⚡ Bolt Optimization: Replace LINQ collection extraction chain with a HashSet and explicit Sort
+            // This eliminates multiple intermediate enumerators, closures, and arrays, significantly reducing
+            // Garbage Collection pressure on the UI thread when the underlying master collection is large.
+            var uniqueCategories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var template in _allTemplates)
+            {
+                if (!string.IsNullOrWhiteSpace(template.Category))
+                {
+                    uniqueCategories.Add(template.Category);
+                }
+            }
+
+            var categories = new List<string>(uniqueCategories);
+            categories.Sort(StringComparer.OrdinalIgnoreCase);
 
             // ⚡ Bolt Optimization: Batch insert categories using .AddRange() instead of a foreach loop
             // This reduces internal recalculations within the ComboBox collection when filtering the master list
             // ⚡ Bolt Optimization: Leverage array covariance instead of Cast<object>()
             // Using .ToArray() directly creates a string[], which can implicitly be passed to ComboBox.Items.AddRange(object[])
             // This prevents LINQ from allocating an extra enumerator and a second object[] array.
-            cmbCategory.Items.AddRange(categories.ToArray()!);
+            cmbCategory.Items.AddRange(categories.ToArray());
 
             if (previousSelection != null && cmbCategory.Items.Contains(previousSelection))
             {
@@ -324,26 +333,30 @@ namespace ImageGeneratorApp
             var searchText = txtSearch.Text.Trim();
             var selectedCategory = cmbCategory.SelectedItem?.ToString();
 
-            var filtered = _allTemplates.AsEnumerable();
+            bool hasSearchText = !string.IsNullOrEmpty(searchText);
+            bool hasCategoryFilter = !string.IsNullOrEmpty(selectedCategory) && selectedCategory != "Toutes les catégories";
 
-            // Text search (case-insensitive key and tags matching)
-            if (!string.IsNullOrEmpty(searchText))
+            // ⚡ Bolt Optimization: Replace LINQ chains on rapid UI paths with a standard foreach loop
+            // This eliminates multiple intermediate enumerators and closure allocations on the main UI thread.
+            var filtered = new List<TemplateModel>();
+            foreach (var t in _allTemplates)
             {
-                filtered = filtered.Where(t =>
+                bool matchesSearch = !hasSearchText ||
                     t.Key.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                    (t.Tags != null && t.Tags.Contains(searchText, StringComparison.OrdinalIgnoreCase))
-                );
-            }
+                    (t.Tags != null && t.Tags.Contains(searchText, StringComparison.OrdinalIgnoreCase));
 
-            // Category filter
-            if (!string.IsNullOrEmpty(selectedCategory) && selectedCategory != "Toutes les catégories")
-            {
-                filtered = filtered.Where(t => string.Equals(t.Category, selectedCategory, StringComparison.OrdinalIgnoreCase));
+                bool matchesCategory = !hasCategoryFilter ||
+                    string.Equals(t.Category, selectedCategory, StringComparison.OrdinalIgnoreCase);
+
+                if (matchesSearch && matchesCategory)
+                {
+                    filtered.Add(t);
+                }
             }
 
             // ⚡ Bolt Optimization: Bulk update DataGridView by reassigning BindingList
             // Avoids sequential internal array reallocations and manual event suspension
-            _filteredTemplates = new BindingList<TemplateModel>(filtered.ToList());
+            _filteredTemplates = new BindingList<TemplateModel>(filtered);
             dataGridViewTemplates.DataSource = _filteredTemplates;
 
             ConfigureGridColumns();
