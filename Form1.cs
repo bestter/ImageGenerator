@@ -743,6 +743,18 @@ namespace ImageGeneratorApp
                     lblStatus.Text = "💾 Image sauvegardée avec métadonnées AI intégrées.";
                     MessageBox.Show("Image enregistrée avec succès !", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
+                catch (IOException ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"IO Error saving image: {ex.Message}");
+                    lblStatus.Text = "❌ Erreur d'accès au fichier";
+                    MessageBox.Show("Le fichier est en cours d'utilisation ou l'accès est refusé.", "Erreur de sauvegarde", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Auth Error saving image: {ex.Message}");
+                    lblStatus.Text = "❌ Accès refusé";
+                    MessageBox.Show("Vous n'avez pas les permissions pour sauvegarder à cet emplacement.", "Accès refusé", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"Error saving image: {ex.Message}");
