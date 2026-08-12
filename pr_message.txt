@@ -1,0 +1,11 @@
+🧪 [testing improvement] Add tests for TemplateRepository.UpdateUsageStatsBulkAsync
+
+🎯 **What:** Added comprehensive unit tests for `TemplateRepository.UpdateUsageStatsBulkAsync` to ensure its correctness. This addresses the testing gap for this public method.
+
+📊 **Coverage:** Covered the following scenarios:
+* Successfully updating usage counts and `last_used` for multiple templates when providing valid keys.
+* Returning `false` and handling `null` correctly.
+* Returning `false` when providing an empty collection of keys.
+* Returning `false` when providing a collection of invalid keys (empty, whitespace, or null).
+
+✨ **Result:** Test coverage is improved, ensuring the `UpdateUsageStatsBulkAsync` method is fully verified and regressions won't occur in the future.
