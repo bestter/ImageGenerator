@@ -194,14 +194,10 @@ namespace ImageGeneratorApp.Tests
                 "ImageGeneratorApp"
             );
 
-            // Ensure the directory is deleted to trigger the DirectoryNotFoundException
+            // Ensure history directory is deleted to test directory creation
             if (Directory.Exists(historyFolder))
             {
                 Directory.Delete(historyFolder, true);
-            }
-            if (Directory.Exists(appFolder))
-            {
-                Directory.Delete(appFolder, true);
             }
 
             var baseFileName = $"test_missing_dir_{Guid.NewGuid():N}";
@@ -218,14 +214,9 @@ namespace ImageGeneratorApp.Tests
             }
             finally
             {
-                // Clean up the created directory to leave the environment clean
-                if (Directory.Exists(historyFolder))
+                if (!string.IsNullOrEmpty(_createdWebpPath) && File.Exists(_createdWebpPath))
                 {
-                    try { Directory.Delete(historyFolder, true); } catch { }
-                }
-                if (Directory.Exists(appFolder))
-                {
-                    try { Directory.Delete(appFolder, true); } catch { }
+                    try { File.Delete(_createdWebpPath); } catch { }
                 }
             }
         }
