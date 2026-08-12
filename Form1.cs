@@ -341,27 +341,25 @@ namespace ImageGeneratorApp
         private void BtnHistory_Click(object? sender, EventArgs e)
         {
             using var historyForm = new HistoryViewerForm(_historyRepo, _imageProcessingService);
-            historyForm.ShowDialog(this);
 
-            // Apply "Copie prompt" result if the user activated the button inside the history viewer.
-            // The history dialog closes itself on copy, so we are immediately back here to paste.
-            // Setting txtPrompt.Text triggers TextChanged (resets red border error state, updates generate button, etc.).
-            // Setting cmbModel.SelectedIndex triggers SelectedIndexChanged (updates model-dependent controls + key label).
-            if (!string.IsNullOrWhiteSpace(historyForm.PromptToLoad))
+            historyForm.HistoryItemCopied += (s, args) =>
             {
-                txtPrompt.Text = historyForm.PromptToLoad;
-
-                if (!string.IsNullOrWhiteSpace(historyForm.ModelToLoad))
+                if (!string.IsNullOrWhiteSpace(args.Prompt))
                 {
-                    int index = cmbModel.Items.IndexOf(historyForm.ModelToLoad);
-                    if (index >= 0)
+                    txtPrompt.Text = args.Prompt;
+
+                    if (!string.IsNullOrWhiteSpace(args.ModelName))
                     {
-                        cmbModel.SelectedIndex = index;
+                        int index = cmbModel.Items.IndexOf(args.ModelName);
+                        if (index >= 0)
+                        {
+                            cmbModel.SelectedIndex = index;
+                        }
                     }
-                    // If the stored model name is not in the current list (e.g. future model), we leave the
-                    // current selection unchanged. This is defensive and keeps behavior minimal.
                 }
-            }
+            };
+
+            historyForm.ShowDialog(this);
         }
 
         /// <summary>
