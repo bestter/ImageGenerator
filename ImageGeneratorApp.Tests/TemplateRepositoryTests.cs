@@ -285,5 +285,72 @@ namespace ImageGeneratorApp.Tests
             afterSecond.Should().NotBeNull();
             afterSecond!.UsageCount.Should().Be(2);
         }
+
+        [Fact]
+        public async Task UpdateUsageStatsBulkAsync_ShouldIncrementUsageCountForMultipleTemplates()
+        {
+            // Arrange
+            var template1 = new TemplateModel { Key = "bulk_test_1", Value = "test prompt 1" };
+            var template2 = new TemplateModel { Key = "bulk_test_2", Value = "test prompt 2" };
+            var template3 = new TemplateModel { Key = "bulk_test_3", Value = "test prompt 3" };
+
+            await _repository.InsertAsync(template1);
+            await _repository.InsertAsync(template2);
+            await _repository.InsertAsync(template3);
+
+            var keysToUpdate = new[] { "bulk_test_1", "bulk_test_2" };
+
+            // Act
+            bool success = await _repository.UpdateUsageStatsBulkAsync(keysToUpdate);
+
+            var after1 = await _repository.GetByKeyAsync("bulk_test_1");
+            var after2 = await _repository.GetByKeyAsync("bulk_test_2");
+            var after3 = await _repository.GetByKeyAsync("bulk_test_3");
+
+            // Assert
+            success.Should().BeTrue();
+
+            after1.Should().NotBeNull();
+            after1!.UsageCount.Should().Be(1);
+            after1.LastUsed.Should().NotBeNull();
+
+            after2.Should().NotBeNull();
+            after2!.UsageCount.Should().Be(1);
+            after2.LastUsed.Should().NotBeNull();
+
+            after3.Should().NotBeNull();
+            after3!.UsageCount.Should().Be(0);
+            after3.LastUsed.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task UpdateUsageStatsBulkAsync_WithNullKeys_ShouldReturnFalse()
+        {
+            // Act
+            bool result = await _repository.UpdateUsageStatsBulkAsync(null!);
+
+            // Assert
+            result.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task UpdateUsageStatsBulkAsync_WithEmptyKeys_ShouldReturnFalse()
+        {
+            // Act
+            bool result = await _repository.UpdateUsageStatsBulkAsync(Array.Empty<string>());
+
+            // Assert
+            result.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task UpdateUsageStatsBulkAsync_WithOnlyWhitespaceOrNullKeys_ShouldReturnFalse()
+        {
+            // Act
+            bool result = await _repository.UpdateUsageStatsBulkAsync(new[] { "", "   ", null! });
+
+            // Assert
+            result.Should().BeFalse();
+        }
     }
 }
