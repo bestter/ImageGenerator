@@ -265,17 +265,34 @@ namespace ImageGeneratorApp
             return sb.ToString();
         }
 
+        private static readonly char[] XmlSpecialChars = { '&', '<', '>', '"', '\'' };
+
         private static string XmlEscape(string? value)
         {
             if (string.IsNullOrEmpty(value))
                 return string.Empty;
 
-            return value
-                .Replace("&", "&amp;")
-                .Replace("<", "&lt;")
-                .Replace(">", "&gt;")
-                .Replace("\"", "&quot;")
-                .Replace("'", "&apos;");
+            // ⚡ Bolt Optimization: Zero-allocation fast path for strings that don't need escaping
+            if (value.IndexOfAny(XmlSpecialChars) == -1)
+            {
+                return value;
+            }
+
+            // ⚡ Bolt Optimization: Use StringBuilder and loop to avoid multiple intermediate string allocations from chaining Replace() calls
+            var sb = new StringBuilder(value.Length + 10);
+            foreach (char c in value)
+            {
+                switch (c)
+                {
+                    case '&': sb.Append("&amp;"); break;
+                    case '<': sb.Append("&lt;"); break;
+                    case '>': sb.Append("&gt;"); break;
+                    case '"': sb.Append("&quot;"); break;
+                    case '\'': sb.Append("&apos;"); break;
+                    default: sb.Append(c); break;
+                }
+            }
+            return sb.ToString();
         }
     }
 }
