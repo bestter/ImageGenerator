@@ -331,10 +331,10 @@ namespace ImageGeneratorApp
         private void ApplyFilters()
         {
             var searchText = txtSearch.Text.Trim();
-            var selectedCategory = cmbCategory.SelectedItem?.ToString();
-
             bool hasSearchText = !string.IsNullOrEmpty(searchText);
-            bool hasCategoryFilter = !string.IsNullOrEmpty(selectedCategory) && selectedCategory != "Toutes les catégories";
+
+            bool hasCategoryFilter = cmbCategory.SelectedIndex > 0;
+            string? selectedCategory = hasCategoryFilter ? cmbCategory.SelectedItem?.ToString() : null;
 
             // ⚡ Bolt Optimization: Replace LINQ chains on rapid UI paths with a standard foreach loop
             // This eliminates multiple intermediate enumerators and closure allocations on the main UI thread.
