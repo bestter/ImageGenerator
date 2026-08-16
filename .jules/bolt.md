@@ -182,3 +182,7 @@
 ## 2026-11-21 - Avoid HashSet for small distinct collections
 **Learning:** Using a `HashSet` inside a hot loop (like a recursive template parser) to extract unique matches from a Regex collection causes unnecessary allocations, as the number of matches is typically very small.
 **Action:** Always replace `HashSet` with a simple array and a standard `for` loop to eliminate the memory allocation and hashing overhead completely.
+
+## 2026-11-21 - Avoid redundant string operations and conversions on statically populated UI filters
+**Learning:** Evaluating `cmbCategory.SelectedItem?.ToString()` in a rapidly firing UI list-filter (like `ApplyFilters()`) incurs unnecessary overhead when checking if a "Toutes les catégories" static default option is selected. Because the default option is always at index 0, checking `SelectedIndex > 0` directly avoids the `.ToString()` and string comparison completely.
+**Action:** Always prefer checking the integer `SelectedIndex` rather than retrieving the selected string for static ComboBox options used purely as control flow flags in filter algorithms. Only retrieve the string payload if the filter is actually active.
