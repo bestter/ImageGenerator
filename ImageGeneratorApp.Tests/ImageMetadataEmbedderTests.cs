@@ -125,6 +125,26 @@ namespace ImageGeneratorApp.Tests
             pngMeta!.TextData.Should().NotBeEmpty();
         }
 
+        [Theory]
+        [InlineData(".xyz")]
+        [InlineData("   ")]
+        [InlineData("invalid")]
+        public void Embed_UnrecognizedExtension_DefaultsToPng(string invalidExtension)
+        {
+            var sourceBytes = CreateDummyImageBytes(false);
+            var metadata = CreateDummyMetadata();
+
+            var resultBytes = ImageMetadataEmbedder.Embed(sourceBytes, metadata, invalidExtension);
+
+            resultBytes.Should().NotBeNull();
+            resultBytes.Should().NotBeEmpty();
+
+            using var resultImage = SixLabors.ImageSharp.Image.Load(resultBytes);
+            var pngMeta = resultImage.Metadata.GetFormatMetadata(SixLabors.ImageSharp.Formats.Png.PngFormat.Instance);
+            pngMeta.Should().NotBeNull();
+            pngMeta!.TextData.Should().NotBeEmpty();
+        }
+
         [Fact]
         public void ApplyMetadata_NullImage_ThrowsArgumentNullException()
         {
