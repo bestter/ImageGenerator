@@ -186,3 +186,8 @@
 ## 2026-11-21 - Avoid redundant string operations and conversions on statically populated UI filters
 **Learning:** Evaluating `cmbCategory.SelectedItem?.ToString()` in a rapidly firing UI list-filter (like `ApplyFilters()`) incurs unnecessary overhead when checking if a "Toutes les catégories" static default option is selected. Because the default option is always at index 0, checking `SelectedIndex > 0` directly avoids the `.ToString()` and string comparison completely.
 **Action:** Always prefer checking the integer `SelectedIndex` rather than retrieving the selected string for static ComboBox options used purely as control flow flags in filter algorithms. Only retrieve the string payload if the filter is actually active.
+## 2024-08-18 - Over-allocating List<T> capacity
+
+**Learning:** When building collections for filtered search results from a larger dataset, initializing `List<T>` with a capacity equal to the full source dataset size (e.g., `new List<T>(cache.Count)`) causes massive memory over-allocation and GC pressure for small result sets. The benchmark showed allocations jumping from ~320KB to ~80MB, with negligible performance difference.
+
+**Action:** Avoid blindly initializing `List<T>` capacity to the size of the source collection when filtering down to a smaller subset.
