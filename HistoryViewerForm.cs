@@ -42,6 +42,9 @@ namespace ImageGeneratorApp
         private readonly List<string> _imageCacheOrder = new();
         private const int MaxImageCacheSize = 10;
 
+        // ⚡ Bolt Optimization: Cache for fetched metadata
+        private readonly Dictionary<int, string> _metadataCache = new();
+
         public event EventHandler<HistoryItemCopiedEventArgs>? HistoryItemCopied;
 
         private System.Windows.Forms.Timer _searchDebounceTimer = null!;
@@ -574,7 +577,15 @@ namespace ImageGeneratorApp
             // ⚡ Bolt Optimization: Lazily fetch RawMetadata on selection instead of loading it for the entire list
             try
             {
-                var rawMetadata = await _historyRepository.GetRawMetadataAsync((int)history.Id);
+                int historyId = (int)history.Id;
+                if (!_metadataCache.TryGetValue(historyId, out string? rawMetadata))
+                {
+                    rawMetadata = await _historyRepository.GetRawMetadataAsync(historyId);
+                    if (rawMetadata != null)
+                    {
+                        _metadataCache[historyId] = rawMetadata;
+                    }
+                }
                 txtMetadata.Text = FormatJson(rawMetadata);
             }
             catch

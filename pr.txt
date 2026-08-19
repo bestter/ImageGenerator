@@ -1,7 +1,1 @@
-🛡️ Sentinel: [HIGH] Fix Missing Entropy in DPAPI
-
-🚨 **Severity:** High
-💡 **Vulnerability:** The API key storage helper was using `ProtectedData.Protect` without supplying optional entropy. This means the encryption relies solely on the current user's profile key.
-🎯 **Impact:** If an attacker manages to obtain a copy of the user's registry hive/profile data, or if automated decryption tools are used on an infected machine, the API keys can be easily decrypted.
-🔧 **Fix:** Added a static, non-null byte array to act as application-specific entropy when calling `ProtectedData.Protect` and `ProtectedData.Unprotect`, securely tying the encrypted payload to this application.
-✅ **Verification:** Verified compilation succeeds. The fix is a standard usage of DPAPI optional entropy.
+⚡ Bolt: [performance improvement] Cache raw metadata fetches
