@@ -155,6 +155,24 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
+        public async Task SaveImageAsWebpAsync_PathTraversalAttempt_ThrowsArgumentException()
+        {
+            // Arrange
+            // This traversal attempt should be caught by our rigorous GetFullPath check
+            // Note: Since we use Path.GetFileName(baseFileName) first, simple attempts like "../../foo" just become "foo".
+            // However, it's good to ensure that if any weird edge case bypasses GetFileName (e.g. absolute paths),
+            // the subsequent GetFullPath check catches it. For instance, testing with a full absolute path on a different drive.
+            // On Windows this might be "D:\foo.webp", on Linux "/tmp/foo.webp".
+            var maliciousPath = Path.DirectorySeparatorChar == '\\' ? "C:\\malicious.webp" : "/malicious.webp";
+
+            // Act
+            Func<Task> act = async () => await _imageProcessingService.SaveImageAsWebpAsync(ValidPngBytes, maliciousPath);
+
+            // Assert
+            await act.Should().ThrowAsync<ArgumentException>().WithMessage("*Base file name results in a path outside the intended history directory.*");
+        }
+
+        [Fact]
         public async Task SaveImageAsWebpAsync_WithMetadata_EmbedsMetadataInWebpImage()
         {
             // Arrange
