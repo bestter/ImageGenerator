@@ -163,7 +163,7 @@ namespace ImageGeneratorApp.Tests
         public void LoadApiKey_WhenPathIsDirectory_ReturnsEmptyString_UnauthorizedAccessException()
         {
             // Arrange
-            // Create a directory at the file path to trigger UnauthorizedAccessException
+            // Create a directory at the file path to trigger UnauthorizedAccessException during LoadApiKey
             Directory.CreateDirectory(_filePath);
 
             // Act

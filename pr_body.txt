@@ -1,8 +1,3 @@
-💡 **What:** Replaced `cmbModel.SelectedItem?.ToString() == "nano-banana-pro"` with `cmbModel.SelectedIndex == 2` in `UpdateModelDependentControls` and `CmbModel_SelectedIndexChanged`.
-
-🎯 **Why:** Calling `.ToString()` on the selected item and performing a string comparison on every state update is unnecessary when the ComboBox items are statically defined. This change avoids redundant string conversions, potential memory allocations, and method calls on a hot path during UI interaction.
-
-📊 **Measured Improvement:**
-- **Baseline:** ~44 ms (10,000,000 iterations evaluating `?.ToString() == "..."`)
-- **Optimized:** ~3 ms (10,000,000 iterations evaluating `SelectedIndex == 2`)
-- **Impact:** Over 10x faster execution for this specific check, eliminating intermediate GC pressure when the UI refreshes or model changes.
+🎯 **What:** The testing gap addressed was testing the `UnauthorizedAccessException` condition during `LoadApiKey`. We added a test that simulates a directory at the API key storage path to accurately trigger this exception without depending on OS-level ACLs.
+📊 **Coverage:** The scenario covered is when the API key file storage path exists but is unauthorized (e.g. it is a directory), simulating restricted file access.
+✨ **Result:** Test coverage for `ApiKeyStorageHelper.LoadApiKey` exception handling is improved, guaranteeing silent failures occur properly and empty strings are returned when files cannot be accessed due to permissions.
