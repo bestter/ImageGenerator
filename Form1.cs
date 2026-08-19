@@ -737,7 +737,18 @@ namespace ImageGeneratorApp
                         return originalBytes;
                     });
 
-                    await File.WriteAllBytesAsync(sfd.FileName, bytesToSave);
+                    // Secure against path traversal: isolate the final file component and combine it with the intended directory
+                    string directory = Path.GetDirectoryName(sfd.FileName) ?? string.Empty;
+                    string safeFileName = Path.GetFileName(sfd.FileName);
+                    string safePath = Path.GetFullPath(Path.Combine(directory, safeFileName));
+
+                    // Ensure the target path resides within expected boundaries before writing
+                    if (!safePath.StartsWith(Path.GetFullPath(directory), StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new UnauthorizedAccessException("Tentative de traversée de répertoire détectée.");
+                    }
+
+                    await File.WriteAllBytesAsync(safePath, bytesToSave);
                     lblStatus.Text = "💾 Image sauvegardée avec métadonnées AI intégrées.";
                     MessageBox.Show("Image enregistrée avec succès !", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
