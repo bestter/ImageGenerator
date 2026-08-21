@@ -168,6 +168,9 @@ namespace ImageGeneratorApp
                     }
                 }
 
+                // ⚡ Bolt Optimization: Use StringBuilder and loop to avoid multiple intermediate string allocations from chaining Replace() calls
+                var promptSb = new System.Text.StringBuilder(currentPrompt, currentPrompt.Length + 500);
+
                 for (int k = 0; k < uniqueCount; k++)
                 {
                     var tag = uniqueTags[k];
@@ -216,12 +219,12 @@ namespace ImageGeneratorApp
                     }
 
                     // Update the prompt replacing all occurrences of this specific tag expression
-                    currentPrompt = currentPrompt.Replace(tag, templateValue);
+                    promptSb.Replace(tag, templateValue);
                     replacedAny = true;
 
                     // 🛡️ Sentinel: Enforce maximum length on resolved prompt to prevent memory exhaustion (DoS)
                     // from exponential template expansion (similar to a Billion Laughs attack).
-                    if (currentPrompt.Length > 100000)
+                    if (promptSb.Length > 100000)
                     {
                         throw new InvalidOperationException("Le prompt résolu dépasse la taille maximale autorisée (100000 caractères).");
                     }
@@ -232,6 +235,8 @@ namespace ImageGeneratorApp
                         usedKeys.Add(key);
                     }
                 }
+
+                currentPrompt = promptSb.ToString();
 
                 iterations++;
 
