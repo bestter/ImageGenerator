@@ -191,3 +191,6 @@
 **Learning:** When building collections for filtered search results from a larger dataset, initializing `List<T>` with a capacity equal to the full source dataset size (e.g., `new List<T>(cache.Count)`) causes massive memory over-allocation and GC pressure for small result sets. The benchmark showed allocations jumping from ~320KB to ~80MB, with negligible performance difference.
 
 **Action:** Avoid blindly initializing `List<T>` capacity to the size of the source collection when filtering down to a smaller subset.
+## 2024-05-18 - Reduce GC Pressure with StringBuilder for Multiple Replacements in loops
+**Learning:** When performing iterative `string.Replace` operations over a collection of items in a loop, assigning the result back to an immutable string on each iteration (e.g. `currentPrompt = currentPrompt.Replace(...)`) creates excessive allocations.
+**Action:** Instantiate a single `StringBuilder` before the loop, perform `sb.Replace()` inside the loop, and call `.ToString()` at the end.
