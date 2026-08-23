@@ -182,3 +182,8 @@
 **Vulnerability:** The application used `SaveFileDialog.FileName` directly in `File.WriteAllBytesAsync`. If an attacker or a malicious process modifies the file name to include path traversal sequences (e.g., `..\..\Windows\System32\cmd.exe`), the file could be saved outside the intended directory selected by the user, leading to arbitrary file write.
 **Learning:** `SaveFileDialog.FileName` can contain path traversal sequences if the file name is modified maliciously, which bypasses the intended directory selection.
 **Prevention:** Always validate the directory structure or ensure the target path resides within expected boundaries before writing. Extract the file name safely using `Path.GetFileName()` and explicitly combine it with the intended directory using `Path.Combine()`, then verify it using `Path.GetFullPath()`.
+
+## 2026-08-05 - Prevent Path Traversal Bypass via Trailing Slashes
+**Vulnerability:** The application used `StartsWith` on `Path.GetFullPath(directory)` to verify if a resolved file path resided within an intended directory. However, because `Path.GetFullPath` does not append a trailing slash, an attacker could supply a path like `C:\app\data_backup\file.txt` to bypass a check meant for `C:\app\data`.
+**Learning:** Checking string prefixes for directory containment is flawed if the target prefix doesn't definitively end with a directory separator.
+**Prevention:** Always ensure the target directory string explicitly ends with `Path.DirectorySeparatorChar` before calling `StartsWith()` to perform containment validation, or use URI/DirectoryInfo comparison methods.

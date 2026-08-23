@@ -742,8 +742,14 @@ namespace ImageGeneratorApp
                     string safeFileName = Path.GetFileName(sfd.FileName);
                     string safePath = Path.GetFullPath(Path.Combine(directory, safeFileName));
 
+                    string directoryFullPath = Path.GetFullPath(directory);
+                    if (!directoryFullPath.EndsWith(Path.DirectorySeparatorChar.ToString()))
+                    {
+                        directoryFullPath += Path.DirectorySeparatorChar;
+                    }
+
                     // Ensure the target path resides within expected boundaries before writing
-                    if (!safePath.StartsWith(Path.GetFullPath(directory), StringComparison.OrdinalIgnoreCase))
+                    if (!safePath.StartsWith(directoryFullPath, StringComparison.OrdinalIgnoreCase))
                     {
                         throw new UnauthorizedAccessException("Tentative de traversée de répertoire détectée.");
                     }
