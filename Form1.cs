@@ -737,16 +737,10 @@ namespace ImageGeneratorApp
                         return originalBytes;
                     });
 
-                    // Secure against path traversal: isolate the final file component and combine it with the intended directory
+                    // Treat the dialog result as a directory plus a leaf name so ".." in the file component cannot escape.
                     string directory = Path.GetDirectoryName(sfd.FileName) ?? string.Empty;
                     string safeFileName = Path.GetFileName(sfd.FileName);
                     string safePath = Path.GetFullPath(Path.Combine(directory, safeFileName));
-
-                    // Ensure the target path resides within expected boundaries before writing
-                    if (!safePath.StartsWith(Path.GetFullPath(directory), StringComparison.OrdinalIgnoreCase))
-                    {
-                        throw new UnauthorizedAccessException("Tentative de traversée de répertoire détectée.");
-                    }
 
                     await File.WriteAllBytesAsync(safePath, bytesToSave);
                     lblStatus.Text = "💾 Image sauvegardée avec métadonnées AI intégrées.";

@@ -19,7 +19,7 @@ jobs:
         node-version: 20
 
     - name: Run Component Detection
-      uses: actions/component-detection-dependency-submission-action@v3.0.0
+      uses: advanced-security/component-detection-dependency-submission-action@v0.1.4
       env:
         NODE_OPTIONS: "--use-system-ca"
       with:
