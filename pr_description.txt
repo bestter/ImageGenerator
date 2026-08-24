@@ -1,8 +1,0 @@
-💡 **What:** Added a `Dictionary<int, string>` to `HistoryViewerForm` to cache fetched metadata so it only calls `GetRawMetadataAsync` from the database once per history item.
-
-🎯 **Why:** To eliminate redundant database queries when navigating the generation history grid, reducing CPU usage, memory allocation (strings), and I/O latency.
-
-📊 **Measured Improvement:** Created a benchmark simulating 50 items being clicked 10 times.
-- Baseline DB fetches (500 ops): 50 ms
-- Improved Cache fetches (500 ops): 6 ms
-Resulting in an ~88% reduction in latency for metadata fetching during repeated viewing.

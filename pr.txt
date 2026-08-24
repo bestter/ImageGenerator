@@ -1,1 +1,0 @@
-⚡ Bolt: [performance improvement] Cache raw metadata fetches
