@@ -155,6 +155,46 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
+        public async Task SaveImageAsWebpAsync_PathLikeBaseFileName_SavesInsideHistoryFolder()
+        {
+            var historyFolder = Path.Combine(Path.GetTempPath(), $"ImageGenerator_History_{Guid.NewGuid():N}");
+            var isolatedService = new ImageProcessingService(historyFolder);
+            var absoluteName = Path.DirectorySeparatorChar == '\\' ? @"C:\malicious.webp" : "/malicious.webp";
+            var relativeTraversalName = Path.Combine("..", "..", "outside");
+
+            try
+            {
+                var absoluteSavedPath = await isolatedService.SaveImageAsWebpAsync(ValidPngBytes, absoluteName);
+                var relativeSavedPath = await isolatedService.SaveImageAsWebpAsync(ValidPngBytes, relativeTraversalName);
+
+                Path.GetDirectoryName(absoluteSavedPath).Should().Be(historyFolder);
+                Path.GetFileName(absoluteSavedPath).Should().Be("malicious.webp");
+                File.Exists(absoluteSavedPath).Should().BeTrue();
+
+                Path.GetDirectoryName(relativeSavedPath).Should().Be(historyFolder);
+                Path.GetFileName(relativeSavedPath).Should().Be("outside.webp");
+                File.Exists(relativeSavedPath).Should().BeTrue();
+            }
+            finally
+            {
+                if (Directory.Exists(historyFolder))
+                {
+                    try { Directory.Delete(historyFolder, true); } catch { }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task SaveImageAsWebpAsync_EmptyStemAfterSanitization_ThrowsArgumentException()
+        {
+            var emptyStemName = Path.DirectorySeparatorChar == '\\' ? @"C:\" : "/";
+
+            Func<Task> act = async () => await _imageProcessingService.SaveImageAsWebpAsync(ValidPngBytes, emptyStemName);
+
+            await act.Should().ThrowAsync<ArgumentException>().WithMessage("*Base file name cannot be null or whitespace.*");
+        }
+
+        [Fact]
         public async Task SaveImageAsWebpAsync_WithMetadata_EmbedsMetadataInWebpImage()
         {
             // Arrange
