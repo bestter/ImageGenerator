@@ -178,6 +178,7 @@ namespace ImageGeneratorApp
         {
             dataGridViewHistory = new DataGridView
             {
+                Name = "dataGridViewHistory",
                 Dock = DockStyle.Fill,
                 AutoGenerateColumns = false,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
@@ -411,6 +412,7 @@ namespace ImageGeneratorApp
 
             txtMetadata = new TextBox
             {
+                Name = "txtMetadata",
                 Dock = DockStyle.Top,
                 Height = 110,
                 Multiline = true,
@@ -511,7 +513,7 @@ namespace ImageGeneratorApp
                 {
                     // ⚡ Bolt Optimization: In-memory filtering instead of database queries for loaded collections.
                     // This eliminates massive, redundant I/O overhead on every debounced keystroke and guarantees instant filtering.
-                    var filtered = new List<GenerationHistoryModel>(_allHistoryCache.Count);
+                    var filtered = new List<GenerationHistoryModel>();
                     foreach (var record in _allHistoryCache)
                     {
                         if (record.Prompt.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
@@ -571,15 +573,26 @@ namespace ImageGeneratorApp
             txtPrompt.Text = history.Prompt;
             lblModelValue.Text = $"{history.ModelName}  {(string.IsNullOrEmpty(history.ModelVersion) ? "" : $"({history.ModelVersion})")}";
 
-            // ⚡ Bolt Optimization: Lazily fetch RawMetadata on selection instead of loading it for the entire list
+            // Lazily fetch RawMetadata on selection instead of loading it for the entire list.
             try
             {
-                var rawMetadata = await _historyRepository.GetRawMetadataAsync((int)history.Id);
-                txtMetadata.Text = FormatJson(rawMetadata);
+                if (history.RawMetadata is null)
+                {
+                    var rawMetadata = await _historyRepository.GetRawMetadataAsync(history.Id);
+                    history.RawMetadata = rawMetadata ?? string.Empty;
+                }
+
+                if (token == _currentSelectionToken)
+                {
+                    txtMetadata.Text = FormatJson(history.RawMetadata);
+                }
             }
             catch
             {
-                txtMetadata.Text = "{ \"error\": \"Impossible de charger les métadonnées\" }";
+                if (token == _currentSelectionToken)
+                {
+                    txtMetadata.Text = "{ \"error\": \"Impossible de charger les métadonnées\" }";
+                }
             }
 
             // Clean up the old image before rendering a new one to prevent GDI+ memory leaks

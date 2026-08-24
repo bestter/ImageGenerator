@@ -107,7 +107,7 @@ namespace ImageGeneratorApp
         /// </summary>
         /// <param name="id">The Id of the history record.</param>
         /// <returns>The raw metadata JSON string, or null if not found.</returns>
-        public async Task<string?> GetRawMetadataAsync(int id)
+        public async Task<string?> GetRawMetadataAsync(long id)
         {
             const string sql = "SELECT RawMetadata FROM GenerationHistory WHERE Id = @Id;";
             using var connection = _databaseHelper.GetConnection();

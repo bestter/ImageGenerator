@@ -191,3 +191,6 @@
 **Learning:** When building collections for filtered search results from a larger dataset, initializing `List<T>` with a capacity equal to the full source dataset size (e.g., `new List<T>(cache.Count)`) causes massive memory over-allocation and GC pressure for small result sets. The benchmark showed allocations jumping from ~320KB to ~80MB, with negligible performance difference.
 
 **Action:** Avoid blindly initializing `List<T>` capacity to the size of the source collection when filtering down to a smaller subset.
+## 2026-08-24 - Do not wrap TemplateParser unique-tag Replace in StringBuilder
+**Learning:** In `TemplateParser`, unique tags per outer pass are typically one. Allocating `new StringBuilder(currentPrompt, currentPrompt.Length + 500)` inside the `do` loop then calling `ToString()` is extra copies: `Regex.Matches` still needs a string for the next pass, and a magic `+ 500` over-allocates. That is more work than `currentPrompt = currentPrompt.Replace(tag, templateValue)` for the common case.
+**Action:** Keep in-loop `string.Replace` assigned back to `currentPrompt` for the unique-tag loop. Use `StringBuilder` only when many replacements happen on a buffer that does not need to be a string until the end (parameter `{0}`/`{1}` substitution inside a template value). Do not add `if (uniqueCount > 1)` just to hide the extra copy.

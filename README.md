@@ -96,6 +96,7 @@ dotnet test ImageGeneratorApp.Tests/ImageGeneratorApp.Tests.csproj --verbosity n
 - Les clés API saisies sont sauvegardées localement de manière chiffrée sur le disque via l'API DPAPI de Windows (`ProtectedData`), restreignant l'accès à l'utilisateur Windows courant.
 - Le chargement des clés sur le disque est protégé contre les attaques de type TOCTOU (*Time-of-Check to Time-of-Use*) et DoS par épuisement mémoire (avec limite de taille stricte à 4096 octets).
 - L'ouverture du fichier de licence dans le dialogue « À propos » est protégée contre le TOCTOU par un verrouillage via `FileStream` et exclut les chemins système absolus des dialogues d'erreur pour éviter la fuite d'informations (Path Disclosure).
+- Les écritures de fichiers (export utilisateur via Save As et images d'historique) isolent le nom de fichier avec `Path.GetFileName` avant `Path.Combine` / `Path.GetFullPath`, pour bloquer une traversée de chemin. Un contrôle `StartsWith` n'est pas utilisé comme sandbox.
 - L'identifiant utilisateur envoyé à l'API est un hash opaque (SHA-256) pour protéger les PII.
 - Un `device_id` aléatoire est stocké localement dans `%LOCALAPPDATA%\GrokImagineApp\device_id.txt` comme identifiant stable.
 
