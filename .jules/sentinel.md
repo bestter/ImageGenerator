@@ -179,11 +179,11 @@
 **Prevention:** Unconditionally call `Directory.CreateDirectory()` before performing operations that require the directory to exist, rather than attempting to predict or catch directory-related exceptions as part of the normal flow.
 
 ## 2026-08-01 - Prevent Path Traversal in SaveFileDialog
-**Vulnerability:** The application used `SaveFileDialog.FileName` directly in `File.WriteAllBytesAsync`. If an attacker or a malicious process modifies the file name to include path traversal sequences (e.g., `..\..\Windows\System32\cmd.exe`), the file could be saved outside the intended directory selected by the user, leading to arbitrary file write.
-**Learning:** `SaveFileDialog.FileName` can contain path traversal sequences if the file name is modified maliciously, which bypasses the intended directory selection.
-**Prevention:** Always validate the directory structure or ensure the target path resides within expected boundaries before writing. Extract the file name safely using `Path.GetFileName()` and explicitly combine it with the intended directory using `Path.Combine()`, then verify it using `Path.GetFullPath()`.
+**Vulnerability:** The application used `SaveFileDialog.FileName` directly in `File.WriteAllBytesAsync`. If the file name included path traversal sequences (e.g. `..\..\Windows\System32\cmd.exe`), the write could leave the directory the user selected.
+**Learning:** `SaveFileDialog.FileName` is a full path. Passing it through unchanged treats a malicious leaf as a path.
+**Prevention:** Do not pass `SaveFileDialog.FileName` straight to `File.WriteAllBytesAsync`. Isolate the leaf with `Path.GetFileName()`, combine it with `Path.GetDirectoryName()` via `Path.Combine()`, then resolve with `Path.GetFullPath()`. That construction is the defense. A prefix/`StartsWith` check against the same directory is not a sandbox.
 
-## 2026-08-05 - Prevent Path Traversal Bypass via StartsWith
-**Vulnerability:** When verifying that a combined file path resides within an intended directory using `safePath.StartsWith(fullDirectoryPath)`, an attacker could bypass the check by selecting a sibling directory with a name that starts with the intended directory's name (e.g., `C:\MyApp\Images-Malicious\`).
-**Learning:** String comparison methods like `StartsWith` do not understand path semantics and will match prefixes unconditionally.
-**Prevention:** Always normalize the intended target directory by ensuring it ends with a trailing `Path.DirectorySeparatorChar` before performing the `StartsWith` string comparison.
+## 2026-08-05 - Do Not Use StartsWith as Path Containment for SaveFileDialog
+**Vulnerability:** A follow-up patch treated `safePath.StartsWith(fullDirectoryPath)` as a sandbox and "fixed" a sibling-prefix bypass (`C:\MyApp\Images` vs `C:\MyApp\Images-Malicious\`) by appending a trailing `Path.DirectorySeparatorChar`. That bypass only exists when the allowed directory is a fixed root independent of the candidate path.
+**Learning:** When the allowed directory is `Path.GetDirectoryName` of the same `SaveFileDialog.FileName`, `StartsWith` is tautological: it asks whether a path sits under its own parent. User Save As is also meant to write wherever the user picks. Prefix matching is not a substitute for filename isolation.
+**Prevention:** Isolate the leaf with `Path.GetFileName`, then `Path.Combine` with either `Path.GetDirectoryName` (user-chosen save) or a known sandbox folder (history, API keys), then `Path.GetFullPath`. Do not add `StartsWith` (even with a trailing separator). Do not compare against a directory derived from the untrusted path and call that a boundary.
