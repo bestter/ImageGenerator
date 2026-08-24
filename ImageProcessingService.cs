@@ -53,24 +53,14 @@ namespace ImageGeneratorApp
 
             var historyFolder = _historyFolder;
 
-            // Clean the base file name, strip any existing extension, and append .webp
-            var safeBaseName = Path.GetFileName(baseFileName);
-            var cleanFileName = Path.GetFileNameWithoutExtension(safeBaseName) + ".webp";
-
-            // 🛡️ Sentinel: Prevent Path Traversal by enforcing that the final resolved path resides within the target directory.
-            var fullPath = Path.GetFullPath(Path.Combine(historyFolder, cleanFileName));
-            var normalizedHistoryFolder = Path.GetFullPath(historyFolder);
-
-            // Ensure the directory path ends with a separator to avoid false positives (e.g., /app/history and /app/history-malicious)
-            if (!normalizedHistoryFolder.EndsWith(Path.DirectorySeparatorChar.ToString()))
+            // Treat baseFileName as a name, not a path: strip directories and any existing extension.
+            var stem = Path.GetFileNameWithoutExtension(Path.GetFileName(baseFileName));
+            if (string.IsNullOrWhiteSpace(stem))
             {
-                normalizedHistoryFolder += Path.DirectorySeparatorChar;
+                throw new ArgumentException("Base file name cannot be null or whitespace.", nameof(baseFileName));
             }
 
-            if (!fullPath.StartsWith(normalizedHistoryFolder, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new ArgumentException("Base file name results in a path outside the intended history directory.", nameof(baseFileName));
-            }
+            var fullPath = Path.Combine(historyFolder, stem + ".webp");
 
             // Offload CPU-heavy image loading, encoding, and IO-heavy saving to a background thread to prevent UI freezing
             await Task.Run(() =>

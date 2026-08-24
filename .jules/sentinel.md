@@ -178,11 +178,6 @@
 **Learning:** `Directory.CreateDirectory()` in .NET is inherently idempotent and handles race conditions natively. Implementing custom logic to avoid calling it, or using an EAFP pattern to handle directory creation, is security theater. It complicates the code without adding security value and can obscure underlying issues.
 **Prevention:** Unconditionally call `Directory.CreateDirectory()` before performing operations that require the directory to exist, rather than attempting to predict or catch directory-related exceptions as part of the normal flow.
 
-## 2024-08-18 - Prevent Path Traversal in File Saving
-**Vulnerability:** While `Path.GetFileName` strips directory components from simple paths, relying solely on it before concatenating with a base folder can be risky if edge cases or different OS path parsers are involved.
-**Learning:** To guarantee that a file operation stays within a designated folder, validating the final constructed path is much more robust than trying to sanitize the input pieces.
-**Prevention:** Always normalize both the target directory and the final combined path using `Path.GetFullPath()`. Ensure the normalized directory ends with a directory separator, and then check if the final file path starts with that directory using `StartsWith(..., StringComparison.OrdinalIgnoreCase)`.
-
 ## 2026-08-01 - Prevent Path Traversal in SaveFileDialog
 **Vulnerability:** The application used `SaveFileDialog.FileName` directly in `File.WriteAllBytesAsync`. If an attacker or a malicious process modifies the file name to include path traversal sequences (e.g., `..\..\Windows\System32\cmd.exe`), the file could be saved outside the intended directory selected by the user, leading to arbitrary file write.
 **Learning:** `SaveFileDialog.FileName` can contain path traversal sequences if the file name is modified maliciously, which bypasses the intended directory selection.

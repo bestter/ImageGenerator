@@ -155,21 +155,43 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
-        public async Task SaveImageAsWebpAsync_PathTraversalAttempt_ThrowsArgumentException()
+        public async Task SaveImageAsWebpAsync_PathLikeBaseFileName_SavesInsideHistoryFolder()
         {
-            // Arrange
-            // This traversal attempt should be caught by our rigorous GetFullPath check
-            // Note: Since we use Path.GetFileName(baseFileName) first, simple attempts like "../../foo" just become "foo".
-            // However, it's good to ensure that if any weird edge case bypasses GetFileName (e.g. absolute paths),
-            // the subsequent GetFullPath check catches it. For instance, testing with a full absolute path on a different drive.
-            // On Windows this might be "D:\foo.webp", on Linux "/tmp/foo.webp".
-            var maliciousPath = Path.DirectorySeparatorChar == '\\' ? "C:\\malicious.webp" : "/malicious.webp";
+            var historyFolder = Path.Combine(Path.GetTempPath(), $"ImageGenerator_History_{Guid.NewGuid():N}");
+            var isolatedService = new ImageProcessingService(historyFolder);
+            var absoluteName = Path.DirectorySeparatorChar == '\\' ? @"C:\malicious.webp" : "/malicious.webp";
+            var relativeTraversalName = Path.Combine("..", "..", "outside");
 
-            // Act
-            Func<Task> act = async () => await _imageProcessingService.SaveImageAsWebpAsync(ValidPngBytes, maliciousPath);
+            try
+            {
+                var absoluteSavedPath = await isolatedService.SaveImageAsWebpAsync(ValidPngBytes, absoluteName);
+                var relativeSavedPath = await isolatedService.SaveImageAsWebpAsync(ValidPngBytes, relativeTraversalName);
 
-            // Assert
-            await act.Should().ThrowAsync<ArgumentException>().WithMessage("*Base file name results in a path outside the intended history directory.*");
+                Path.GetDirectoryName(absoluteSavedPath).Should().Be(historyFolder);
+                Path.GetFileName(absoluteSavedPath).Should().Be("malicious.webp");
+                File.Exists(absoluteSavedPath).Should().BeTrue();
+
+                Path.GetDirectoryName(relativeSavedPath).Should().Be(historyFolder);
+                Path.GetFileName(relativeSavedPath).Should().Be("outside.webp");
+                File.Exists(relativeSavedPath).Should().BeTrue();
+            }
+            finally
+            {
+                if (Directory.Exists(historyFolder))
+                {
+                    try { Directory.Delete(historyFolder, true); } catch { }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task SaveImageAsWebpAsync_EmptyStemAfterSanitization_ThrowsArgumentException()
+        {
+            var emptyStemName = Path.DirectorySeparatorChar == '\\' ? @"C:\" : "/";
+
+            Func<Task> act = async () => await _imageProcessingService.SaveImageAsWebpAsync(ValidPngBytes, emptyStemName);
+
+            await act.Should().ThrowAsync<ArgumentException>().WithMessage("*Base file name cannot be null or whitespace.*");
         }
 
         [Fact]
