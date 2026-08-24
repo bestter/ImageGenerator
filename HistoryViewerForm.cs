@@ -514,7 +514,7 @@ namespace ImageGeneratorApp
                 {
                     // ⚡ Bolt Optimization: In-memory filtering instead of database queries for loaded collections.
                     // This eliminates massive, redundant I/O overhead on every debounced keystroke and guarantees instant filtering.
-                    var filtered = new List<GenerationHistoryModel>();
+                    var filtered = new List<GenerationHistoryModel>(_allHistoryCache.Count);
                     foreach (var record in _allHistoryCache)
                     {
                         if (record.Prompt.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
