@@ -51,6 +51,9 @@ namespace ImageGeneratorApp
         private Button btnCopyError = null!;
         private string? _lastErrorMessage = null;
         private CheckBox chkMultiTurnEditing = null!;
+#if DEBUG
+        private CheckBox chkMockOpenAI = null!;
+#endif
         private string? currentBase64Image = null;
         private byte[]? currentImageBytes = null;
         private ImageGenerationMetadata? currentImageMetadata = null;
@@ -65,7 +68,10 @@ namespace ImageGeneratorApp
         // ⚡ Bolt Optimization: Use a shared HttpClient instance for the lifetime of the application
         // This avoids socket exhaustion (TIME_WAIT state) and eliminates TCP/TLS handshake latency on subsequent requests
         // 🛡️ Sentinel: Add timeout to prevent hanging indefinitely if external API is unresponsive
-        private static readonly HttpClient _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+#if DEBUG
+        private static readonly OpenAIMockHttpMessageHandler _openAIMockHandler = new OpenAIMockHttpMessageHandler();
+#endif
+        private static readonly HttpClient _httpClient = CreateHttpClient();
         private readonly ImageGeneratorClient _imageClient = new ImageGeneratorClient(_httpClient);
 
         // Prompt Template System Fields
@@ -99,6 +105,15 @@ namespace ImageGeneratorApp
             InitializeControls();
         }
 
+        private static HttpClient CreateHttpClient()
+        {
+#if DEBUG
+            return new HttpClient(_openAIMockHandler) { Timeout = TimeSpan.FromSeconds(60) };
+#else
+            return new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+#endif
+        }
+
         private void InitializeControls()
         {
             InitializeTimers();
@@ -111,6 +126,9 @@ namespace ImageGeneratorApp
 
             this.Controls.AddRange(new Control[] { lblKey, txtApiKey, lblPrompt, txtPrompt, lblModel, cmbModel, lblRes, cmbResolution, btnAddImages, lblRatio, cmbAspectRatio, chkMultiTurnEditing,
                 btnGenerate, btnSave, btnClear, btnHistory, lblStatus, pictureBox, btnManageTemplates, chkEnableTemplates, lstAutocomplete });
+#if DEBUG
+            this.Controls.Add(chkMockOpenAI);
+#endif
 
             lstAutocomplete.BringToFront();
 
@@ -214,6 +232,19 @@ namespace ImageGeneratorApp
                 AutoSize = true,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
+
+#if DEBUG
+            chkMockOpenAI = new CheckBox
+            {
+                Text = "Simuler OpenAI (sans crédits)",
+                Location = new Point(680, contentTop + 190),
+                AutoSize = true,
+                Enabled = false,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
+            };
+            _openAIMockHandler.Enabled = false;
+            chkMockOpenAI.CheckedChanged += ChkMockOpenAI_CheckedChanged;
+#endif
         }
 
         private void InitializeActionButtons(int contentTop)
@@ -233,6 +264,11 @@ namespace ImageGeneratorApp
                 InitialDelay = 500,
                 ReshowDelay = 100
             };
+#if DEBUG
+            toolTipGenerate.SetToolTip(
+                chkMockOpenAI,
+                "Intercepte uniquement la génération OpenAI et retourne une image locale sans utiliser de crédits.");
+#endif
 
             btnSave = new Button { Text = "📥 Enregistrer l'image (haute rés.)", Location = new Point(370, contentTop + 230), Width = 250, Height = 40, Enabled = false, Anchor = AnchorStyles.Top | AnchorStyles.Left };
             btnSave.Click += BtnSave_Click;
@@ -423,10 +459,16 @@ namespace ImageGeneratorApp
 
         private async void BtnGenerate_Click(object? sender, EventArgs e)
         {
-            string apiKey = txtApiKey.Text?.Trim() ?? string.Empty;
+            bool useOpenAIMock = IsOpenAIMockEnabled();
+            string apiKey = useOpenAIMock
+                ? GetOpenAIMockApiKey()
+                : txtApiKey.Text?.Trim() ?? string.Empty;
 
-            string provider = GetProviderName(cmbModel.Text);
-            await ApiKeyStorageHelper.SaveApiKeyAsync(provider, apiKey);
+            if (!useOpenAIMock)
+            {
+                string provider = GetProviderName(cmbModel.Text);
+                await ApiKeyStorageHelper.SaveApiKeyAsync(provider, apiKey);
+            }
 
             string? imageToEditBase64 = null;
             if (chkMultiTurnEditing.Checked && !string.IsNullOrEmpty(currentBase64Image))
@@ -439,11 +481,14 @@ namespace ImageGeneratorApp
             byte[]? previousImageBytes = currentImageBytes;
 
             _isGenerating = true;
+            UpdateModelDependentControls();
             _ = UpdateGenerateButtonStateAsync();
             btnSave.Enabled = false;
             _lastErrorMessage = null;
             btnCopyError.Visible = false;
-            lblStatus.Text = "⏳ Génération en cours...";
+            lblStatus.Text = useOpenAIMock
+                ? "🧪 Génération OpenAI simulée en cours — aucun appel API..."
+                : "⏳ Génération en cours...";
             DisposeCurrentImage();
             currentBase64Image = null;
             currentImageBytes = null;
@@ -483,6 +528,7 @@ namespace ImageGeneratorApp
             finally
             {
                 _isGenerating = false;
+                UpdateModelDependentControls();
                 _ = UpdateGenerateButtonStateAsync();
                 if (currentBase64Image == null && previousBase64Image != null)
                 {
@@ -869,6 +915,36 @@ namespace ImageGeneratorApp
             return model is "grok-imagine-image" or "grok-imagine-image-quality";
         }
 
+        private bool IsOpenAIMockEnabled()
+        {
+#if DEBUG
+            return cmbModel.Text == "gpt-image-2" && chkMockOpenAI.Checked;
+#else
+            return false;
+#endif
+        }
+
+        private static string GetOpenAIMockApiKey()
+        {
+#if DEBUG
+            return OpenAIMockHttpMessageHandler.MockApiKey;
+#else
+            return string.Empty;
+#endif
+        }
+
+#if DEBUG
+        private void ChkMockOpenAI_CheckedChanged(object? sender, EventArgs e)
+        {
+            _openAIMockHandler.Enabled = chkMockOpenAI.Checked;
+            txtApiKey.Enabled = !chkMockOpenAI.Checked;
+            lblStatus.Text = chkMockOpenAI.Checked
+                ? "🧪 Mode OpenAI simulé activé — aucun appel API ne sera effectué."
+                : "Mode OpenAI simulé désactivé.";
+            _ = UpdateGenerateButtonStateAsync();
+        }
+#endif
+
         // 🛡️ Sentinel: Enforce model-specific UI state per AGENTS.md requirement.
         // Only Grok Imagine models support image editing in this application.
         private void UpdateModelDependentControls()
@@ -882,6 +958,18 @@ namespace ImageGeneratorApp
             {
                 chkMultiTurnEditing.Enabled = supportsImageEditing;
             }
+
+#if DEBUG
+            if (chkMockOpenAI != null)
+            {
+                bool isOpenAI = cmbModel.Text == "gpt-image-2";
+                chkMockOpenAI.Enabled = isOpenAI && !_isGenerating;
+                if (!isOpenAI && chkMockOpenAI.Checked)
+                {
+                    chkMockOpenAI.Checked = false;
+                }
+            }
+#endif
 
             if (!supportsImageEditing)
             {
@@ -1210,7 +1298,7 @@ namespace ImageGeneratorApp
             string key = txtApiKey.Text.Trim();
             string prompt = txtPrompt.Text.Trim();
 
-            if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(prompt))
+            if ((!IsOpenAIMockEnabled() && string.IsNullOrEmpty(key)) || string.IsNullOrEmpty(prompt))
             {
                 btnGenerate.Enabled = false;
                 return;
