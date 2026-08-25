@@ -60,7 +60,21 @@ namespace ImageGeneratorApp
                 throw new ArgumentException("Base file name cannot be null or whitespace.", nameof(baseFileName));
             }
 
-            var fullPath = Path.Combine(historyFolder, stem + ".webp");
+            // Normalize directory and ensure trailing separator for secure prefix check
+            string normalizedTargetDir = Path.GetFullPath(historyFolder);
+            if (!normalizedTargetDir.EndsWith(Path.DirectorySeparatorChar.ToString()))
+            {
+                normalizedTargetDir += Path.DirectorySeparatorChar;
+            }
+
+            string combinedPath = Path.Combine(normalizedTargetDir, stem + ".webp");
+            var fullPath = Path.GetFullPath(combinedPath);
+
+            // SÉCURITÉ : Validation stricte StartsWith pour prévenir les fuites de répertoires
+            if (!fullPath.StartsWith(normalizedTargetDir, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException("Détection de tentative de traversée de chemin dans le nom du fichier.");
+            }
 
             // Offload CPU-heavy image loading, encoding, and IO-heavy saving to a background thread to prevent UI freezing
             await Task.Run(() =>
