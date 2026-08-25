@@ -56,7 +56,8 @@ namespace ImageGeneratorApp
         {
             ["grok-imagine-image"] = "Grok Imagine",
             ["grok-imagine-image-quality"] = "Grok Imagine Quality",
-            ["nano-banana-pro"] = "Nano Banana Pro"
+            ["nano-banana-pro"] = "Nano Banana Pro",
+            ["gpt-image-2"] = "OpenAI GPT Image"
             // Future: add "dall-e-3" = "DALL-E 3", etc. Extensible without code changes in Form1.
         };
 

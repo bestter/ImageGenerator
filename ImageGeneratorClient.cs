@@ -151,6 +151,27 @@ namespace ImageGeneratorApp
 
                 content = JsonContent.Create(geminiRequest, ImageGeneratorJsonContext.Default.GeminiRequest);
             }
+            else if (model == "gpt-image-2")
+            {
+                if (imagesList != null && imagesList.Count > 0)
+                {
+                    throw new ArgumentException("Le modèle GPT Image 2 ne supporte pas l'édition d'image dans cette application.", nameof(imagesList));
+                }
+
+                apiUrl = "https://api.openai.com/v1/images/generations";
+                authHeaderName = "Authorization";
+                authHeaderValue = $"Bearer {apiKey}";
+
+                OpenAIImageRequest openAIRequest = new OpenAIImageRequest
+                {
+                    Model = model,
+                    Prompt = prompt,
+                    Size = GetOpenAIImageSize(resolution, aspectRatio),
+                    User = opaqueUserId
+                };
+
+                content = JsonContent.Create(openAIRequest, ImageGeneratorJsonContext.Default.OpenAIImageRequest);
+            }
             else
             {
                 authHeaderName = "Authorization";
@@ -191,6 +212,26 @@ namespace ImageGeneratorApp
             }
 
             return (apiUrl, content, authHeaderName, authHeaderValue);
+        }
+
+        private static string GetOpenAIImageSize(string resolution, string aspectRatio)
+        {
+            return (resolution, aspectRatio) switch
+            {
+                ("1k", "1:1") => "1024x1024",
+                ("1k", "16:9") => "1280x720",
+                ("1k", "9:16") => "720x1280",
+                ("1k", "4:3") => "1024x768",
+                ("1k", "3:2") => "1056x704",
+                ("1k", "20:9") => "1280x576",
+                ("2k", "1:1") => "2048x2048",
+                ("2k", "16:9") => "2048x1152",
+                ("2k", "9:16") => "1152x2048",
+                ("2k", "4:3") => "2048x1536",
+                ("2k", "3:2") => "2016x1344",
+                ("2k", "20:9") => "1920x864",
+                _ => throw new ArgumentException("La combinaison de résolution et de ratio d'aspect n'est pas prise en charge par OpenAI.")
+            };
         }
 
         private async Task<ImageGeneratorException> ParseErrorResponseAsync(HttpResponseMessage response, Stream responseStream)

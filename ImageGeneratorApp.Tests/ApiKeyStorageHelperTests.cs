@@ -86,6 +86,37 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
+        public async Task SaveAndLoadApiKey_DifferentProviders_RemainIsolated()
+        {
+            // Arrange
+            string otherProvider = _testProvider + "_Other";
+            string otherBaseFileName = Path.GetFileName(otherProvider);
+            string safeOtherProvider = string.Concat(otherBaseFileName.Split(Path.GetInvalidFileNameChars()));
+            string otherFilePath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "ImageGeneratorApp",
+                $"ApiKey_{safeOtherProvider}.dat");
+
+            try
+            {
+                // Act
+                await ApiKeyStorageHelper.SaveApiKeyAsync(_testProvider, "xai-key");
+                await ApiKeyStorageHelper.SaveApiKeyAsync(otherProvider, "openai-key");
+
+                // Assert
+                ApiKeyStorageHelper.LoadApiKey(_testProvider).Should().Be("xai-key");
+                ApiKeyStorageHelper.LoadApiKey(otherProvider).Should().Be("openai-key");
+            }
+            finally
+            {
+                if (File.Exists(otherFilePath))
+                {
+                    File.Delete(otherFilePath);
+                }
+            }
+        }
+
+        [Fact]
         public void LoadApiKey_WhenFileIsOversized_ReturnsEmptyString()
         {
             // Arrange

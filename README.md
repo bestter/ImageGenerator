@@ -1,115 +1,139 @@
 # Image Generator App
 
-Application de bureau Windows Forms (.NET 10) pour la génération d'images par IA, supportant plusieurs providers.
+Image Generator App is a Windows Forms desktop application for generating AI images with xAI, Google, and OpenAI APIs. It targets .NET 10 on Windows and keeps API calls, image processing, metadata, templates, and generation history local to the desktop workflow.
 
-## Providers supportés
+Current application version: `2.0.1`
 
-| Provider | Modèle(s) | API | Édition multi-tour |
-|---|---|---|---|
-| **Grok Imagine (xAI)** | `grok-imagine-image`, `grok-imagine-image-quality` | `https://api.x.ai/v1/images/` | ✅ Oui (jusqu'à 3 images) |
-| **Nano Banana Pro (Google)** | `nano-banana-pro` | `https://generativelanguage.googleapis.com/v1beta/` | ❌ Non |
+Documentation last verified against the codebase: August 25, 2026
 
-## Fonctionnalités
+## Supported providers
 
-- **Génération d'images multi-provider** : Sélectionnez le modèle souhaité et fournissez un prompt textuel pour générer une image.
-- **Édition d'images (Multi-turn)** : Chargez jusqu'à 3 images de base ou modifiez l'image précédemment générée *(Grok Imagine uniquement)*.
-- **Résolutions multiples** : Support 1k et 2k.
-- **Ratios d'aspect variés** : 1:1, 16:9, 9:16, 4:3, 3:2, 20:9.
-- **Sauvegarde locale asynchrone** : Enregistrez l'image générée en PNG ou JPEG sans bloquer l'interface. Le décodage Base64, l'encodage ImageSharp et l'intégration de métadonnées sont exécutés de façon asynchrone via un thread d'arrière-plan (`Task.Run` + `File.WriteAllBytesAsync`) garantissant une réactivité maximale de l'interface graphique.
-- **Intégration automatique de métadonnées AI** : Lors de l'export, les informations de génération (prompt original, modèle utilisé, date/heure, résolution, etc.) sont automatiquement intégrées dans les métadonnées de l'image (EXIF, XMP et chunks PNG tEXt/iTXt).
-- **Système de Gabarits (Templates) SQLite** : Utilisez des balises `{key}` ou `{key:param1:param2}` pour factoriser vos styles, avec résolution récursive sécurisée (limite de 20 boucles) et moteur de validation syntaxique levant des exceptions dédiées (`FormatException`, `InvalidOperationException`, `KeyNotFoundException`).
-- **Validation visuelle en temps réel (Bordure rouge UX)** : Une bordure rouge de 2 pixels apparaît instantanément autour du champ prompt en cas de syntaxe invalide ou de gabarit non reconnu (évaluée à la perte de focus ou au survol du bouton de génération). La bordure rouge disparaît immédiatement dès la reprise de la saisie.
-- **Activation dynamique intelligente (Generating button locking)** : Le bouton de génération se désactive et se verrouille automatiquement en cas de champ vide, d'erreur syntaxique, de clé de template absente de la base, ou lorsqu'une génération asynchrone d'image est en cours.
-- **Autocomplétion Mid-String au Caret** : Une liste flottante contextuelle d'autocomplétion apparaît lors de la saisie de l'accolade `{` pour insérer rapidement vos gabarits, alimentée par un cache asynchrone pour éviter tout ralentissement de la saisie.
-- **Aperçu dynamique du Prompt** : Survolez le bouton de génération pour prévisualiser le prompt entièrement résolu et expansé dans une info-bulle avant de l'envoyer à l'API.
-- **Historique de Génération Local (SQLite & WEBP)** : Chaque image générée avec succès déclenche une tâche d'arrière-plan asynchrone et silencieuse qui compresse l'image d'origine en **WEBP (Qualité 80%)** dans le dossier `%LocalAppData%\ImageGeneratorApp\HistoryImages\`, préservant de 5 à 10 fois le stockage par rapport aux PNG d'origine.
-- **Préservation de Métadonnées Provenance** : Les images d'historique WEBP stockées sur disque intègrent les profils de métadonnées EXIF et XMP standardisés contenant le prompt, le nom du modèle, la date/heure de génération et le logiciel de création.
-- **Explorateur d'Historique Premium (Split View)** : Un dialogue moderne scindé (SplitContainer) codé manuellement en code-first (Design-First) offrant une recherche textuelle filtrée par SQL `LIKE` temps réel avec Dapper, prévisualisation de l'image (décodage asynchrone sécurisé WEBP vers Bitmap GDI+), visualiseur monospace de prompt et bloc de métadonnées JSON avec indentation automatique.
-- **Concurrence & Sécurité Mémoire** : Protection contre les race conditions lors d'une navigation rapide dans l'historique (les anciennes requêtes de chargement d'image sont automatiquement ignorées via un jeton de sélection unique), et libération rigoureuse des handles GDI+ pour éviter les fuites de ressources.
-- **Dialogue « À propos » et licence** : Accédez aux informations de version, copyright et au texte complet de la licence GPL v3 directement depuis l'application via le menu **Aide → À propos de Générateur d'image...**. Un bouton permet d'ouvrir le fichier `LICENSE.txt` situé à côté de l'exécutable.
+| Provider | Model identifiers | Endpoint | Authentication | Image editing in this app |
+|---|---|---|---|---|
+| xAI Grok Imagine | `grok-imagine-image`, `grok-imagine-image-quality` | `POST https://api.x.ai/v1/images/generations` or `/edits` | `Authorization: Bearer` | Yes, with up to three reference images and multi-turn editing |
+| Google Nano Banana Pro | `nano-banana-pro` | `POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent` | `x-goog-api-key` | No |
+| OpenAI GPT Image | `gpt-image-2` | [`POST https://api.openai.com/v1/images/generations`](https://developers.openai.com/api/reference/resources/images/methods/generate) | `Authorization: Bearer` | No; generation only |
 
-## Prérequis
+The application stores a separate encrypted API key for each provider. Switching models updates the key label and reloads the matching provider key. Google and OpenAI models disable and clear reference-image and multi-turn controls; selecting either Grok model enables them again.
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download) (Windows)
-- Une clé API xAI (pour Grok Imagine) et/ou une clé Google Cloud (pour Nano Banana Pro)
+## Features
 
-## Démarrage rapide
+- Multi-provider image generation from one responsive Windows Forms interface.
+- Grok image editing with one to three reference images and iterative multi-turn refinement.
+- `1k` and `2k` resolution presets with `1:1`, `16:9`, `9:16`, `4:3`, `3:2`, and `20:9` aspect ratios.
+- Asynchronous image display and PNG/JPEG export without blocking the UI.
+- Automatic EXIF, XMP, and PNG metadata containing the prompt, model, generation date, resolution, and other provenance information.
+- Recursive SQLite prompt templates using `{key}` and `{key:param1:param2}`, with syntax validation, contextual autocomplete, and resolved-prompt preview.
+- Automatic local generation history with WebP quality 80 compression, metadata preservation, SQLite search, and asynchronous preview loading.
+- Provider-specific API keys protected with Windows DPAPI for the current Windows user.
 
-```bash
-# Compiler
+## OpenAI GPT Image 2
+
+OpenAI support was added for [ticket #277](https://github.com/bestter/ImageGenerator/issues/277). The integration uses the direct Images API without the OpenAI SDK or any additional dependency.
+
+The application sends only this request shape:
+
+```json
+{
+  "model": "gpt-image-2",
+  "prompt": "A lighthouse in a storm",
+  "size": "1280x720",
+  "user": "opaque-device-id"
+}
+```
+
+It does not send `resolution`, `aspect_ratio`, `response_format`, `image`, `images`, `n`, `quality`, `background`, `moderation`, `output_format`, or streaming parameters. One image is requested implicitly. GPT Image models return base64 image data by default, which the application reads from `data[0].b64_json` and routes through the existing display, export, metadata, and history workflows.
+
+The [OpenAI GPT Image 2 model documentation](https://developers.openai.com/api/docs/models/gpt-image-2) and [Images API reference](https://developers.openai.com/api/reference/resources/images/methods/generate) support arbitrary `WIDTHxHEIGHT` sizes within the model limits. The application intentionally exposes only the following validated mappings:
+
+| Resolution | `1:1` | `16:9` | `9:16` | `4:3` | `3:2` | `20:9` |
+|---|---|---|---|---|---|---|
+| `1k` | `1024x1024` | `1280x720` | `720x1280` | `1024x768` | `1056x704` | `1280x576` |
+| `2k` | `2048x2048` | `2048x1152` | `1152x2048` | `2048x1536` | `2016x1344` | `1920x864` |
+
+Unsupported resolution/aspect-ratio combinations and reference images are rejected before any OpenAI HTTP request is made. OpenAI image editing remains outside the application scope even if the upstream model supports it. Model access, billing, and any account or organization verification requirements are managed externally in the OpenAI account.
+
+## Requirements
+
+- Windows, matching the `net10.0-windows10.0.22621.0` target framework.
+- [.NET 10 SDK](https://dotnet.microsoft.com/download).
+- At least one provider credential:
+  - xAI API key for Grok Imagine;
+  - Google Cloud API key for Nano Banana Pro;
+  - OpenAI API key with access to `gpt-image-2` for OpenAI GPT Image.
+
+## Build and run
+
+```powershell
 dotnet build ImageGeneratorApp.csproj
-
-# Lancer
 dotnet run --project ImageGeneratorApp.csproj
-
-# Tests
-dotnet test ImageGeneratorApp.Tests/ImageGeneratorApp.Tests.csproj --verbosity normal
+dotnet test --verbosity normal
 ```
 
-## Structure du projet
+All network tests use a mocked `HttpMessageHandler`; the test suite never calls a live provider API.
 
-```text
-├── Form1.cs                      # Interface utilisateur (WinForms code-first et bouton historique)
-├── DatabaseHelper.cs             # Initialisation de la base SQLite, type-mapping Dapper (gère templates et historique)
-├── TemplateModel.cs              # Représentation entité d'un gabarit de prompt
-├── TemplateRepository.cs         # Opérations CRUD asynchrones alimentées par Dapper
-├── TemplateParser.cs             # Moteur de résolution récursif avec Regex compilées
-├── TemplatesManagerForm.cs       # Dialogue de gestion des gabarits programmé en C#
-├── TemplateEditorForm.cs         # Dialogue d'ajout/édition de gabarits programmé en C#
-├── GenerationHistoryModel.cs     # Représentation entité d'un enregistrement d'historique
-├── GenerationHistoryRepository.cs# Opérations CRUD et recherche (Dapper) pour l'historique
-├── ImageProcessingService.cs     # Service de conversion WEBP, d'injection et de décodage BMP GDI+ (ImageSharp)
-├── HistoryOrchestrator.cs        # Orchestrateur coordonnant la sauvegarde WEBP et l'écriture SQLite
-├── HistoryViewerForm.cs          # Explorateur d'historique (split-panel, code-first) avec protection de course
-├── AboutForm.cs                  # Dialogue À propos (licence GPL v3, ouverture de LICENSE.txt)
-├── ImageGeneratorClient.cs       # Client HTTP multi-provider
-├── ImageGeneratorRequest.cs      # Modèle de requête (xAI)
-├── ImageGeneratorResponse.cs     # Modèle de réponse (xAI)
-├── ImageGeneratorException.cs    # Exception personnalisée (tous providers)
-├── ImageGeneratorJsonContext.cs  # Sérialisation JSON source-generated
-├── GeminiModels.cs               # Modèles Gemini (requête/réponse)
-├── ImageUrlObject.cs             # Objet de référence image (type + URL)
-├── Helpers/
-│   └── ApiKeyStorageHelper.cs      # Service de stockage sécurisé des clés API (chiffrement DPAPI)
-├── ImageMetadataEmbedder.cs      # Service d'intégration de métadonnées AI (EXIF/XMP/PNG)
-├── UserIdHelper.cs               # Gestion des identifiants (PII)
-├── Program.cs                    # Point d'entrée
-├── ImageGeneratorApp.csproj      # Fichier de projet
-├── ImageGeneratorApp.slnx        # Fichier de solution
-├── ImageGeneratorApp.Tests/      # Tests unitaires et d'intégration (xUnit + Moq + FluentAssertions)
-│   ├── GlobalUsings.cs
-│   ├── ImageGeneratorClientTests.cs
-│   ├── ApiKeyStorageHelperTests.cs # Tests de stockage et chargement sécurisé des clés API
-│   ├── UserIdHelperTests.cs
-│   ├── DatabaseHelperTests.cs      # Tests de configuration et initialisation SQLite
-│   ├── TemplateRepositoryTests.cs  # Tests de persistance et CRUD SQLite
-│   ├── TemplateParserTests.cs      # Tests du moteur d'analyse et de récursion
-│   ├── GenerationHistoryRepositoryTests.cs # Tests de persistance et recherche d'historique
-│   └── HistoryOrchestratorTests.cs # Tests d'intégration du flux WEBP et de persistance
-│   (inclut les tests pour ImageMetadataEmbedder)
-└── content/
-    └── Grok_Logomark_Dark.png    # Logo Grok
+## Local data
+
+Application data is stored below `%LocalAppData%\ImageGeneratorApp\`:
+
+| Data | Location |
+|---|---|
+| Provider API keys | `ApiKey_xAI.dat`, `ApiKey_Google.dat`, and `ApiKey_OpenAI.dat` |
+| Opaque device identifier | `device_id.txt` |
+| Prompt templates and generation history | `templates.db` |
+| Compressed history images | `HistoryImages\` |
+
+API key files are encrypted with Windows DPAPI using `DataProtectionScope.CurrentUser`. Key loading is limited to 4,096 encrypted bytes. The opaque API user identifier is a generated GUID and does not expose the Windows user name. Successful generated images are limited to 50 MiB of decoded data before they enter the display and persistence workflows.
+
+## Architecture
+
+| Component | Responsibility |
+|---|---|
+| `Form1.cs` | Code-first UI, provider state, generation workflow, display, export, and validation |
+| `ImageGeneratorClient.cs` | Provider routing, HTTP requests, defensive error parsing, response parsing, and image-size limits |
+| `ImageGeneratorRequest.cs` | xAI generation and edit request model |
+| `OpenAIImageRequest.cs` | Minimal OpenAI generation request model |
+| `GeminiModels.cs` | Google Gemini request and response models |
+| `ImageGeneratorResponse.cs` | Shared xAI/OpenAI `data[].b64_json` response model |
+| `ImageGeneratorJsonContext.cs` | Source-generated `System.Text.Json` serialization metadata |
+| `ApiKeyStorageHelper.cs` | Provider-specific DPAPI key persistence |
+| `TemplateParser.cs` and `TemplateRepository.cs` | Recursive prompt templates and SQLite persistence |
+| `HistoryOrchestrator.cs` | Coordination of WebP history storage and SQLite logging |
+| `ImageProcessingService.cs` | Image decoding, WebP encoding, and WinForms-compatible bitmap conversion |
+| `ImageMetadataEmbedder.cs` | EXIF, XMP, PNG, and friendly generator metadata |
+
+The UI is defined programmatically in `Form1.InitializeControls()`. Network logic stays in `ImageGeneratorClient`, and the shared `HttpClient` is injected into the client.
+
+## Testing
+
+The test project uses xUnit v3, Moq, and FluentAssertions. OpenAI coverage includes:
+
+- all twelve resolution/aspect-ratio mappings;
+- exact URL, HTTP method, Bearer token, and JSON payload;
+- confirmation that xAI-specific and editing properties are absent;
+- reference-image and unknown-size rejection before network access;
+- HTTP 401 and 429 errors;
+- malformed JSON and successful responses without `b64_json`;
+- provider key isolation and friendly OpenAI metadata.
+
+Run the complete suite before submitting changes:
+
+```powershell
+dotnet test --verbosity normal
 ```
 
-## Sécurité
+The expected result is a successful build with every test passing and zero compiler warnings.
 
-- Les clés API saisies sont sauvegardées localement de manière chiffrée sur le disque via l'API DPAPI de Windows (`ProtectedData`), restreignant l'accès à l'utilisateur Windows courant.
-- Le chargement des clés sur le disque est protégé contre les attaques de type TOCTOU (*Time-of-Check to Time-of-Use*) et DoS par épuisement mémoire (avec limite de taille stricte à 4096 octets).
-- L'ouverture du fichier de licence dans le dialogue « À propos » est protégée contre le TOCTOU par un verrouillage via `FileStream` et exclut les chemins système absolus des dialogues d'erreur pour éviter la fuite d'informations (Path Disclosure).
-- Les écritures de fichiers (export utilisateur via Save As et images d'historique) isolent le nom de fichier avec `Path.GetFileName` avant `Path.Combine` / `Path.GetFullPath`, pour bloquer une traversée de chemin. Un contrôle `StartsWith` n'est pas utilisé comme sandbox.
-- L'identifiant utilisateur envoyé à l'API est un hash opaque (SHA-256) pour protéger les PII.
-- Un `device_id` aléatoire est stocké localement dans `%LOCALAPPDATA%\GrokImagineApp\device_id.txt` comme identifiant stable.
+## Documentation maintenance
 
-## Licence
+Documentation is part of the implementation. Any change to providers, model identifiers, endpoints, authentication, request or response payloads, supported sizes, editing behavior, API-key storage, metadata, user-visible workflows, prerequisites, or tests must update this README in the same change. OpenAI behavior must be checked against current official OpenAI documentation before it is documented.
+
+Repository instruction files such as `AGENTS.md`, `ANTIGRAVITY.md`, and `.editorconfig` have separate protection rules and must not be edited without explicit owner authorization.
+
+## License
 
 Copyright (C) 2026 Martin Labelle (@bestter)
 
-Ce programme est un logiciel libre ; vous pouvez le redistribuer et/ou le modifier selon les termes de la **GNU General Public License** telle que publiée par la Free Software Foundation, soit la version 3 de la Licence, soit (à votre choix) toute version ultérieure.
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
 
-Ce programme est distribué dans l'espoir qu'il sera utile, mais **SANS AUCUNE GARANTIE** ; sans même la garantie implicite de COMMERCIABILITÉ ou d'ADÉQUATION À UN USAGE PARTICULIER. Consultez la GNU General Public License pour plus de détails.
-
-Vous devriez avoir reçu une copie de la GNU General Public License avec ce programme. Si ce n'est pas le cas, consultez <https://www.gnu.org/licenses/>.
-
-Voir le fichier [LICENSE](LICENSE.txt) pour le texte complet de la licence.
-
-Vous pouvez également consulter les informations de licence et ouvrir le fichier `LICENSE.txt` directement depuis l'application (menu **Aide → À propos de Générateur d'image...**).
+This program is distributed without any warranty; without even the implied warranty of merchantability or fitness for a particular purpose. See [LICENSE.txt](LICENSE.txt) for the complete license text.
