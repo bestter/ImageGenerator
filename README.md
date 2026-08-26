@@ -72,19 +72,6 @@ dotnet test --verbosity normal
 
 All network tests use a mocked `HttpMessageHandler`; the test suite never calls a live provider API.
 
-## Cost-free OpenAI manual testing
-
-The official [GPT Image 2 model documentation](https://developers.openai.com/api/docs/models/gpt-image-2) lists the free API tier as unsupported. A live end-to-end generation therefore requires a funded OpenAI API account. Debug builds provide a local simulation mode for validating the application without credits:
-
-1. Start the application with `dotnet run --configuration Debug`.
-2. Select `gpt-image-2`.
-3. Enable **Simuler OpenAI (sans crédits)**. No API key is required while this option is enabled.
-4. Enter a prompt, choose a resolution and aspect ratio, and generate the image normally.
-
-The Debug-only handler intercepts `POST https://api.openai.com/v1/images/generations`. It validates the Bearer token and the exact `model`, `prompt`, `size`, and `user` payload before returning a locally generated PNG at the requested dimensions in `data[0].b64_json`. While simulation is enabled, every other request to `api.openai.com` is blocked instead of reaching the network. The result then follows the normal display, export, metadata, and history workflows.
-
-The simulation control and handler are excluded from Release builds. They validate the local integration contract but cannot verify a real API key, account access, billing, rate limits, or upstream image quality; those checks still require a live smoke test.
-
 ## Local data
 
 Application data is stored below `%LocalAppData%\ImageGeneratorApp\`:
@@ -106,7 +93,7 @@ API key files are encrypted with Windows DPAPI using `DataProtectionScope.Curren
 | `ImageGeneratorClient.cs` | Provider routing, HTTP requests, defensive error parsing, response parsing, and image-size limits |
 | `ImageGeneratorRequest.cs` | xAI generation and edit request model |
 | `OpenAIImageRequest.cs` | Minimal OpenAI generation request model |
-| `OpenAIMockHttpMessageHandler.cs` | Debug-only OpenAI request validator and local image response |
+| `ImageProviderCatalog.cs` | Model identifiers, storage provider names, editing support, and friendly generator names |
 | `GeminiModels.cs` | Google Gemini request and response models |
 | `ImageGeneratorResponse.cs` | Shared xAI/OpenAI `data[].b64_json` response model |
 | `ImageGeneratorJsonContext.cs` | Source-generated `System.Text.Json` serialization metadata |
