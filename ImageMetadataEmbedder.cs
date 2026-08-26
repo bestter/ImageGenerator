@@ -20,7 +20,6 @@ using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using SixLabors.ImageSharp.Metadata.Profiles.Xmp;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
@@ -52,26 +51,13 @@ namespace ImageGeneratorApp
         /// </summary>
         public const string AppNameVersion = "GrokImagineApp 2.0.1";
 
-        private static readonly Dictionary<string, string> ModelToGenerator = new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["grok-imagine-image"] = "Grok Imagine",
-            ["grok-imagine-image-quality"] = "Grok Imagine Quality",
-            ["nano-banana-pro"] = "Nano Banana Pro"
-            // Future: add "dall-e-3" = "DALL-E 3", etc. Extensible without code changes in Form1.
-        };
-
         /// <summary>
         /// Returns a human-readable generator name for the given model ID.
         /// Falls back to the raw model ID if unknown (supports future providers).
         /// </summary>
         public static string GetFriendlyGeneratorName(string modelId)
         {
-            if (string.IsNullOrWhiteSpace(modelId))
-                return "Unknown";
-
-            return ModelToGenerator.TryGetValue(modelId.Trim(), out var friendly)
-                ? friendly
-                : modelId.Trim();
+            return ImageProviderCatalog.GetFriendlyGeneratorName(modelId);
         }
 
         /// <summary>

@@ -66,6 +66,215 @@ namespace ImageGeneratorApp.Tests
             handlerMock.Verify();
         }
 
+        [Theory]
+        [InlineData("1k", "1:1", "1024x1024")]
+        [InlineData("1k", "16:9", "1280x720")]
+        [InlineData("1k", "9:16", "720x1280")]
+        [InlineData("1k", "4:3", "1024x768")]
+        [InlineData("1k", "3:2", "1056x704")]
+        [InlineData("1k", "20:9", "1280x576")]
+        [InlineData("2k", "1:1", "2048x2048")]
+        [InlineData("2k", "16:9", "2048x1152")]
+        [InlineData("2k", "9:16", "1152x2048")]
+        [InlineData("2k", "4:3", "2048x1536")]
+        [InlineData("2k", "3:2", "2016x1344")]
+        [InlineData("2k", "20:9", "1920x864")]
+        public async Task GenerateImageAsync_OpenAIModel_MapsSizeAndSendsOpenAISpecificPayload(
+            string resolution,
+            string aspectRatio,
+            string expectedSize)
+        {
+            // Arrange
+            const string expectedBase64 = "openai_base64";
+            var responseJson = new { data = new[] { new { b64_json = expectedBase64 } } };
+            HttpMethod? capturedMethod = null;
+            Uri? capturedUri = null;
+            string? capturedAuthorization = null;
+            string? capturedBody = null;
+
+            var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+            handlerMock
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
+                .Callback<HttpRequestMessage, CancellationToken>((request, _) =>
+                {
+                    capturedMethod = request.Method;
+                    capturedUri = request.RequestUri;
+                    capturedAuthorization = request.Headers.GetValues("Authorization").Single();
+                    capturedBody = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+                })
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent(JsonSerializer.Serialize(responseJson))
+                })
+                .Verifiable();
+
+            var client = new ImageGeneratorClient(new HttpClient(handlerMock.Object));
+
+            // Act
+            string result = await client.GenerateImageAsync(
+                "openai_key",
+                "A lighthouse in a storm",
+                "gpt-image-2",
+                resolution,
+                aspectRatio,
+                "opaque_user",
+                new List<ImageUrlObject>());
+
+            // Assert
+            result.Should().Be(expectedBase64);
+            capturedMethod.Should().Be(HttpMethod.Post);
+            capturedUri.Should().Be("https://api.openai.com/v1/images/generations");
+            capturedAuthorization.Should().Be("Bearer openai_key");
+
+            using JsonDocument document = JsonDocument.Parse(capturedBody!);
+            JsonElement root = document.RootElement;
+            root.EnumerateObject().Should().HaveCount(4);
+            root.GetProperty("model").GetString().Should().Be("gpt-image-2");
+            root.GetProperty("prompt").GetString().Should().Be("A lighthouse in a storm");
+            root.GetProperty("size").GetString().Should().Be(expectedSize);
+            root.GetProperty("user").GetString().Should().Be("opaque_user");
+            root.TryGetProperty("resolution", out _).Should().BeFalse();
+            root.TryGetProperty("aspect_ratio", out _).Should().BeFalse();
+            root.TryGetProperty("response_format", out _).Should().BeFalse();
+            root.TryGetProperty("image", out _).Should().BeFalse();
+            root.TryGetProperty("images", out _).Should().BeFalse();
+            handlerMock.Verify();
+        }
+
+        [Fact]
+        public async Task GenerateImageAsync_OpenAIModelWithImages_ThrowsArgumentException()
+        {
+            // Arrange
+            var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+            var client = new ImageGeneratorClient(new HttpClient(handlerMock.Object));
+            var images = new List<ImageUrlObject>
+            {
+                new ImageUrlObject { Type = "image_url", Url = "data:image/png;base64,dummy" }
+            };
+
+            // Act
+            Func<Task> act = async () => await client.GenerateImageAsync(
+                "openai_key",
+                "A lighthouse in a storm",
+                "gpt-image-2",
+                "1k",
+                "16:9",
+                "opaque_user",
+                images);
+
+            // Assert
+            await act.Should().ThrowAsync<ArgumentException>()
+                .WithMessage("*ne supporte pas l'édition d'image dans cette application*");
+        }
+
+        [Theory]
+        [InlineData("4k", "1:1")]
+        [InlineData("1k", "5:4")]
+        public async Task GenerateImageAsync_OpenAIModelWithUnsupportedSize_ThrowsArgumentException(
+            string resolution,
+            string aspectRatio)
+        {
+            // Arrange
+            var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+            var client = new ImageGeneratorClient(new HttpClient(handlerMock.Object));
+
+            // Act
+            Func<Task> act = async () => await client.GenerateImageAsync(
+                "openai_key",
+                "A lighthouse in a storm",
+                "gpt-image-2",
+                resolution,
+                aspectRatio,
+                "opaque_user",
+                new List<ImageUrlObject>());
+
+            // Assert
+            await act.Should().ThrowAsync<ArgumentException>()
+                .WithMessage("*n'est pas prise en charge par OpenAI*");
+        }
+
+        [Theory]
+        [InlineData(HttpStatusCode.Unauthorized, "Invalid API key")]
+        [InlineData(HttpStatusCode.TooManyRequests, "Rate limit exceeded")]
+        public async Task GenerateImageAsync_OpenAIErrorResponse_ThrowsImageGeneratorException(
+            HttpStatusCode statusCode,
+            string errorMessage)
+        {
+            // Arrange
+            var errorResponse = new { error = new { message = errorMessage } };
+            var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+            handlerMock
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.Is<HttpRequestMessage>(request =>
+                        request.RequestUri!.ToString() == "https://api.openai.com/v1/images/generations"),
+                    ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = statusCode,
+                    Content = new StringContent(JsonSerializer.Serialize(errorResponse))
+                });
+
+            var client = new ImageGeneratorClient(new HttpClient(handlerMock.Object));
+
+            // Act
+            Func<Task> act = async () => await client.GenerateImageAsync(
+                "openai_key",
+                "A lighthouse in a storm",
+                "gpt-image-2",
+                "1k",
+                "16:9",
+                "opaque_user",
+                new List<ImageUrlObject>());
+
+            // Assert
+            var exception = await act.Should().ThrowAsync<ImageGeneratorException>().WithMessage(errorMessage);
+            exception.Which.StatusCode.Should().Be((int)statusCode);
+        }
+
+        [Theory]
+        [InlineData("invalid json", "La réponse de l'API est malformée.")]
+        [InlineData("{\"data\":[{}]}", "La réponse de l'API ne contient pas d'image valide.")]
+        public async Task GenerateImageAsync_OpenAISuccessResponseWithoutValidImage_ThrowsImageGeneratorException(
+            string responseContent,
+            string expectedMessage)
+        {
+            // Arrange
+            var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+            handlerMock
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent(responseContent)
+                });
+
+            var client = new ImageGeneratorClient(new HttpClient(handlerMock.Object));
+
+            // Act
+            Func<Task> act = async () => await client.GenerateImageAsync(
+                "openai_key",
+                "A lighthouse in a storm",
+                "gpt-image-2",
+                "1k",
+                "16:9",
+                "opaque_user",
+                new List<ImageUrlObject>());
+
+            // Assert
+            await act.Should().ThrowAsync<ImageGeneratorException>().WithMessage(expectedMessage);
+        }
+
         [Fact]
         public async Task GenerateImageAsync_ValidRequestWithImages_CallsEditsEndpointAndReturnsBase64()
         {

@@ -201,6 +201,7 @@ namespace ImageGeneratorApp.Tests
             ImageMetadataEmbedder.GetFriendlyGeneratorName("grok-imagine-image").Should().Be("Grok Imagine");
             ImageMetadataEmbedder.GetFriendlyGeneratorName("grok-imagine-image-quality").Should().Be("Grok Imagine Quality");
             ImageMetadataEmbedder.GetFriendlyGeneratorName("nano-banana-pro").Should().Be("Nano Banana Pro");
+            ImageMetadataEmbedder.GetFriendlyGeneratorName("gpt-image-2").Should().Be("OpenAI GPT Image");
             ImageMetadataEmbedder.GetFriendlyGeneratorName("future-dall-e-4").Should().Be("future-dall-e-4");
             ImageMetadataEmbedder.GetFriendlyGeneratorName("").Should().Be("Unknown");
         }

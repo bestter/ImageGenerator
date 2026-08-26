@@ -31,6 +31,8 @@
     <Compile Include="..\ImageGeneratorJsonContext.cs" />
     <Compile Include="..\UserIdHelper.cs" />
     <Compile Include="..\ImageGeneratorRequest.cs" />
+    <Compile Include="..\OpenAIImageRequest.cs" />
+    <Compile Include="..\ImageProviderCatalog.cs" />
     <Compile Include="..\ImageGeneratorException.cs" />
     <Compile Include="..\ImageGeneratorResponse.cs" />
     <Compile Include="..\GeminiModels.cs" />
@@ -52,4 +54,3 @@
     <Compile Include="..\HistoryItemCopiedEventArgs.cs" />
   </ItemGroup>
 </Project>
-

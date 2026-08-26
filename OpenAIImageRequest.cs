@@ -16,17 +16,20 @@
 
 using System.Text.Json.Serialization;
 
-
 namespace ImageGeneratorApp
 {
-    [JsonSerializable(typeof(ImageGeneratorRequest))]
-    [JsonSerializable(typeof(ImageGeneratorResponse))]
-    [JsonSerializable(typeof(OpenAIImageRequest))]
-    [JsonSerializable(typeof(GeminiRequest))]
-    [JsonSerializable(typeof(GeminiResponse))]
-    [JsonSerializable(typeof(ImageUrlObject))]
-    [JsonSerializable(typeof(ImageUrlObject[]))]
-    internal partial class ImageGeneratorJsonContext : JsonSerializerContext
+    internal sealed class OpenAIImageRequest
     {
+        [JsonPropertyName("model")]
+        public string Model { get; set; } = string.Empty;
+
+        [JsonPropertyName("prompt")]
+        public string Prompt { get; set; } = string.Empty;
+
+        [JsonPropertyName("size")]
+        public string Size { get; set; } = string.Empty;
+
+        [JsonPropertyName("user")]
+        public string User { get; set; } = string.Empty;
     }
 }

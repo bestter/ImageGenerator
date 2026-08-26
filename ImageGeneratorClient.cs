@@ -110,87 +110,143 @@ namespace ImageGeneratorApp
             if (string.IsNullOrWhiteSpace(prompt))
                 throw new ArgumentException("Un prompt est requis.", nameof(prompt));
 
-            string apiUrl;
-            HttpContent content;
-            string authHeaderName;
-            string authHeaderValue;
+            int imageCount = imagesList?.Count ?? 0;
+            ImageProviderCatalog.EnsureReferenceImagesAllowed(model, imageCount);
 
-            if (model == "nano-banana-pro")
+            if (model == ImageProviderCatalog.NanoBananaPro)
+                return PrepareGeminiRequest(apiKey, prompt, resolution, aspectRatio);
+
+            if (model == ImageProviderCatalog.GptImage2)
+                return PrepareOpenAIRequest(apiKey, prompt, model, resolution, aspectRatio, opaqueUserId);
+
+            return PrepareXaiRequest(apiKey, prompt, model, resolution, aspectRatio, opaqueUserId, imagesList);
+        }
+
+        private static (string apiUrl, HttpContent content, string authHeaderName, string authHeaderValue) PrepareGeminiRequest(
+            string apiKey,
+            string prompt,
+            string resolution,
+            string aspectRatio)
+        {
+            GeminiRequest geminiRequest = new GeminiRequest
             {
-                // nano-banana-pro does not support image editing/multi-turn
-                if (imagesList != null && imagesList.Count > 0)
+                Contents = new[]
                 {
-                    throw new ArgumentException("Le modèle Nano Banana Pro ne supporte pas l'édition d'image.", nameof(imagesList));
+                    new GeminiContent
+                    {
+                        Parts = new[]
+                        {
+                            new GeminiPart { Text = prompt }
+                        }
+                    }
+                },
+                GenerationConfig = new GeminiGenerationConfig
+                {
+                    ResponseModalities = new[] { "IMAGE" },
+                    ImageConfig = new GeminiImageConfig
+                    {
+                        AspectRatio = aspectRatio,
+                        ImageSize = resolution.ToUpperInvariant()
+                    }
                 }
-                apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent";
-                authHeaderName = "x-goog-api-key";
-                authHeaderValue = apiKey;
+            };
 
-                GeminiRequest geminiRequest = new GeminiRequest
-                {
-                    Contents = new[]
-                    {
-                        new GeminiContent
-                        {
-                            Parts = new[]
-                            {
-                                new GeminiPart { Text = prompt }
-                            }
-                        }
-                    },
-                    GenerationConfig = new GeminiGenerationConfig
-                    {
-                        ResponseModalities = new[] { "IMAGE" },
-                        ImageConfig = new GeminiImageConfig
-                        {
-                            AspectRatio = aspectRatio,
-                            ImageSize = resolution.ToUpperInvariant()
-                        }
-                    }
-                };
+            return (
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent",
+                JsonContent.Create(geminiRequest, ImageGeneratorJsonContext.Default.GeminiRequest),
+                "x-goog-api-key",
+                apiKey);
+        }
 
-                content = JsonContent.Create(geminiRequest, ImageGeneratorJsonContext.Default.GeminiRequest);
-            }
-            else
+        private static (string apiUrl, HttpContent content, string authHeaderName, string authHeaderValue) PrepareOpenAIRequest(
+            string apiKey,
+            string prompt,
+            string model,
+            string resolution,
+            string aspectRatio,
+            string opaqueUserId)
+        {
+            OpenAIImageRequest openAIRequest = new OpenAIImageRequest
             {
-                authHeaderName = "Authorization";
-                authHeaderValue = $"Bearer {apiKey}";
+                Model = model,
+                Prompt = prompt,
+                Size = GetOpenAIImageSize(resolution, aspectRatio),
+                User = opaqueUserId
+            };
 
-                ImageGeneratorRequest requestBody = new ImageGeneratorRequest
-                {
-                    Model = model,
-                    Prompt = prompt,
-                    Resolution = resolution,
-                    AspectRatio = aspectRatio,
-                    User = opaqueUserId,
-                    N = 1,
-                    ResponseFormat = "b64_json"
-                };
+            return (
+                "https://api.openai.com/v1/images/generations",
+                JsonContent.Create(openAIRequest, ImageGeneratorJsonContext.Default.OpenAIImageRequest),
+                "Authorization",
+                $"Bearer {apiKey}");
+        }
 
-                if (imagesList != null && imagesList.Count > 0)
+        private static (string apiUrl, HttpContent content, string authHeaderName, string authHeaderValue) PrepareXaiRequest(
+            string apiKey,
+            string prompt,
+            string model,
+            string resolution,
+            string aspectRatio,
+            string opaqueUserId,
+            List<ImageUrlObject>? imagesList)
+        {
+            ImageGeneratorRequest requestBody = new ImageGeneratorRequest
+            {
+                Model = model,
+                Prompt = prompt,
+                Resolution = resolution,
+                AspectRatio = aspectRatio,
+                User = opaqueUserId,
+                N = 1,
+                ResponseFormat = "b64_json"
+            };
+
+            string apiUrl;
+            if (imagesList != null && imagesList.Count > 0)
+            {
+                apiUrl = "https://api.x.ai/v1/images/edits";
+                if (imagesList.Count == 1)
                 {
-                    apiUrl = "https://api.x.ai/v1/images/edits";
-                    if (imagesList.Count == 1)
-                    {
-                        requestBody.Image = imagesList[0];
-                    }
-                    else
-                    {
-                        requestBody.Images = imagesList.ToArray();
-                    }
+                    requestBody.Image = imagesList[0];
                 }
                 else
                 {
-                    apiUrl = "https://api.x.ai/v1/images/generations";
+                    requestBody.Images = imagesList.ToArray();
                 }
-
-                // ⚡ Bolt: Using JsonContent.Create prevents large string allocations in memory by streaming the JSON
-                // directly to the request stream, which is crucial since requestBody may contain large base64 strings.
-                // ⚡ Bolt: Using JsonContent.Create with Source Generated Context prevents reflection overhead
-                content = JsonContent.Create(requestBody, ImageGeneratorJsonContext.Default.ImageGeneratorRequest);
+            }
+            else
+            {
+                apiUrl = "https://api.x.ai/v1/images/generations";
             }
 
-            return (apiUrl, content, authHeaderName, authHeaderValue);
+            // ⚡ Bolt: Using JsonContent.Create prevents large string allocations in memory by streaming the JSON
+            // directly to the request stream, which is crucial since requestBody may contain large base64 strings.
+            // ⚡ Bolt: Using JsonContent.Create with Source Generated Context prevents reflection overhead
+            return (
+                apiUrl,
+                JsonContent.Create(requestBody, ImageGeneratorJsonContext.Default.ImageGeneratorRequest),
+                "Authorization",
+                $"Bearer {apiKey}");
+        }
+
+        private static string GetOpenAIImageSize(string resolution, string aspectRatio)
+        {
+            return (resolution, aspectRatio) switch
+            {
+                ("1k", "1:1") => "1024x1024",
+                ("1k", "16:9") => "1280x720",
+                ("1k", "9:16") => "720x1280",
+                ("1k", "4:3") => "1024x768",
+                ("1k", "3:2") => "1056x704",
+                ("1k", "20:9") => "1280x576",
+                ("2k", "1:1") => "2048x2048",
+                ("2k", "16:9") => "2048x1152",
+                ("2k", "9:16") => "1152x2048",
+                ("2k", "4:3") => "2048x1536",
+                ("2k", "3:2") => "2016x1344",
+                ("2k", "20:9") => "1920x864",
+                _ => throw new ArgumentException("La combinaison de résolution et de ratio d'aspect n'est pas prise en charge par OpenAI.")
+            };
         }
 
         private async Task<ImageGeneratorException> ParseErrorResponseAsync(HttpResponseMessage response, Stream responseStream)
@@ -252,7 +308,7 @@ namespace ImageGeneratorApp
         {
             try
             {
-                if (model == "nano-banana-pro")
+                if (model == ImageProviderCatalog.NanoBananaPro)
                 {
                     // ⚡ Bolt Optimization: Use JsonSerializer.DeserializeAsync instead of JsonDocument.ParseAsync.
                     // This avoids building a large DOM in memory for potentially huge payloads (like 20MB base64 images),

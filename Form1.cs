@@ -146,7 +146,7 @@ namespace ImageGeneratorApp
             mainMenuStrip.Items.Add(helpMenu);
             this.Controls.Add(mainMenuStrip);
 
-            this.Text = "Générateur d'image Grok Imagine et Nano Banana Pro";
+            this.Text = "Générateur d'images par IA";
             this.ClientSize = new Size(900, 700);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.WindowState = FormWindowState.Maximized;
@@ -186,7 +186,13 @@ namespace ImageGeneratorApp
             // Modèle
             lblModel = new Label { Text = "Modèle :", Location = new Point(20, contentTop + 145), AutoSize = true };
             cmbModel = new ComboBox { Location = new Point(190, contentTop + 142), Width = 230, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Top | AnchorStyles.Left };
-            cmbModel.Items.AddRange(new[] { "grok-imagine-image", "grok-imagine-image-quality", "nano-banana-pro" });
+            cmbModel.Items.AddRange(new[]
+            {
+                ImageProviderCatalog.GrokImagineImage,
+                ImageProviderCatalog.GrokImagineImageQuality,
+                ImageProviderCatalog.NanoBananaPro,
+                ImageProviderCatalog.GptImage2
+            });
             cmbModel.SelectedIndex = 0;
             cmbModel.SelectedIndexChanged += CmbModel_SelectedIndexChanged;
 
@@ -424,8 +430,7 @@ namespace ImageGeneratorApp
         private async void BtnGenerate_Click(object? sender, EventArgs e)
         {
             string apiKey = txtApiKey.Text?.Trim() ?? string.Empty;
-
-            string provider = cmbModel.Text == "nano-banana-pro" ? "Google" : "xAI";
+            string provider = ImageProviderCatalog.GetStorageProviderName(cmbModel.Text);
             await ApiKeyStorageHelper.SaveApiKeyAsync(provider, apiKey);
 
             string? imageToEditBase64 = null;
@@ -439,6 +444,7 @@ namespace ImageGeneratorApp
             byte[]? previousImageBytes = currentImageBytes;
 
             _isGenerating = true;
+            UpdateModelDependentControls();
             _ = UpdateGenerateButtonStateAsync();
             btnSave.Enabled = false;
             _lastErrorMessage = null;
@@ -483,6 +489,7 @@ namespace ImageGeneratorApp
             finally
             {
                 _isGenerating = false;
+                UpdateModelDependentControls();
                 _ = UpdateGenerateButtonStateAsync();
                 if (currentBase64Image == null && previousBase64Image != null)
                 {
@@ -855,21 +862,20 @@ namespace ImageGeneratorApp
         }
 
         // 🛡️ Sentinel: Enforce model-specific UI state per AGENTS.md requirement.
-        // Nano Banana Pro does not support image editing/multi-turn; disable related controls
-        // and clear any pending edit state to prevent invalid combinations reaching the client.
+        // Only Grok Imagine models support image editing in this application.
         private void UpdateModelDependentControls()
         {
-            bool isNano = cmbModel.SelectedIndex == 2; // "nano-banana-pro"
+            bool supportsImageEditing = ImageProviderCatalog.SupportsImageEditing(cmbModel.Text);
             if (btnAddImages != null)
             {
-                btnAddImages.Enabled = !isNano;
+                btnAddImages.Enabled = supportsImageEditing;
             }
             if (chkMultiTurnEditing != null)
             {
-                chkMultiTurnEditing.Enabled = !isNano;
+                chkMultiTurnEditing.Enabled = supportsImageEditing;
             }
 
-            if (isNano)
+            if (!supportsImageEditing)
             {
                 if (selectedImages.Count > 0)
                 {
@@ -887,22 +893,25 @@ namespace ImageGeneratorApp
         {
             UpdateModelDependentControls();
 
-            if (cmbModel.SelectedIndex == 2) // "nano-banana-pro"
+            string provider = ImageProviderCatalog.GetStorageProviderName(cmbModel.Text);
+            if (provider == ImageProviderCatalog.StorageProviderGoogle)
             {
                 lblKey.Text = "Clé Google Cloud :";
                 lblKey.ForeColor = Color.FromArgb(26, 115, 232); // Google Blue
-
-                string savedKey = ApiKeyStorageHelper.LoadApiKey("Google");
-                if (txtApiKey != null) txtApiKey.Text = savedKey ?? string.Empty;
+            }
+            else if (provider == ImageProviderCatalog.StorageProviderOpenAI)
+            {
+                lblKey.Text = "Clé API OpenAI :";
+                lblKey.ForeColor = SystemColors.ControlText;
             }
             else
             {
                 lblKey.Text = "Clé API xAI :";
                 lblKey.ForeColor = Color.FromArgb(220, 76, 30); // xAI Orange-Red
-
-                string savedKey = ApiKeyStorageHelper.LoadApiKey("xAI");
-                if (txtApiKey != null) txtApiKey.Text = savedKey ?? string.Empty;
             }
+
+            string savedKey = ApiKeyStorageHelper.LoadApiKey(provider);
+            if (txtApiKey != null) txtApiKey.Text = savedKey ?? string.Empty;
         }
 
         //[STAThread]
@@ -919,7 +928,7 @@ namespace ImageGeneratorApp
         {
             base.OnLoad(e);
 
-            string initialProvider = cmbModel?.Text == "nano-banana-pro" ? "Google" : "xAI";
+            string initialProvider = ImageProviderCatalog.GetStorageProviderName(cmbModel?.Text ?? string.Empty);
             string savedKey = ApiKeyStorageHelper.LoadApiKey(initialProvider);
             if (!string.IsNullOrEmpty(savedKey) && txtApiKey != null)
             {
