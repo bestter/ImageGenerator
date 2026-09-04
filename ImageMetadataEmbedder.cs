@@ -175,8 +175,12 @@ namespace ImageGeneratorApp
             if (string.IsNullOrEmpty(ext))
                 return false;
 
-            ext = ext.TrimStart('.').ToLowerInvariant();
-            return ext is "jpg" or "jpeg";
+            // ⚡ Bolt Optimization: Avoid chained string allocations (.ToLowerInvariant().TrimStart('.')) for file extension parsing.
+            // Using string.Equals with OrdinalIgnoreCase eliminates intermediate string allocations and reduces GC pressure.
+            return string.Equals(ext, ".jpg", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(ext, ".jpeg", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(ext, "jpg", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(ext, "jpeg", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
