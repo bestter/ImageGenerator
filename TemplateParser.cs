@@ -190,29 +190,35 @@ namespace ImageGeneratorApp
                     if (colonIndex != -1)
                     {
                         var paramString = innerContent.Substring(colonIndex + 1);
-                        // ⚡ Bolt Optimization: Use StringBuilder for multiple substring replacements instead of chaining immutable string.Replace calls
-                        // to reduce intermediate allocations and Garbage Collection (GC) pressure.
-                        var sb = new System.Text.StringBuilder(templateValue, templateValue.Length + 100);
 
-                        // ⚡ Bolt Optimization: Avoid string array allocations by iteratively finding the colon separator
-                        int paramIndex = 0;
-                        int currentPos = 0;
-                        while (currentPos <= paramString.Length)
+                        // ⚡ Bolt Optimization: Implement a zero-allocation fast path.
+                        // Do not blindly allocate a StringBuilder if the template value does not contain any parameter placeholders.
+                        if (templateValue.IndexOf('{') != -1)
                         {
-                            int nextColon = paramString.IndexOf(':', currentPos);
-                            if (nextColon == -1)
+                            // ⚡ Bolt Optimization: Use StringBuilder for multiple substring replacements instead of chaining immutable string.Replace calls
+                            // to reduce intermediate allocations and Garbage Collection (GC) pressure.
+                            var sb = new System.Text.StringBuilder(templateValue, templateValue.Length + 100);
+
+                            // ⚡ Bolt Optimization: Avoid string array allocations by iteratively finding the colon separator
+                            int paramIndex = 0;
+                            int currentPos = 0;
+                            while (currentPos <= paramString.Length)
                             {
-                                sb.Replace($"{{{paramIndex}}}", paramString.Substring(currentPos).Trim());
-                                break;
+                                int nextColon = paramString.IndexOf(':', currentPos);
+                                if (nextColon == -1)
+                                {
+                                    sb.Replace($"{{{paramIndex}}}", paramString.Substring(currentPos).Trim());
+                                    break;
+                                }
+                                else
+                                {
+                                    sb.Replace($"{{{paramIndex}}}", paramString.Substring(currentPos, nextColon - currentPos).Trim());
+                                    currentPos = nextColon + 1;
+                                    paramIndex++;
+                                }
                             }
-                            else
-                            {
-                                sb.Replace($"{{{paramIndex}}}", paramString.Substring(currentPos, nextColon - currentPos).Trim());
-                                currentPos = nextColon + 1;
-                                paramIndex++;
-                            }
+                            templateValue = sb.ToString();
                         }
-                        templateValue = sb.ToString();
                     }
 
                     // Update the prompt replacing all occurrences of this specific tag expression

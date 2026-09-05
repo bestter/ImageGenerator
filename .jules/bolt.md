@@ -194,3 +194,6 @@
 ## 2026-08-24 - Do not wrap TemplateParser unique-tag Replace in StringBuilder
 **Learning:** In `TemplateParser`, unique tags per outer pass are typically one. Allocating `new StringBuilder(currentPrompt, currentPrompt.Length + 500)` inside the `do` loop then calling `ToString()` is extra copies: `Regex.Matches` still needs a string for the next pass, and a magic `+ 500` over-allocates. That is more work than `currentPrompt = currentPrompt.Replace(tag, templateValue)` for the common case.
 **Action:** Keep in-loop `string.Replace` assigned back to `currentPrompt` for the unique-tag loop. Use `StringBuilder` only when many replacements happen on a buffer that does not need to be a string until the end (parameter `{0}`/`{1}` substitution inside a template value). Do not add `if (uniqueCount > 1)` just to hide the extra copy.
+## 2025-05-19 - Skip StringBuilder allocation if no replacements needed
+**Learning:** To truly optimize C# string replacements (like XML escaping or template parameter substitutions) and avoid allocations, do not blindly initialize a `StringBuilder` and iterate when no replacements are actually needed.
+**Action:** Always implement a zero-allocation fast path first by checking `string.IndexOfAny(cachedCharArray) == -1` (or `string.IndexOf(char) == -1`) and bypassing the `StringBuilder` allocation if true.
