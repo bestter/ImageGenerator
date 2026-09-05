@@ -187,3 +187,8 @@
 **Vulnerability:** A follow-up patch treated `safePath.StartsWith(fullDirectoryPath)` as a sandbox and "fixed" a sibling-prefix bypass (`C:\MyApp\Images` vs `C:\MyApp\Images-Malicious\`) by appending a trailing `Path.DirectorySeparatorChar`. That bypass only exists when the allowed directory is a fixed root independent of the candidate path.
 **Learning:** When the allowed directory is `Path.GetDirectoryName` of the same `SaveFileDialog.FileName`, `StartsWith` is tautological: it asks whether a path sits under its own parent. User Save As is also meant to write wherever the user picks. Prefix matching is not a substitute for filename isolation.
 **Prevention:** Isolate the leaf with `Path.GetFileName`, then `Path.Combine` with either `Path.GetDirectoryName` (user-chosen save) or a known sandbox folder (history, API keys), then `Path.GetFullPath`. Do not add `StartsWith` (even with a trailing separator). Do not compare against a directory derived from the untrusted path and call that a boundary.
+
+## 2026-08-05 - Prevent DoS via Unbounded File Stream Read in UserIdHelper
+**Vulnerability:** The application was reading the `device_id.txt` file directly from a `StreamReader` using `ReadToEndAsync()` after a file size check. However, an attacker could exploit a TOCTOU race condition to replace the file with a massive payload between the length check and the read, causing an `OutOfMemoryException` and DoS.
+**Learning:** Checking `fs.Length <= 1024` is insufficient if followed by an unbounded read.
+**Prevention:** To prevent TOCTOU memory exhaustion, always enforce the limit during the read itself using bounded methods like `StreamReader.ReadBlockAsync()` with a fixed-size buffer instead of `ReadToEndAsync()`.
