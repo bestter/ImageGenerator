@@ -1,38 +1,21 @@
-# Instructions pour l'Agent IA (Antigravity) - Image Generator App
+# Instructions propres à Antigravity — Image Generator App
 
-Ce fichier complète `AGENTS.md` et contient les directives spécifiques à la réflexion, au comportement et à la méthodologie de l'agent IA (Antigravity) travaillant sur ce projet. Il s'agit des règles de vol pour l'agent.
+Lis intégralement `AGENTS.md` et `.editorconfig` avant d'agir. `AGENTS.md` contient toutes les règles communes et prévaut sur ce complément; ne les duplique pas ici.
 
-## 1. Comportement Général et Éthique de l'Agent
+## Méthode de travail
 
-- **Zéro Refactoring Non Sollicité** : Ne modifie jamais une structure existante (comme réorganiser les dossiers, renommer des méthodes publiques, ou abstraire des interfaces) à moins que ce ne soit strictement nécessaire pour accomplir la tâche ou explicitement demandé. Reste chirurgical dans tes interventions.
-- **Respect IMPÉRATIF de `.editorconfig`** : Avant de générer, modifier ou formater du code, tu dois consulter et appliquer strictement les règles définies dans le fichier `.editorconfig` (ex: espaces vs tabulations, taille de l'indentation, sauts de ligne, etc.). Aucune déviation n'est tolérée.
-- **Autonomie Prudente** : Si tu es confronté à une erreur de compilation ou un test en échec suite à ta modification, tu es autorisé à tenter de le corriger par toi-même de manière itérative, mais n'entre pas dans une boucle infinie de modifications aveugles.
-- **Vérification Systématique** : Après toute modification de code C#, tu **DOIS** compiler (`dotnet build`) ou tester (`dotnet test --verbosity normal`) le code avant de rendre la main à l'utilisateur. Ne présume jamais que ton code compile sans avoir vérifié.
+1. Reformule mentalement le résultat attendu et repère les décisions non documentées.
+2. Inspecte les fichiers directement concernés, leurs appelants et leurs tests avant de modifier quoi que ce soit.
+3. Pour l'interface, établis d'abord le layout, les états et le comportement au redimensionnement.
+4. Applique un changement chirurgical et cohérent avec les frontières existantes.
+5. Après chaque échec causé par ton changement, lis le diagnostic complet et corrige la cause démontrée. N'enchaîne pas des essais spéculatifs.
+6. Si la correction déborde la portée initiale ou exige une décision d'architecture, arrête-toi et demande l'accord du propriétaire.
+7. Termine avec les validations et le compte rendu exigés par `AGENTS.md`.
 
-## 2. Règles strictes de développement WinForms (Code-First)
+## Discipline de raisonnement
 
-- **Sanctuaire du Designer** : Ne touche **JAMAIS** à `Form1.Designer.cs`. Toute la création et le paramétrage de l'interface doivent impérativement se trouver dans la méthode `InitializeControls()` de `Form1.cs`.
-- **Calcul Spatial Mental** : Avant d'ajouter un élément UI, calcule mentalement les coordonnées (X, Y) en lisant la position des éléments adjacents. Garde des marges cohérentes (ex: 10-20 pixels d'espacement).
-- **Responsive Design Manuel** : N'oublie jamais de définir la propriété `Anchor` (ou `Dock`) pour chaque nouveau contrôle afin que l'interface reste cohérente lorsque la fenêtre est redimensionnée ou maximisée.
-
-## 3. Communication réseau et API
-
-- **Résilience** : L'API peut renvoyer des structures d'erreur inattendues. Garde la logique de parsing JSON défensive (utiliser `TryGetProperty` plutôt que `GetProperty`).
-- **Performance** : Utilise l'instance partagée statique de `HttpClient` déjà en place. Ne crée jamais de nouvelles instances de `HttpClient` avec `new` dans le flux principal pour éviter l'épuisement des sockets.
-
-## 4. Politique Linguistique Mixte (Rappel critique)
-
-- **Code Source** : Variables, noms de méthodes, classes, commentaires inline, et messages de commits git -> **ANGLAIS**.
-- **Interface Utilisateur (UI)** : Propriété `Text` des labels, boutons, `MessageBox`, et statuts -> **FRANÇAIS**.
-- **Méta-Documentation** : `AGENTS.md` et `ANTIGRAVITY.md` -> **FRANÇAIS**.
-
-## 5. Gestion de l'état asynchrone
-
-- L'interface ne doit pas geler pendant les appels réseau. Assure-toi que toutes les méthodes qui communiquent avec l'API sont `async` et appelées avec `await`.
-- Gère correctement l'activation/désactivation des boutons (`btnGenerate.Enabled = false;`) au début de la tâche asynchrone, et n'oublie pas de les réactiver dans un bloc `finally`.
-
-## 6. Workflow de Validation Avancé (Anti-Regression)
-
-- **Règle de l'Étendue (Scope Rule)** : Lorsque l'utilisateur demande une modification de code, tu dois d'abord identifier avec précision les fichiers qui pourraient être affectés par ce changement (principe de moindre perturbation). Ne modifie que les fichiers strictement nécessaires à la fonctionnalité demandée.
-- **Double Vérification de Cohérence** : Avant de proposer une solution ou de finaliser une étape, tu dois vérifier si cette modification n'entraîne pas une régression dans les fonctionnalités adjacentes ou déjà existantes (par exemple, si tu modifies la méthode `UpdateUI`, vérifie que les boutons continuent de s'activer/désactiver correctement).
-- **Itération Contrôlée** : En cas d'erreur de compilation ou de test, tu es autorisé à effectuer des modifications correctives sur les fichiers directement touchés. Cependant, si la correction nécessite des modifications dans d'autres parties du code, tu dois impérativement soumettre ces modifications à l'utilisateur pour validation avant de les appliquer.
+- Distingue les faits observés dans le dépôt, les exigences de l'utilisateur et les hypothèses.
+- Ne présente jamais une hypothèse comme un comportement confirmé.
+- Vérifie les effets adjacents pertinents sans élargir la modification à un nettoyage général.
+- Préfère les contrats centralisés et les abstractions déjà présentes aux cas spéciaux ajoutés localement.
+- Lorsqu'une règle commune doit changer, modifie `AGENTS.md` avec l'autorisation requise au lieu d'ajouter une règle concurrente ici.
