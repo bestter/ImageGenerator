@@ -72,6 +72,12 @@ namespace ImageGeneratorApp
             using var connection = GetConnection();
             connection.Open();
 
+            CreateTables(connection);
+            CreateIndexes(connection);
+        }
+
+        private void CreateTables(SqliteConnection connection)
+        {
             // Create templates table if not exists
             const string createTableSql = @"
                 CREATE TABLE IF NOT EXISTS templates (
@@ -101,7 +107,10 @@ namespace ImageGeneratorApp
                 );";
 
             connection.Execute(createHistoryTableSql);
+        }
 
+        private void CreateIndexes(SqliteConnection connection)
+        {
             // Create standard indexes for efficient lookup
             connection.Execute("CREATE INDEX IF NOT EXISTS IX_templates_key ON templates(key);");
             connection.Execute("CREATE INDEX IF NOT EXISTS IX_templates_category ON templates(category);");
