@@ -1,7 +1,0 @@
-🎯 **What:** Modified empty `catch` blocks in `Helpers/ApiKeyStorageHelper.cs:51` (`SaveApiKeyAsync`) to log exceptions using `Debug.WriteLine` instead of silently swallowing them.
-
-💡 **Why:** Silently swallowing exceptions makes debugging difficult, as it hides the underlying reason for failures (e.g., storage, permission, or encryption errors). Logging the exception message improves observability and maintainability while preserving the existing 'fail safely' behavior that callers expect.
-
-✅ **Verification:** Verified by building the project successfully (`dotnet build`). Code review confirmed the changes are correct and safe.
-
-✨ **Result:** Enhanced code health and debuggability without altering application functionality or introducing regressions.
