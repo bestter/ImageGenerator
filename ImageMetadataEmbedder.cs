@@ -175,8 +175,15 @@ namespace ImageGeneratorApp
             if (string.IsNullOrEmpty(ext))
                 return false;
 
-            ext = ext.TrimStart('.').ToLowerInvariant();
-            return ext is "jpg" or "jpeg";
+            // ⚡ Bolt Optimization: Avoid chained string allocations (.ToLower().TrimStart('.')) for file extension parsing
+            ReadOnlySpan<char> span = ext.AsSpan();
+            if (span.Length > 0 && span[0] == '.')
+            {
+                span = span.Slice(1);
+            }
+
+            return span.Equals("jpg", StringComparison.OrdinalIgnoreCase) ||
+                   span.Equals("jpeg", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
