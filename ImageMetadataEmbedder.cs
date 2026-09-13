@@ -176,11 +176,14 @@ namespace ImageGeneratorApp
                 return false;
 
             // ⚡ Bolt Optimization: Avoid chained string allocations (.ToLower().TrimStart('.')) for file extension parsing
-            // This prevents intermediate string allocations on the heap and reduces Garbage Collection (GC) pressure.
-            return string.Equals(ext, ".jpg", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(ext, ".jpeg", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(ext, "jpg", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(ext, "jpeg", StringComparison.OrdinalIgnoreCase);
+            ReadOnlySpan<char> span = ext.AsSpan();
+            if (span.Length > 0 && span[0] == '.')
+            {
+                span = span.Slice(1);
+            }
+
+            return span.Equals("jpg", StringComparison.OrdinalIgnoreCase) ||
+                   span.Equals("jpeg", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
