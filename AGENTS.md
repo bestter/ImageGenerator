@@ -122,3 +122,8 @@ Dans le compte rendu final :
 - nommer les fichiers modifiés;
 - indiquer les validations réellement exécutées;
 - signaler clairement tout risque, hypothèse, test omis ou décision encore requise.
+
+
+## Commit
+- Donne toujours une description claire des changements
+- Signe tes commits avec le nom de ton outil (ex: Antigravity, Vs Code, Claude Code, Codex, etc.) et le nom de ton modèle exact: (ex: Gemini 3.7 Flash, ChatGpt 6 Astra, etc.).

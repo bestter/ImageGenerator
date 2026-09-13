@@ -192,3 +192,9 @@
 **Vulnerability:** The application was combining a base file name into a fixed history folder without validating the resulting full path. An attacker could provide a malicious filename with path traversal sequences (e.g., `../../../malicious.webp`), allowing files to be written outside the intended history directory. `Path.GetFileName` provides some defense but doesn't prevent traversal if `baseFileName` includes relative path components.
 **Learning:** `Path.Combine` and `Path.GetFileName` are not sufficient to prevent path traversal when combined with external input. Normalization and explicit boundary checking are required.
 **Prevention:** Normalize the target directory and the resulting combined path using `Path.GetFullPath()`. Ensure the normalized target directory ends with `Path.DirectorySeparatorChar`, and then explicitly check that the normalized full path starts with the normalized target directory using `StringComparison.OrdinalIgnoreCase`.
+
+## 2026-08-30 - Prevent TOCTOU Memory Exhaustion on File Reads
+**Vulnerability:** Checking file length via `fs.Length` on an opened `FileStream` prevents TOCTOU on the length check, but using an unbounded read method like `StreamReader.ReadToEndAsync()` immediately after creates a race condition where the file could be appended to during the read, causing an `OutOfMemoryException` (DoS).
+**Learning:** Checking a property like `Length` does not lock the file from being appended to, and unbounded read methods will read until the end of the stream regardless of the initial length check.
+**Prevention:** To prevent TOCTOU memory exhaustion, enforce the read limit directly during the read operation using bounded methods like `StreamReader.ReadBlockAsync()` with a fixed-size buffer instead of unbounded methods.
+
