@@ -125,5 +125,5 @@ Dans le compte rendu final :
 
 
 ## Commit
-- Donne toujours une description claire des changements
+- Donne toujours une description claire des changements.
 - Signe tes commits avec le nom de ton outil (ex: Antigravity, Vs Code, Claude Code, Codex, etc.) et le nom de ton modèle exact: (ex: Gemini 3.7 Flash, ChatGpt 6 Astra, etc.).
