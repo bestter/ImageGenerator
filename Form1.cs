@@ -643,9 +643,11 @@ namespace ImageGeneratorApp
                     Clipboard.SetText(_lastErrorMessage);
                     toolTipGenerate.Show("Message d'erreur copié !", btnCopyError, 0, -30, 2000);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
                     // Fallback if Clipboard access fails
+                    System.Diagnostics.Debug.WriteLine($"Failed to copy error message to clipboard: {ex}");
+                    MessageBox.Show("Impossible de copier le message d'erreur dans le presse-papiers.", "Erreur de copie", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
         }
