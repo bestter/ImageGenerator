@@ -1,7 +1,0 @@
-💡 **What**: Optimized iterative string replacement in `TemplateParser.ProcessPromptAsync` by using a single `StringBuilder` initialized before the loop instead of sequentially reassigning `currentPrompt = currentPrompt.Replace(...)`.
-
-🎯 **Why**: When a template contains multiple parameters (e.g., `{subject:dog:red}`), the previous approach caused excessive intermediate string allocations and Garbage Collection (GC) pressure because strings in C# are immutable, so every `Replace` call allocated a completely new string.
-
-📊 **Measured Improvement**: Drastically reduces Large Object Heap (LOH) pressure and intermediate memory allocations when resolving complex prompts with numerous tags.
-
-🔬 **Measurement**: Verify by processing a prompt with many unique tags containing parameters and profiling memory allocations before and after the change.
