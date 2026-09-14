@@ -188,7 +188,13 @@
 **Learning:** When the allowed directory is `Path.GetDirectoryName` of the same `SaveFileDialog.FileName`, `StartsWith` is tautological: it asks whether a path sits under its own parent. User Save As is also meant to write wherever the user picks. Prefix matching is not a substitute for filename isolation.
 **Prevention:** Isolate the leaf with `Path.GetFileName`, then `Path.Combine` with either `Path.GetDirectoryName` (user-chosen save) or a known sandbox folder (history, API keys), then `Path.GetFullPath`. Do not add `StartsWith` (even with a trailing separator). Do not compare against a directory derived from the untrusted path and call that a boundary.
 
-## 2026-08-05 - Prevent DoS via Unbounded File Stream Read in UserIdHelper
-**Vulnerability:** The application was reading the `device_id.txt` file directly from a `StreamReader` using `ReadToEndAsync()` after a file size check. However, an attacker could exploit a TOCTOU race condition to replace the file with a massive payload between the length check and the read, causing an `OutOfMemoryException` and DoS.
-**Learning:** Checking `fs.Length <= 1024` is insufficient if followed by an unbounded read.
-**Prevention:** To prevent TOCTOU memory exhaustion, always enforce the limit during the read itself using bounded methods like `StreamReader.ReadBlockAsync()` with a fixed-size buffer instead of `ReadToEndAsync()`.
+## 2026-08-10 - Prevent Path Traversal in File Saving Operations
+**Vulnerability:** The application was combining a base file name into a fixed history folder without validating the resulting full path. An attacker could provide a malicious filename with path traversal sequences (e.g., `../../../malicious.webp`), allowing files to be written outside the intended history directory. `Path.GetFileName` provides some defense but doesn't prevent traversal if `baseFileName` includes relative path components.
+**Learning:** `Path.Combine` and `Path.GetFileName` are not sufficient to prevent path traversal when combined with external input. Normalization and explicit boundary checking are required.
+**Prevention:** Normalize the target directory and the resulting combined path using `Path.GetFullPath()`. Ensure the normalized target directory ends with `Path.DirectorySeparatorChar`, and then explicitly check that the normalized full path starts with the normalized target directory using `StringComparison.OrdinalIgnoreCase`.
+
+## 2026-08-30 - Prevent TOCTOU Memory Exhaustion on File Reads
+**Vulnerability:** Checking file length via `fs.Length` on an opened `FileStream` prevents TOCTOU on the length check, but using an unbounded read method like `StreamReader.ReadToEndAsync()` immediately after creates a race condition where the file could be appended to during the read, causing an `OutOfMemoryException` (DoS).
+**Learning:** Checking a property like `Length` does not lock the file from being appended to, and unbounded read methods will read until the end of the stream regardless of the initial length check.
+**Prevention:** To prevent TOCTOU memory exhaustion, enforce the read limit directly during the read operation using bounded methods like `StreamReader.ReadBlockAsync()` with a fixed-size buffer instead of unbounded methods.
+
