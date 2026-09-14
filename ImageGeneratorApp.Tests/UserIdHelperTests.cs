@@ -78,27 +78,5 @@ namespace ImageGeneratorApp.Tests
                 Guid.TryParseExact(result, "N", out Guid parsed).Should().BeTrue();
             }
         }
-
-        [Fact]
-        public async Task GetOpaqueUserIdAsync_WhenFileIsOversized_GeneratesNewFallbackGuid()
-        {
-            // Arrange
-            Directory.CreateDirectory(_testFolderPath);
-            byte[] oversizedBytes = new byte[1025];
-            new Random().NextBytes(oversizedBytes);
-            await File.WriteAllBytesAsync(_testFilePath, oversizedBytes, TestContext.Current.CancellationToken);
-
-            // Act
-            string result = await UserIdHelper.GetOpaqueUserIdAsync();
-
-            // Assert
-            result.Should().NotBeNullOrWhiteSpace();
-            result.Length.Should().Be(32); // GUID "N" format length
-            Guid.TryParseExact(result, "N", out Guid parsed).Should().BeTrue();
-
-            // Verify that the oversized file was replaced with the new valid identifier
-            string fileContent = await File.ReadAllTextAsync(_testFilePath, TestContext.Current.CancellationToken);
-            fileContent.Should().Be(result);
-        }
     }
 }

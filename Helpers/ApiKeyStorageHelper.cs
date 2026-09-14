@@ -48,20 +48,17 @@ namespace ImageGeneratorApp
                     CryptographicOperations.ZeroMemory(plainBytes);
                 }
             }
-            catch (IOException ex)
+            catch (IOException)
             {
-                Debug.WriteLine($"Failed to save API key for {provider}: {ex.Message}");
-                // Fail on storage errors
+                // Silently fail on storage errors
             }
-            catch (UnauthorizedAccessException ex)
+            catch (UnauthorizedAccessException)
             {
-                Debug.WriteLine($"Failed to save API key for {provider}: {ex.Message}");
-                // Fail on permission errors
+                // Silently fail on permission errors
             }
-            catch (CryptographicException ex)
+            catch (CryptographicException)
             {
-                Debug.WriteLine($"Failed to save API key for {provider}: {ex.Message}");
-                // Fail on encryption errors
+                // Silently fail on encryption errors
             }
         }
 

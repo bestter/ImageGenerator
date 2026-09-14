@@ -61,21 +61,6 @@ namespace ImageGeneratorApp
             }
 
             var fullPath = Path.Combine(historyFolder, stem + ".webp");
-            // 🛡️ Sentinel: Prevent path traversal by explicitly validating the normalized path
-            var normalizedHistoryFolder = Path.GetFullPath(historyFolder);
-            if (!normalizedHistoryFolder.EndsWith(Path.DirectorySeparatorChar.ToString()))
-            {
-                normalizedHistoryFolder += Path.DirectorySeparatorChar;
-            }
-
-            var normalizedFullPath = Path.GetFullPath(fullPath);
-            if (!normalizedFullPath.StartsWith(normalizedHistoryFolder, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new ArgumentException("Invalid file name resulting in path traversal.", nameof(baseFileName));
-            }
-
-            fullPath = normalizedFullPath;
-
 
             // Offload CPU-heavy image loading, encoding, and IO-heavy saving to a background thread to prevent UI freezing
             await Task.Run(() =>

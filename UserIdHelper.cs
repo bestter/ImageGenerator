@@ -47,9 +47,7 @@ namespace ImageGeneratorApp
                         {
                             using (var reader = new StreamReader(fs))
                             {
-                                char[] buffer = new char[1024];
-                                int charsRead = await reader.ReadBlockAsync(buffer, 0, buffer.Length);
-                                _cachedDefaultUserId = new string(buffer, 0, charsRead).Trim();
+                                _cachedDefaultUserId = (await reader.ReadToEndAsync()).Trim();
                             }
                         }
                     }
