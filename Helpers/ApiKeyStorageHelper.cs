@@ -16,11 +16,23 @@ namespace ImageGeneratorApp
             // Sanitize provider name to avoid path traversal (though it's hardcoded internally)
             string baseFileName = Path.GetFileName(provider);
             string safeProvider = string.Concat(baseFileName.Split(Path.GetInvalidFileNameChars()));
-            return Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "ImageGeneratorApp",
-                $"ApiKey_{safeProvider}.dat"
-            );
+
+            string targetDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ImageGeneratorApp");
+            string normalizedTargetDir = Path.GetFullPath(targetDir);
+            if (!normalizedTargetDir.EndsWith(Path.DirectorySeparatorChar.ToString()))
+            {
+                normalizedTargetDir += Path.DirectorySeparatorChar;
+            }
+
+            string fullPath = Path.Combine(targetDir, $"ApiKey_{safeProvider}.dat");
+            string normalizedFullPath = Path.GetFullPath(fullPath);
+
+            if (!normalizedFullPath.StartsWith(normalizedTargetDir, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new UnauthorizedAccessException("Invalid API Key provider path.");
+            }
+
+            return normalizedFullPath;
         }
 
         public static async Task SaveApiKeyAsync(string provider, string apiKey)
