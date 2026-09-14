@@ -191,8 +191,8 @@ namespace ImageGeneratorApp
                     {
                         var paramString = innerContent.Substring(colonIndex + 1);
 
-                        // ⚡ Bolt Optimization: Implement a zero-allocation fast path.
-                        // Do not blindly allocate a StringBuilder if the template value does not contain any parameter placeholders.
+                        // ⚡ Bolt Optimization: Zero-allocation fast path check. Skip StringBuilder allocation completely
+                        // if the template does not contain any placeholders to replace.
                         if (templateValue.IndexOf('{') != -1)
                         {
                             // ⚡ Bolt Optimization: Use StringBuilder for multiple substring replacements instead of chaining immutable string.Replace calls
