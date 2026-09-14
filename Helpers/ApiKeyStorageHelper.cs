@@ -17,22 +17,8 @@ namespace ImageGeneratorApp
             string baseFileName = Path.GetFileName(provider);
             string safeProvider = string.Concat(baseFileName.Split(Path.GetInvalidFileNameChars()));
 
-            string targetDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ImageGeneratorApp");
-            string normalizedTargetDir = Path.GetFullPath(targetDir);
-            if (!normalizedTargetDir.EndsWith(Path.DirectorySeparatorChar.ToString()))
-            {
-                normalizedTargetDir += Path.DirectorySeparatorChar;
-            }
-
-            string fullPath = Path.Combine(targetDir, $"ApiKey_{safeProvider}.dat");
-            string normalizedFullPath = Path.GetFullPath(fullPath);
-
-            if (!normalizedFullPath.StartsWith(normalizedTargetDir, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new UnauthorizedAccessException("Invalid API Key provider path.");
-            }
-
-            return normalizedFullPath;
+            string targetDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ImageGeneratorApp");
+            return Path.GetFullPath(Path.Combine(targetDirectory, $"ApiKey_{safeProvider}.dat"));
         }
 
         public static async Task SaveApiKeyAsync(string provider, string apiKey)

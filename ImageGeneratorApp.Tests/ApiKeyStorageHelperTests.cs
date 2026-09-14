@@ -117,6 +117,35 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
+        public async Task SaveAndLoadApiKey_PathTraversalProvider_StoresInApplicationDirectory()
+        {
+            // Arrange
+            string providerName = "TraversalProvider_" + Guid.NewGuid().ToString("N");
+            string provider = Path.Combine("..", "..", providerName);
+            string expectedFilePath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "ImageGeneratorApp",
+                $"ApiKey_{providerName}.dat");
+
+            try
+            {
+                // Act
+                await ApiKeyStorageHelper.SaveApiKeyAsync(provider, "traversal-test-key");
+
+                // Assert
+                File.Exists(expectedFilePath).Should().BeTrue();
+                ApiKeyStorageHelper.LoadApiKey(provider).Should().Be("traversal-test-key");
+            }
+            finally
+            {
+                if (File.Exists(expectedFilePath))
+                {
+                    File.Delete(expectedFilePath);
+                }
+            }
+        }
+
+        [Fact]
         public void LoadApiKey_WhenFileIsOversized_ReturnsEmptyString()
         {
             // Arrange
