@@ -147,7 +147,6 @@ Si la pull request est identifiée comme émanant de Jules et que l’agent inte
 - **Vérification obligatoire** : Toujours inspecter l’état réel de la pull request sur GitHub avant d’agir, et vérifier après publication qu’aucun commentaire n’a été créé par mégarde.
 - **Exception pour Jules** : L’agent Jules lui-même demeure pleinement autorisé à publier des commentaires sur ses propres pull requests (notamment pour expliquer son travail, réagir aux échecs de la CI ou clore ses tâches).
 
-
 ## Commit
 - Donne toujours une description claire des changements.
 - Signe tes commits avec le nom de ton outil (ex: Antigravity, Vs Code, Claude Code, Codex, etc.) et le nom de ton modèle exact: (ex: Gemini 3.7 Flash, ChatGpt 6 Astra, etc.).
