@@ -2,8 +2,8 @@
 
 Ce fichier est la source de vérité commune pour les agents IA qui travaillent dans ce dépôt.
 
-**Version** : 2.1.0
-**Dernière mise à jour** : 11 septembre 2026
+**Version** : 2.2.0
+**Dernière mise à jour** : 14 septembre 2026
 **Propriétaire** : Martin Labelle (@bestter)
 
 ---
@@ -123,6 +123,21 @@ Dans le compte rendu final :
 - indiquer les validations réellement exécutées;
 - signaler clairement tout risque, hypothèse, test omis ou décision encore requise.
 
+## Gestion des pull requests
+
+### Pull requests créées par Google Labs Jules (Consignes pour agents tiers)
+
+Avant toute interaction ou écriture sur une pull request existante par un agent IA, vérifier rigoureusement l'identité de son auteur dans les métadonnées GitHub (ex. `gh pr view <id> --json author`).
+
+Si la pull request a été créée par l'application GitHub **Google Labs Jules** (identifiant `google-labs-jules` ou `google-labs-jules[bot]`) et que l'agent intervenant **n'est pas Jules lui-même** (agent tiers : Antigravity, Copilot, Claude, etc.) :
+
+- **Interdiction absolue d'ajouter des commentaires ou revues** : Ne publier aucun commentaire général, commentaire de revue, commentaire en ligne sur le diff, réponse à un fil de discussion ou revue GitHub (`APPROVE`, `REQUEST_CHANGES`, `COMMENT`), même vide, afin de ne pas réveiller ni désynchroniser Jules.
+- **Aucune notification active** : Ne jamais mentionner `@google-labs-jules` ou `@google-labs-jules[bot]` dans les descriptions de PR ou les messages de commit (utiliser des anti-apostrophes / backticks si le nom doit être cité).
+- **Communication par la description uniquement** : Pour consigner les modifications apportées, mettre à jour uniquement le corps/description de la PR (ex. `gh pr edit <id> --body ...`), en préservant scrupuleusement le contenu utile initial et en ajoutant une section distincte au bas (ex. `### Modifications apportées`).
+- **Commits et poussées autorisés** : Les commits et les poussées (`git push`) sur la branche de la PR demeurent permis lorsqu'ils sont demandés.
+- **Priorité de la règle** : Cette directive prévaut sur toute routine de revue, skill (notamment `code-review-skill`) ou commande automatisée qui génère habituellement des commentaires de PR.
+- **Vérification obligatoire** : Ne jamais se fier uniquement au nom de la branche ou à l'auteur d'un commit local. Toujours inspecter l'auteur réel de la pull request sur GitHub avant d'agir, et vérifier après publication qu'aucun commentaire n'a été créé par mégarde.
+- **Exception pour Jules** : L'agent Jules lui-même demeure pleinement autorisé à publier des commentaires sur ses propres pull requests (notamment pour expliquer son travail, réagir aux échecs de la CI ou clore ses tâches).
 
 ## Commit
 - Donne toujours une description claire des changements.
