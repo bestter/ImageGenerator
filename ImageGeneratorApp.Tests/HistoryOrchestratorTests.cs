@@ -120,32 +120,46 @@ namespace ImageGeneratorApp.Tests
             reader["RawMetadata"].ToString().Should().Be(rawMetadata);
         }
 
-        [Fact]
-        public async Task LogGenerationAsync_NullOrEmptyParameters_ThrowsExceptions()
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public async Task LogGenerationAsync_InvalidPrompt_ThrowsArgumentException(string? invalidPrompt)
         {
-            // Assert Null Image Bytes
-            Func<Task> act1 = async () => await _orchestrator.LogGenerationAsync(null!, "prompt", "model");
-            await act1.Should().ThrowAsync<ArgumentException>().WithMessage("*Image bytes*");
+            Func<Task> act = async () => await _orchestrator.LogGenerationAsync(ValidPngBytes, invalidPrompt!, "model");
+            await act.Should().ThrowAsync<ArgumentException>()
+                .WithMessage("*Prompt cannot be null or whitespace.*")
+                .WithParameterName("prompt");
+        }
 
-            // Assert Empty Image Bytes
-            Func<Task> act2 = async () => await _orchestrator.LogGenerationAsync(Array.Empty<byte>(), "prompt", "model");
-            await act2.Should().ThrowAsync<ArgumentException>().WithMessage("*Image bytes*");
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public async Task LogGenerationAsync_InvalidModelName_ThrowsArgumentException(string? invalidModelName)
+        {
+            Func<Task> act = async () => await _orchestrator.LogGenerationAsync(ValidPngBytes, "prompt", invalidModelName!);
+            await act.Should().ThrowAsync<ArgumentException>()
+                .WithMessage("*Model name cannot be null or whitespace.*")
+                .WithParameterName("modelName");
+        }
 
-            // Assert Null Prompt
-            Func<Task> act3 = async () => await _orchestrator.LogGenerationAsync(ValidPngBytes, null!, "model");
-            await act3.Should().ThrowAsync<ArgumentException>().WithMessage("*Prompt*");
+        [Fact]
+        public async Task LogGenerationAsync_NullImageBytes_ThrowsArgumentException()
+        {
+            Func<Task> act = async () => await _orchestrator.LogGenerationAsync(null!, "prompt", "model");
+            await act.Should().ThrowAsync<ArgumentException>()
+                .WithMessage("*Image bytes cannot be null or empty.*")
+                .WithParameterName("imageBytes");
+        }
 
-            // Assert Empty Prompt
-            Func<Task> act4 = async () => await _orchestrator.LogGenerationAsync(ValidPngBytes, "  ", "model");
-            await act4.Should().ThrowAsync<ArgumentException>().WithMessage("*Prompt*");
-
-            // Assert Null ModelName
-            Func<Task> act5 = async () => await _orchestrator.LogGenerationAsync(ValidPngBytes, "prompt", null!);
-            await act5.Should().ThrowAsync<ArgumentException>().WithMessage("*Model name*");
-
-            // Assert Empty ModelName
-            Func<Task> act6 = async () => await _orchestrator.LogGenerationAsync(ValidPngBytes, "prompt", "   ");
-            await act6.Should().ThrowAsync<ArgumentException>().WithMessage("*Model name*");
+        [Fact]
+        public async Task LogGenerationAsync_EmptyImageBytes_ThrowsArgumentException()
+        {
+            Func<Task> act = async () => await _orchestrator.LogGenerationAsync(Array.Empty<byte>(), "prompt", "model");
+            await act.Should().ThrowAsync<ArgumentException>()
+                .WithMessage("*Image bytes cannot be null or empty.*")
+                .WithParameterName("imageBytes");
         }
 
         [Fact]
