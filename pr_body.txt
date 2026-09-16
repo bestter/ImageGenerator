@@ -1,8 +1,0 @@
-💡 What:
-Removed unnecessary `.ToList()` calls when initializing `BindingList<GenerationHistoryModel>` in `HistoryViewerForm.cs`.
-
-🎯 Why:
-The `_allHistoryCache` field is already a `List<GenerationHistoryModel>`. Calling `.ToList()` on it created a redundant shallow copy of the entire collection on the UI thread, adding an unnecessary O(N) array allocation and resulting in avoidable Garbage Collection (GC) pressure.
-
-📊 Measured Improvement:
-Eliminates an O(N) array reallocation each time the history list's search text changes or initializes. This reduces GC overhead and memory churn on the UI thread, providing a smoother experience, especially with large history sets.
