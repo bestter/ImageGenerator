@@ -475,7 +475,7 @@ namespace ImageGeneratorApp
                 // ⚡ Bolt Optimization: Optimize DataGridView bulk updates with BindingList reassignment.
                 // Instead of clearing and sequentially adding items to an existing BindingList, we wrap a pre-allocated
                 // List<T> in a new BindingList<T> and reassign the DataSource.
-                dataGridViewHistory.DataSource = new BindingList<GenerationHistoryModel>(_allHistoryCache.ToList());
+                dataGridViewHistory.DataSource = new BindingList<GenerationHistoryModel>(_allHistoryCache);
                 UpdateSelectionDetails();
             }
             catch (Exception)
@@ -507,7 +507,7 @@ namespace ImageGeneratorApp
             {
                 if (string.IsNullOrWhiteSpace(searchTerm))
                 {
-                    dataGridViewHistory.DataSource = new BindingList<GenerationHistoryModel>(_allHistoryCache.ToList());
+                    dataGridViewHistory.DataSource = new BindingList<GenerationHistoryModel>(_allHistoryCache);
                 }
                 else
                 {

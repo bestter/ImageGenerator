@@ -1,3 +1,4 @@
+using Dapper;
 // AI Image generator. A program to generate image from AI API.
 // Copyright (C) 2026  Martin Labelle
 //
@@ -945,7 +946,9 @@ namespace ImageGeneratorApp
             try
             {
                 var templateKeys = await _templateRepo.GetAllKeysAsync();
-                _templateKeysCache = templateKeys.OrderBy(k => k).ToList();
+                // Bolt Optimization: Replace LINQ OrderBy().ToList() with in-place Sort() to eliminate allocations.
+                _templateKeysCache = templateKeys.AsList();
+                _templateKeysCache.Sort();
             }
             catch
             {
