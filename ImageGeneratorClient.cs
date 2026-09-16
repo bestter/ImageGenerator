@@ -342,7 +342,7 @@ namespace ImageGeneratorApp
                     // instead streaming directly to the required string property, significantly reducing Large Object Heap allocations.
                     var result = await JsonSerializer.DeserializeAsync(responseStream, ImageGeneratorJsonContext.Default.ImageGeneratorResponse);
 
-                    var b64 = result?.Data?[0]?.B64Json;
+                    var b64 = result?.Data != null && result.Data.Length > 0 ? result.Data[0]?.B64Json : null;
                     if (!string.IsNullOrEmpty(b64))
                     {
                         // 🛡️ Sentinel: Enforce output size limit before returning (central boundary for all callers)

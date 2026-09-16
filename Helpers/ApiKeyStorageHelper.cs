@@ -46,15 +46,10 @@ namespace ImageGeneratorApp
                     CryptographicOperations.ZeroMemory(plainBytes);
                 }
             }
-            catch (IOException ex)
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
                 Debug.WriteLine($"Failed to save API key for {provider}: {ex.Message}");
-                // Fail on storage errors
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                Debug.WriteLine($"Failed to save API key for {provider}: {ex.Message}");
-                // Fail on permission errors
+                // Fail on storage or permission errors
             }
             catch (CryptographicException ex)
             {
@@ -104,15 +99,10 @@ namespace ImageGeneratorApp
                     }
                 }
             }
-            catch (IOException ex)
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
                 Debug.WriteLine($"Failed to load API key for {provider}: {ex.Message}");
-                // Return empty if fails to read file
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                Debug.WriteLine($"Failed to load API key for {provider}: {ex.Message}");
-                // Return empty if permission denied
+                // Return empty if fails to read file or permission denied
             }
             catch (CryptographicException ex)
             {

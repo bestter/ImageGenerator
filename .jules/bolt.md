@@ -195,8 +195,9 @@
 **Learning:** In `TemplateParser`, unique tags per outer pass are typically one. Allocating `new StringBuilder(currentPrompt, currentPrompt.Length + 500)` inside the `do` loop then calling `ToString()` is extra copies: `Regex.Matches` still needs a string for the next pass, and a magic `+ 500` over-allocates. That is more work than `currentPrompt = currentPrompt.Replace(tag, templateValue)` for the common case.
 **Action:** Keep in-loop `string.Replace` assigned back to `currentPrompt` for the unique-tag loop. Use `StringBuilder` only when many replacements happen on a buffer that does not need to be a string until the end (parameter `{0}`/`{1}` substitution inside a template value). Do not add `if (uniqueCount > 1)` just to hide the extra copy.
 ## 2025-02-09 - Avoid LINQ .ToList() chains on rapid UI paths
-**Learning:** Avoid LINQ chains like  or  when caching or initializing UI data lists.  combined with zero-allocation retrieval (like Dapper's ) significantly reduces GC pressure.
-**Action:** Always prefer  for Dapper results if a List is needed, and utilize  over LINQ's  when mutating cached internal collections in WinForms apps.
-## 2025-02-09 - Avoid LINQ .ToList() chains on rapid UI paths
 **Learning:** Avoid LINQ chains like `.ToList()` or `.OrderBy().ToList()` when caching or initializing UI data lists. `List<T>.Sort()` combined with zero-allocation retrieval (like Dapper's `AsList()`) significantly reduces GC pressure.
 **Action:** Always prefer `AsList()` for Dapper results if a List is needed, and utilize `List.Sort()` over LINQ's `OrderBy()` when mutating cached internal collections in WinForms apps.
+
+## 2026-11-21 - Avoid calling ToList when wrapping a List in a BindingList
+**Learning:** Calling `.ToList()` on an existing `List<T>` (like `_allHistoryCache`) before passing it to the `BindingList<T>` constructor performs an unnecessary shallow copy, allocating a new array and adding an O(N) operation on the UI thread.
+**Action:** When initializing a `BindingList<T>` with an existing `List<T>` in C# WinForms, pass the list reference directly to the constructor (e.g., `new BindingList<T>(_allHistoryCache)`) to avoid redundant array allocations and Garbage Collection pressure.
