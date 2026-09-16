@@ -962,7 +962,7 @@ namespace ImageGeneratorApp.Tests
             var client = new ImageGeneratorClient(new HttpClient());
 
             // Act
-            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "dall-e-3", "10k", "16:9", "user", new List<ImageUrlObject>());
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", ImageProviderCatalog.GptImage2, "10k", "16:9", "user", new List<ImageUrlObject>());
 
             // Assert
             await act.Should().ThrowAsync<ArgumentException>()

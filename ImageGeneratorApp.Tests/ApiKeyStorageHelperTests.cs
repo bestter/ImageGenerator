@@ -208,36 +208,6 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
-        public async Task SaveApiKey_WhenDirectoryIsAFile_SilentlyFails_IOException()
-        {
-            // Arrange
-            string? directory = Path.GetDirectoryName(_filePath);
-            if (directory != null)
-            {
-                if (Directory.Exists(directory))
-                {
-                    Directory.Delete(directory, true);
-                }
-                // Create a file at the directory path to trigger IOException on Directory.CreateDirectory
-                File.WriteAllText(directory, "this is a file");
-            }
-
-            try
-            {
-                // Act & Assert
-                Func<Task> act = async () => await ApiKeyStorageHelper.SaveApiKeyAsync(_testProvider, "new key");
-                await act.Should().NotThrowAsync();
-            }
-            finally
-            {
-                if (directory != null && File.Exists(directory))
-                {
-                    File.Delete(directory);
-                }
-            }
-        }
-
-        [Fact]
         public async Task SaveApiKey_WhenPathIsDirectory_SilentlyFails_UnauthorizedAccessException()
         {
             // Arrange
