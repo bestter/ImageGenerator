@@ -367,14 +367,17 @@ namespace ImageGeneratorApp.Tests
             await act.Should().ThrowAsync<ArgumentException>().WithMessage("*La clé API est requise.*");
         }
 
-        [Fact]
-        public async Task GenerateImageAsync_ApiKeyWithNewLines_ThrowsArgumentException()
+        [Theory]
+        [InlineData("key\nwithnewline")]
+        [InlineData("key\rwithcarriagereturn")]
+        [InlineData("key\r\nwithboth")]
+        public async Task GenerateImageAsync_ApiKeyWithNewLines_ThrowsArgumentException(string invalidKey)
         {
             // Arrange
             var client = new ImageGeneratorClient(new HttpClient());
 
             // Act
-            Func<Task> act = async () => await client.GenerateImageAsync("key\nwithnewline", "prompt", "model", "1k", "16:9", "user", new List<ImageUrlObject>());
+            Func<Task> act = async () => await client.GenerateImageAsync(invalidKey, "prompt", "model", "1k", "16:9", "user", new List<ImageUrlObject>());
 
             // Assert
             await act.Should().ThrowAsync<ArgumentException>().WithMessage("*La clé API ne doit pas contenir de retours à la ligne.*");
