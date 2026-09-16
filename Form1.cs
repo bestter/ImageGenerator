@@ -945,7 +945,9 @@ namespace ImageGeneratorApp
             try
             {
                 var templateKeys = await _templateRepo.GetAllKeysAsync();
-                _templateKeysCache = templateKeys.OrderBy(k => k).ToList();
+                // Reuse the repository list when possible, then sort it in place to avoid redundant allocations.
+                _templateKeysCache = templateKeys as List<string> ?? templateKeys.ToList();
+                _templateKeysCache.Sort();
             }
             catch
             {

@@ -216,7 +216,8 @@ namespace ImageGeneratorApp
             try
             {
                 this.UseWaitCursor = true;
-                _allTemplates = (await _repository.GetAllAsync()).ToList();
+                IEnumerable<TemplateModel> templates = await _repository.GetAllAsync();
+                _allTemplates = templates as List<TemplateModel> ?? templates.ToList();
 
                 PopulateCategoryFilter();
                 ApplyFilters();
