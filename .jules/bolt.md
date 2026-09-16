@@ -195,8 +195,8 @@
 **Learning:** In `TemplateParser`, unique tags per outer pass are typically one. Allocating `new StringBuilder(currentPrompt, currentPrompt.Length + 500)` inside the `do` loop then calling `ToString()` is extra copies: `Regex.Matches` still needs a string for the next pass, and a magic `+ 500` over-allocates. That is more work than `currentPrompt = currentPrompt.Replace(tag, templateValue)` for the common case.
 **Action:** Keep in-loop `string.Replace` assigned back to `currentPrompt` for the unique-tag loop. Use `StringBuilder` only when many replacements happen on a buffer that does not need to be a string until the end (parameter `{0}`/`{1}` substitution inside a template value). Do not add `if (uniqueCount > 1)` just to hide the extra copy.
 ## 2025-02-09 - Avoid LINQ .ToList() chains on rapid UI paths
-**Learning:** Avoid LINQ chains like `.ToList()` or `.OrderBy().ToList()` when caching or initializing UI data lists. `List<T>.Sort()` combined with zero-allocation retrieval (like Dapper's `AsList()`) significantly reduces GC pressure.
-**Action:** Always prefer `AsList()` for Dapper results if a List is needed, and utilize `List.Sort()` over LINQ's `OrderBy()` when mutating cached internal collections in WinForms apps.
+**Learning:** Avoid LINQ chains like `.ToList()` or `.OrderBy().ToList()` when caching or initializing UI data lists. Reusing an existing `List<T>` and sorting it in place significantly reduces GC pressure without coupling the UI to the persistence library.
+**Action:** Reuse an `IEnumerable<T>` as a `List<T>` when possible, fall back to `ToList()` for other implementations, and use `List.Sort()` instead of `OrderBy()` when mutating an internal UI cache.
 
 ## 2026-11-21 - Avoid calling ToList when wrapping a List in a BindingList
 **Learning:** Calling `.ToList()` on an existing `List<T>` (like `_allHistoryCache`) before passing it to the `BindingList<T>` constructor performs an unnecessary shallow copy, allocating a new array and adding an O(N) operation on the UI thread.
