@@ -107,6 +107,25 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
+        public async Task ProcessPromptAsync_ShouldUseFastPath_WhenTemplateHasParametersButNoPlaceholders()
+        {
+            // Arrange
+            await _repository.InsertAsync(new TemplateModel
+            {
+                Key = "plain_text",
+                Value = "this is just a plain text value without any placeholders"
+            });
+
+            string prompt = "Let's see: {plain_text:ignored1:ignored2}";
+
+            // Act
+            string result = await _parser.ProcessPromptAsync(prompt);
+
+            // Assert
+            result.Should().Be("Let's see: this is just a plain text value without any placeholders");
+        }
+
+        [Fact]
         public async Task ProcessPromptAsync_ShouldResolveRecursiveTemplates()
         {
             // Arrange
