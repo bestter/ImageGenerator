@@ -954,5 +954,19 @@ namespace ImageGeneratorApp.Tests
             // Assert
             await act.Should().ThrowAsync<OperationCanceledException>().WithMessage("*Request timed out*");
         }
+
+        [Fact]
+        public async Task GenerateImageAsync_UnsupportedResolutionOrAspectRatio_ThrowsArgumentException()
+        {
+            // Arrange
+            var client = new ImageGeneratorClient(new HttpClient());
+
+            // Act
+            Func<Task> act = async () => await client.GenerateImageAsync("dummy_key", "prompt", "dall-e-3", "10k", "16:9", "user", new List<ImageUrlObject>());
+
+            // Assert
+            await act.Should().ThrowAsync<ArgumentException>()
+                .WithMessage("La combinaison de résolution et de ratio d'aspect n'est pas prise en charge par OpenAI.");
+        }
     }
 }
