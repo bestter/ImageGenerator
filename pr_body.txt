@@ -1,5 +1,0 @@
-🎯 **What:** The testing gap addressed is the missing explicit cross-platform test for `SaveApiKeyAsync` throwing an `IOException` due to an inaccessible directory path.
-
-📊 **Coverage:** The new test `SaveApiKey_WhenDirectoryIsAFile_SilentlyFails_IOException` mimics an environment where `Directory.CreateDirectory` hits a file with the identical name. This guarantees an `IOException` is thrown consistently across platforms (like Linux where file locks can be advisory), thus ensuring the silent error handling behavior at line 49 functions as expected.
-
-✨ **Result:** Test coverage for `ApiKeyStorageHelper.SaveApiKeyAsync` is enhanced, explicitly verifying the `IOException` path in an OS-independent manner.

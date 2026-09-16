@@ -241,6 +241,10 @@ namespace ImageGeneratorApp.Tests
         [Theory]
         [InlineData("invalid json", "La réponse de l'API est malformée.")]
         [InlineData("{\"data\":[{}]}", "La réponse de l'API ne contient pas d'image valide.")]
+        [InlineData("{}", "La réponse de l'API ne contient pas d'image valide.")]
+        [InlineData("{\"data\":[]}", "La réponse de l'API ne contient pas d'image valide.")]
+        [InlineData("{\"data\":[{\"b64_json\":null}]}", "La réponse de l'API ne contient pas d'image valide.")]
+        [InlineData("{\"data\":[{\"b64_json\":\"\"}]}", "La réponse de l'API ne contient pas d'image valide.")]
         public async Task GenerateImageAsync_OpenAISuccessResponseWithoutValidImage_ThrowsImageGeneratorException(
             string responseContent,
             string expectedMessage)
@@ -367,14 +371,17 @@ namespace ImageGeneratorApp.Tests
             await act.Should().ThrowAsync<ArgumentException>().WithMessage("*La clé API est requise.*");
         }
 
-        [Fact]
-        public async Task GenerateImageAsync_ApiKeyWithNewLines_ThrowsArgumentException()
+        [Theory]
+        [InlineData("key\nwithnewline")]
+        [InlineData("key\rwithcarriagereturn")]
+        [InlineData("key\r\nwithboth")]
+        public async Task GenerateImageAsync_ApiKeyWithNewLines_ThrowsArgumentException(string invalidKey)
         {
             // Arrange
             var client = new ImageGeneratorClient(new HttpClient());
 
             // Act
-            Func<Task> act = async () => await client.GenerateImageAsync("key\nwithnewline", "prompt", "model", "1k", "16:9", "user", new List<ImageUrlObject>());
+            Func<Task> act = async () => await client.GenerateImageAsync(invalidKey, "prompt", "model", "1k", "16:9", "user", new List<ImageUrlObject>());
 
             // Assert
             await act.Should().ThrowAsync<ArgumentException>().WithMessage("*La clé API ne doit pas contenir de retours à la ligne.*");
