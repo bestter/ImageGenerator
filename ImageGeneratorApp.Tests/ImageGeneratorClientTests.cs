@@ -241,6 +241,10 @@ namespace ImageGeneratorApp.Tests
         [Theory]
         [InlineData("invalid json", "La réponse de l'API est malformée.")]
         [InlineData("{\"data\":[{}]}", "La réponse de l'API ne contient pas d'image valide.")]
+        [InlineData("{}", "La réponse de l'API ne contient pas d'image valide.")]
+        [InlineData("{\"data\":[]}", "La réponse de l'API ne contient pas d'image valide.")]
+        [InlineData("{\"data\":[{\"b64_json\":null}]}", "La réponse de l'API ne contient pas d'image valide.")]
+        [InlineData("{\"data\":[{\"b64_json\":\"\"}]}", "La réponse de l'API ne contient pas d'image valide.")]
         public async Task GenerateImageAsync_OpenAISuccessResponseWithoutValidImage_ThrowsImageGeneratorException(
             string responseContent,
             string expectedMessage)
