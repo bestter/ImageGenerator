@@ -201,3 +201,7 @@
 ## 2026-11-21 - Avoid calling ToList when wrapping a List in a BindingList
 **Learning:** Calling `.ToList()` on an existing `List<T>` (like `_allHistoryCache`) before passing it to the `BindingList<T>` constructor performs an unnecessary shallow copy, allocating a new array and adding an O(N) operation on the UI thread.
 **Action:** When initializing a `BindingList<T>` with an existing `List<T>` in C# WinForms, pass the list reference directly to the constructor (e.g., `new BindingList<T>(_allHistoryCache)`) to avoid redundant array allocations and Garbage Collection pressure.
+
+## 2026-11-20 - Do not unconditionally use StringBuilder for iterative string replacements
+**Learning:** When performing string replacements over a collection in a loop, avoid unconditionally allocating a `StringBuilder` if the iteration count is typically very small (e.g., 1). Standard `string.Replace()` is highly optimized and avoids allocation if the target isn't found, whereas `StringBuilder` unconditionally allocates a new object, an internal buffer, and a final string via `.ToString()`, which can be an anti-optimization.
+**Action:** Use `StringBuilder` only when multiple replacements are guaranteed to happen on a buffer that does not need to be a string until the end. For small replacement loops, just use `string.Replace()`.
