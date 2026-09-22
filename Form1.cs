@@ -1228,26 +1228,25 @@ namespace ImageGeneratorApp
             // Fast-scan syntax check (sync) to avoid async database queries for basic syntax issues
             if (chkEnableTemplates != null && chkEnableTemplates.Checked)
             {
-                try
+                int braceCount = 0;
+                bool syntaxValid = true;
+                for (int i = 0; i < prompt.Length; i++)
                 {
-                    int braceCount = 0;
-                    for (int i = 0; i < prompt.Length; i++)
+                    char c = prompt[i];
+                    if (c == '{')
                     {
-                        char c = prompt[i];
-                        if (c == '{')
-                        {
-                            braceCount++;
-                            if (braceCount > 1) throw new FormatException();
-                        }
-                        else if (c == '}')
-                        {
-                            braceCount--;
-                            if (braceCount < 0) throw new FormatException();
-                        }
+                        braceCount++;
+                        if (braceCount > 1) { syntaxValid = false; break; }
                     }
-                    if (braceCount != 0) throw new FormatException();
+                    else if (c == '}')
+                    {
+                        braceCount--;
+                        if (braceCount < 0) { syntaxValid = false; break; }
+                    }
                 }
-                catch
+                if (braceCount != 0) syntaxValid = false;
+
+                if (!syntaxValid)
                 {
                     btnGenerate.Enabled = false;
                     return;
