@@ -91,7 +91,7 @@ namespace ImageGeneratorApp
         private static readonly char[] InvalidQueryChars = { '\r', '\n', ':' };
 
         // ⚡ Bolt Optimization: Filtered collection cache for autocomplete searches
-        private readonly Dictionary<string, string[]> _autocompleteCache = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+        private readonly AutocompleteQueryCache _autocompleteCache = new AutocompleteQueryCache();
 
         public Form1()
         {
@@ -1099,7 +1099,8 @@ namespace ImageGeneratorApp
                 // ⚡ Bolt Optimization: Use a filtered collection strategy to speed up autocomplete searches
                 // by memoizing previously computed matches in a dictionary, reducing O(N) linear scans to O(1) lookups
                 // for repeated queries (e.g. typing and backspacing).
-                if (!_autocompleteCache.TryGetValue(query, out var matchedArray))
+                string[]? matchedArray = _autocompleteCache.Get(query);
+                if (matchedArray is null)
                 {
                     var matched = new List<string>();
                     foreach (var k in _templateKeysCache)
@@ -1110,7 +1111,7 @@ namespace ImageGeneratorApp
                         }
                     }
                     matchedArray = matched.ToArray();
-                    _autocompleteCache[query] = matchedArray;
+                    _autocompleteCache.Add(query, matchedArray);
                 }
 
                 if (matchedArray.Length > 0)
