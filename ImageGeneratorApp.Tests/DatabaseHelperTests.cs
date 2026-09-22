@@ -64,6 +64,23 @@ namespace ImageGeneratorApp.Tests
             tableCount.Should().Be(2, "because InitializeDatabase should create both 'templates' and 'GenerationHistory' tables");
         }
 
+        [Fact]
+        public void GetConnection_ReturnsNewClosedConnectionWithCorrectConnectionString()
+        {
+            // Arrange
+            var customConnectionString = $"Data Source={_customDbPath}";
+            var helper = new DatabaseHelper(customConnectionString);
+
+            // Act
+            using var connection = helper.GetConnection();
+
+            // Assert
+            connection.Should().NotBeNull();
+            connection.Should().BeOfType<SqliteConnection>();
+            connection.ConnectionString.Should().Be(customConnectionString);
+            connection.State.Should().Be(System.Data.ConnectionState.Closed, "because GetConnection should not open the connection automatically");
+        }
+
         public void Dispose()
         {
             // Teardown: ensure the database connection is fully closed so the file is freed, then delete it
