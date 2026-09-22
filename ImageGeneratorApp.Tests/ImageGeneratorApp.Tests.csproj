@@ -45,6 +45,7 @@
     <Compile Include="..\TemplateModel.cs" />
     <Compile Include="..\TemplateRepository.cs" />
     <Compile Include="..\TemplateParser.cs" />
+    <Compile Include="..\AutocompleteQueryCache.cs" />
     <Compile Include="..\GenerationHistoryModel.cs" />
     <Compile Include="..\GenerationHistoryRepository.cs" />
     <Compile Include="..\ImageProcessingService.cs" />

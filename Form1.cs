@@ -19,6 +19,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Principal;
@@ -88,6 +89,9 @@ namespace ImageGeneratorApp
         // ⚡ Bolt Optimization: Cache the invalid query characters array to avoid
         // repeated heap allocations on every key press in the UI thread.
         private static readonly char[] InvalidQueryChars = { '\r', '\n', ':' };
+
+        // ⚡ Bolt Optimization: Filtered collection cache for autocomplete searches
+        private readonly AutocompleteQueryCache _autocompleteCache = new AutocompleteQueryCache();
 
         public Form1()
         {
@@ -948,6 +952,7 @@ namespace ImageGeneratorApp
                 // Reuse the repository list when possible, then sort it in place to avoid redundant allocations.
                 _templateKeysCache = templateKeys as List<string> ?? templateKeys.ToList();
                 _templateKeysCache.Sort();
+                _autocompleteCache.Clear();
             }
             catch
             {
@@ -1091,23 +1096,32 @@ namespace ImageGeneratorApp
             var (triggerIndex, query, active) = GetActiveTrigger();
             if (active)
             {
-                var matched = new List<string>();
-                foreach (var k in _templateKeysCache)
+                // ⚡ Bolt Optimization: Use a filtered collection strategy to speed up autocomplete searches
+                // by memoizing previously computed matches in a dictionary, reducing O(N) linear scans to O(1) lookups
+                // for repeated queries (e.g. typing and backspacing).
+                string[]? matchedArray = _autocompleteCache.Get(query);
+                if (matchedArray is null)
                 {
-                    if (k.Contains(query, StringComparison.OrdinalIgnoreCase))
+                    var matched = new List<string>();
+                    foreach (var k in _templateKeysCache)
                     {
-                        matched.Add(k);
+                        if (k.Contains(query, StringComparison.OrdinalIgnoreCase))
+                        {
+                            matched.Add(k);
+                        }
                     }
+                    matchedArray = matched.ToArray();
+                    _autocompleteCache.Add(query, matchedArray);
                 }
 
-                if (matched.Count > 0)
+                if (matchedArray.Length > 0)
                 {
                     lstAutocomplete.BeginUpdate();
                     lstAutocomplete.Items.Clear();
                     // ⚡ Bolt Optimization: Batch insert autocomplete items using .AddRange() instead of a foreach loop
                     // This prevents repeated array resizing and layout recalculations, optimizing rendering performance
                     // ⚡ Bolt Optimization: Use array covariance with string[] instead of Cast<object>()
-                    lstAutocomplete.Items.AddRange(matched.ToArray());
+                    lstAutocomplete.Items.AddRange(matchedArray);
                     lstAutocomplete.SelectedIndex = 0;
                     lstAutocomplete.EndUpdate();
 
