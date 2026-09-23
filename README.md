@@ -4,7 +4,7 @@ Image Generator App is a Windows Forms desktop application for generating AI ima
 
 Current application version: `2.0.1`
 
-Documentation last verified against the codebase: August 25, 2026
+Documentation reviewed against the source code: September 23, 2026
 
 ## Supported providers
 
@@ -16,16 +16,20 @@ Documentation last verified against the codebase: August 25, 2026
 
 The application stores a separate encrypted API key for each provider. Switching models updates the key label and reloads the matching provider key. Google and OpenAI models disable and clear reference-image and multi-turn controls; selecting either Grok model enables them again.
 
+xAI has [announced the retirement of `grok-imagine-image-quality` on November 2, 2026](https://docs.x.ai/developers/migration/imagine-image-quality-nov-2). The identifier remains available in this application. After that date, xAI says requests using it will be served by `grok-imagine-image-2.0` with `quality: "low"`.
+
 ## Features
 
 - Multi-provider image generation from one responsive Windows Forms interface.
 - Grok image editing with one to three reference images and iterative multi-turn refinement.
 - `1k` and `2k` resolution presets with `1:1`, `16:9`, `9:16`, `4:3`, `3:2`, and `20:9` aspect ratios.
-- Asynchronous image display and PNG/JPEG export without blocking the UI.
-- Automatic EXIF, XMP, and PNG metadata containing the prompt, model, generation date, resolution, and other provenance information.
+- Asynchronous provider requests and PNG/JPEG export; generated images are displayed on the UI thread.
+- PNG/JPEG exports with EXIF and XMP provenance metadata, plus PNG text metadata, when embedding succeeds.
 - Recursive SQLite prompt templates using `{key}` and `{key:param1:param2}`, with syntax validation, contextual autocomplete, and resolved-prompt preview.
-- Automatic local generation history with WebP quality 80 compression, metadata preservation, SQLite search, and asynchronous preview loading.
+- Best-effort local generation history with WebP quality 80 compression, SQLite search, and asynchronous preview loading.
 - Provider-specific API keys protected with Windows DPAPI for the current Windows user.
+
+Exports attempt to embed the prompt, model, generation date, resolution, and aspect ratio. If embedding fails, the application saves the original image bytes. History WebP files embed the prompt, model, and generation date; resolution and aspect ratio are stored separately in the SQLite history record. A history storage failure does not prevent a successful generation from being displayed.
 
 ## OpenAI GPT Image 2
 
@@ -42,7 +46,7 @@ The application sends only this request shape:
 }
 ```
 
-It does not send `resolution`, `aspect_ratio`, `response_format`, `image`, `images`, `n`, `quality`, `background`, `moderation`, `output_format`, or streaming parameters. One image is requested implicitly. GPT Image models return base64 image data by default, which the application reads from `data[0].b64_json` and routes through the existing display, export, metadata, and history workflows.
+It does not send `resolution`, `aspect_ratio`, `response_format`, `image`, `images`, `n`, `quality`, `background`, `moderation`, `output_format`, or streaming parameters. One image is requested implicitly. GPT Image models return base64 image data by default, which the application reads from `data[0].b64_json` and passes to the display, export, and best-effort history workflows.
 
 The [OpenAI GPT Image 2 model documentation](https://developers.openai.com/api/docs/models/gpt-image-2) and [Images API reference](https://developers.openai.com/api/reference/resources/images/methods/generate) support arbitrary `WIDTHxHEIGHT` sizes within the model limits. The application intentionally exposes only the following validated mappings:
 
@@ -67,7 +71,6 @@ Unsupported resolution/aspect-ratio combinations and reference images are reject
 ```powershell
 dotnet build ImageGeneratorApp.csproj
 dotnet run --project ImageGeneratorApp.csproj
-dotnet test --verbosity normal
 ```
 
 All network tests use a mocked `HttpMessageHandler`; the test suite never calls a live provider API.
@@ -116,15 +119,16 @@ The test project uses xUnit v3, Moq, and FluentAssertions. OpenAI coverage inclu
 - HTTP 401 and 429 errors;
 - malformed JSON and successful responses without `b64_json`;
 - provider key isolation and friendly OpenAI metadata.
-- Debug mock interception, payload rejection, provider isolation, and generated image dimensions.
 
-Run the complete suite before submitting changes:
+For code changes, run the repository validation sequence:
 
 ```powershell
-dotnet test --verbosity normal
+dotnet build ImageGeneratorApp.csproj
+dotnet run --project ImageGeneratorApp.Tests/ImageGeneratorApp.Tests.csproj
+git diff --check
 ```
 
-The expected result is a successful build with every test passing and zero compiler warnings.
+Report the observed build warnings and test results rather than assuming a fixed outcome.
 
 ## Documentation maintenance
 
