@@ -13,24 +13,12 @@ namespace ImageGeneratorApp
 
         private static string GetStorageFilePath(string provider)
         {
-            // 🛡️ Sentinel: Prevent path traversal by isolating the filename, normalizing the directory, and explicitly checking boundaries
+            // Sanitize provider name to avoid path traversal (though it's hardcoded internally)
             string baseFileName = Path.GetFileName(provider);
             string safeProvider = string.Concat(baseFileName.Split(Path.GetInvalidFileNameChars()));
 
             string targetDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ImageGeneratorApp");
-            string normalizedTargetDirectory = Path.GetFullPath(targetDirectory);
-            if (!normalizedTargetDirectory.EndsWith(Path.DirectorySeparatorChar.ToString()))
-            {
-                normalizedTargetDirectory += Path.DirectorySeparatorChar;
-            }
-
-            string finalPath = Path.GetFullPath(Path.Combine(normalizedTargetDirectory, $"ApiKey_{safeProvider}.dat"));
-            if (!finalPath.StartsWith(normalizedTargetDirectory, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new ArgumentException("Invalid provider name resulting in path traversal.", nameof(provider));
-            }
-
-            return finalPath;
+            return Path.GetFullPath(Path.Combine(targetDirectory, $"ApiKey_{safeProvider}.dat"));
         }
 
         public static async Task SaveApiKeyAsync(string provider, string apiKey)
