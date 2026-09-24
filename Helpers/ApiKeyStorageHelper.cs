@@ -18,7 +18,21 @@ namespace ImageGeneratorApp
             string safeProvider = string.Concat(baseFileName.Split(Path.GetInvalidFileNameChars()));
 
             string targetDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ImageGeneratorApp");
-            return Path.GetFullPath(Path.Combine(targetDirectory, $"ApiKey_{safeProvider}.dat"));
+
+            // 🛡️ Sentinel: Prevent path traversal by explicitly validating the normalized path
+            var normalizedTargetDirectory = Path.GetFullPath(targetDirectory);
+            if (!normalizedTargetDirectory.EndsWith(Path.DirectorySeparatorChar.ToString()))
+            {
+                normalizedTargetDirectory += Path.DirectorySeparatorChar;
+            }
+
+            var fullPath = Path.GetFullPath(Path.Combine(targetDirectory, $"ApiKey_{safeProvider}.dat"));
+            if (!fullPath.StartsWith(normalizedTargetDirectory, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException("Invalid provider resulting in path traversal.", nameof(provider));
+            }
+
+            return fullPath;
         }
 
         public static async Task SaveApiKeyAsync(string provider, string apiKey)
