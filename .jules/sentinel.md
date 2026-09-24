@@ -198,3 +198,8 @@
 **Learning:** Checking a property like `Length` does not lock the file from being appended to, and unbounded read methods will read until the end of the stream regardless of the initial length check.
 **Prevention:** To prevent TOCTOU memory exhaustion, enforce the read limit directly during the read operation using bounded methods like `StreamReader.ReadBlockAsync()` with a fixed-size buffer instead of unbounded methods.
 
+
+## 2026-08-12 - Prevent Path Traversal in Custom Directory Paths
+**Vulnerability:** The API Key storage helper used `provider.Split(Path.GetInvalidFileNameChars())` and `Path.GetFileName` to sanitize the provider name before combining it with a fixed target directory (`LocalApplicationData`). While `Path.GetFileName` provides isolation, failing to validate the resulting combined path against the target directory's boundary leaves a theoretical opening if the framework's path parsing or the provider string behaves unexpectedly (e.g., extremely long paths or unicode normalization bypasses).
+**Learning:** `Path.Combine` and `Path.GetFileName` are good first steps, but not sufficient on their own to mathematically guarantee path traversal prevention in highly sensitive storage locations like DPAPI keys.
+**Prevention:** Normalize the target directory and the resulting combined path using `Path.GetFullPath()`. Ensure the normalized target directory ends with `Path.DirectorySeparatorChar`, and then explicitly check that the normalized full path starts with the normalized target directory using `StringComparison.OrdinalIgnoreCase`.
