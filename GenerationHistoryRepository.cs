@@ -11,6 +11,8 @@ namespace ImageGeneratorApp
     /// </summary>
     public class GenerationHistoryRepository
     {
+        private static readonly char[] _sqlWildcards = new[] { '\\', '%', '_', '[' };
+
         private readonly DatabaseHelper _databaseHelper;
 
         /// <summary>
@@ -84,19 +86,30 @@ namespace ImageGeneratorApp
             // SÉCURITÉ : Échappe les caractères joker SQL (%, _, [, et le caractère d'échappement lui-même)
             // pour prévenir les attaques par injection de wildcards (qui peuvent causer des lenteurs DoS).
             var trimmedTerm = searchTerm.Trim();
-            // ⚡ Bolt Optimization: Append wildcard characters directly to StringBuilder to avoid string concatenation allocations
-            var sb = new System.Text.StringBuilder(trimmedTerm.Length + 10);
-            sb.Append('%');
-            foreach (var c in trimmedTerm)
+
+            string escapedTerm;
+            // ⚡ Bolt Optimization: Zero-allocation fast path check. Skip StringBuilder allocation completely
+            // if the search term does not contain any characters that need escaping.
+            if (trimmedTerm.IndexOfAny(_sqlWildcards) == -1)
             {
-                if (c == '\\' || c == '%' || c == '_' || c == '[')
-                {
-                    sb.Append('\\');
-                }
-                sb.Append(c);
+                escapedTerm = "%" + trimmedTerm + "%";
             }
-            sb.Append('%');
-            var escapedTerm = sb.ToString();
+            else
+            {
+                // ⚡ Bolt Optimization: Append wildcard characters directly to StringBuilder to avoid string concatenation allocations
+                var sb = new System.Text.StringBuilder(trimmedTerm.Length + 10);
+                sb.Append('%');
+                foreach (var c in trimmedTerm)
+                {
+                    if (c == '\\' || c == '%' || c == '_' || c == '[')
+                    {
+                        sb.Append('\\');
+                    }
+                    sb.Append(c);
+                }
+                sb.Append('%');
+                escapedTerm = sb.ToString();
+            }
 
             using var connection = _databaseHelper.GetConnection();
             return await connection.QueryAsync<GenerationHistoryModel>(sql, new { Query = escapedTerm });
