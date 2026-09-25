@@ -690,10 +690,10 @@ namespace ImageGeneratorApp
             }
             else if (ex is ImageGeneratorException generatorEx)
             {
-                _lastErrorMessage = generatorEx.Message;
+                _lastErrorMessage = "Une erreur est survenue lors de la communication avec l'API.";
                 btnCopyError.Visible = true;
                 lblStatus.Text = $"❌ Erreur {generatorEx.StatusCode}";
-                MessageBox.Show($"Erreur API :\n{generatorEx.Message}", "Erreur API", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Une erreur est survenue lors de la communication avec l'API.", "Erreur API", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else if (ex is TaskCanceledException)
             {

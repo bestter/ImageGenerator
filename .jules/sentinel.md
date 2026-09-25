@@ -203,3 +203,8 @@
 **Vulnerability:** The API Key storage helper used `provider.Split(Path.GetInvalidFileNameChars())` and `Path.GetFileName` to sanitize the provider name before combining it with a fixed target directory (`LocalApplicationData`). While `Path.GetFileName` provides isolation, failing to validate the resulting combined path against the target directory's boundary leaves a theoretical opening if the framework's path parsing or the provider string behaves unexpectedly (e.g., extremely long paths or unicode normalization bypasses).
 **Learning:** `Path.Combine` and `Path.GetFileName` are good first steps, but not sufficient on their own to mathematically guarantee path traversal prevention in highly sensitive storage locations like DPAPI keys.
 **Prevention:** Normalize the target directory and the resulting combined path using `Path.GetFullPath()`. Ensure the normalized target directory ends with `Path.DirectorySeparatorChar`, and then explicitly check that the normalized full path starts with the normalized target directory using `StringComparison.OrdinalIgnoreCase`.
+
+## 2026-06-03 - Prevent Information Leakage in MessageBox Dialogs
+**Vulnerability:** Calling `MessageBox.Show(ex.Message)` or interpolating `ex.Message` directly in user-facing dialogs can inadvertently expose sensitive internal details (such as database structure, exact file paths, or internal error states) to the user.
+**Learning:** Any unhandled or explicitly caught exceptions that are passed to the UI layer must be sanitized to prevent leaking diagnostic internals.
+**Prevention:** Always catch specific exceptions where possible, and present generic, safe error messages to the user in `MessageBox.Show` instead of relying on the raw exception string.
