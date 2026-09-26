@@ -690,10 +690,13 @@ namespace ImageGeneratorApp
             }
             else if (ex is ImageGeneratorException generatorEx)
             {
-                _lastErrorMessage = generatorEx.Message;
+                string errorMessage = GenerationErrorMessageFormatter.GetDisplayMessage(generatorEx);
+                _lastErrorMessage = errorMessage;
                 btnCopyError.Visible = true;
-                lblStatus.Text = $"❌ Erreur {generatorEx.StatusCode}";
-                MessageBox.Show($"Erreur API :\n{generatorEx.Message}", "Erreur API", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                lblStatus.Text = GenerationErrorMessageFormatter.HasHttpErrorStatus(generatorEx.StatusCode)
+                    ? $"❌ Erreur HTTP {generatorEx.StatusCode}"
+                    : "❌ Erreur de génération";
+                MessageBox.Show(errorMessage, "Erreur API", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else if (ex is TaskCanceledException)
             {
