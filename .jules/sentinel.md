@@ -208,3 +208,8 @@
 **Vulnerability:** Calling `MessageBox.Show(ex.Message)` or interpolating `ex.Message` directly in user-facing dialogs can inadvertently expose sensitive internal details (such as database structure, exact file paths, or internal error states) to the user.
 **Learning:** Any unhandled or explicitly caught exceptions that are passed to the UI layer must be sanitized to prevent leaking diagnostic internals.
 **Prevention:** Catch specific exceptions where possible. Show safe, specific messages for known application errors and mapped HTTP statuses, with a generic fallback for untrusted provider or exception text. Use the same safe message in `MessageBox.Show` and copy-to-clipboard actions.
+
+## 2026-06-25 - Prevent Security Theater and TOCTOU in Process.Start
+**Vulnerability:** The application checked `File.Exists` before launching an external process (e.g., `notepad.exe`) to open a file. This creates a TOCTOU (Time of Check to Time of Use) race condition where the file could be modified or deleted between the check and the process start. Additionally, hardcoding `notepad.exe` and disabling `UseShellExecute` as a "security fix" for internally constructed safe paths is security theater.
+**Learning:** `Process.Start` relies on the external executable to handle its own file opening. Checking `File.Exists` beforehand is insufficient and prone to race conditions.
+**Prevention:** To correctly handle missing files and avoid TOCTOU race conditions when launching an external viewer via `Process.Start`, do not check `File.Exists` beforehand. Instead, attempt to start the process directly and wrap it in a `try-catch` block handling `Win32Exception` and `FileNotFoundException`. `UseShellExecute = true` is safe for internally constructed safe paths.

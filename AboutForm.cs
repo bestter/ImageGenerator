@@ -162,7 +162,7 @@ https://www.gnu.org/licenses/";
 
         /// <summary>
         /// Opens the LICENSE.txt file located in the same directory as the running executable.
-        /// Uses a specific application (notepad.exe) with UseShellExecute = false to securely open the file.
+        /// Uses the default text viewer (UseShellExecute = true) to securely open the file.
         /// Gracefully handles the case where the file is missing.
         /// </summary>
         private void BtnShowLicense_Click(object? sender, EventArgs e)
@@ -171,23 +171,17 @@ https://www.gnu.org/licenses/";
 
             try
             {
-                // ⚡ Bolt: Replaced FileStream with File.Exists to avoid unnecessary file handle allocation and overhead.
-                if (!File.Exists(licensePath))
-                {
-                    throw new FileNotFoundException();
-                }
-
-                // 🛡️ Sentinel: Mitigate command execution risk by specifying notepad.exe directly and disabling UseShellExecute.
+                // 🛡️ Sentinel: Prevent TOCTOU file read by attempting to start the process directly
+                // and avoid security theater by allowing UseShellExecute for safe internally constructed paths.
                 var startInfo = new ProcessStartInfo
                 {
-                    FileName = "notepad.exe",
-                    UseShellExecute = false
+                    FileName = licensePath,
+                    UseShellExecute = true
                 };
-                startInfo.ArgumentList.Add(licensePath);
 
                 Process.Start(startInfo);
             }
-            catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException)
+            catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException || ex is System.ComponentModel.Win32Exception)
             {
                 // 🛡️ Sentinel: Avoid leaking system paths or directory structure in user-facing message boxes.
                 MessageBox.Show(
