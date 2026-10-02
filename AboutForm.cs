@@ -162,8 +162,8 @@ https://www.gnu.org/licenses/";
 
         /// <summary>
         /// Opens the LICENSE.txt file located in the same directory as the running executable.
-        /// Uses a specific application (notepad.exe) with UseShellExecute = false to securely open the file.
-        /// Gracefully handles the case where the file is missing.
+        /// Uses the default text viewer with UseShellExecute = true.
+        /// Gracefully handles the case where the file is missing or cannot be opened.
         /// </summary>
         private void BtnShowLicense_Click(object? sender, EventArgs e)
         {
@@ -171,27 +171,21 @@ https://www.gnu.org/licenses/";
 
             try
             {
-                // ⚡ Bolt: Replaced FileStream with File.Exists to avoid unnecessary file handle allocation and overhead.
-                if (!File.Exists(licensePath))
-                {
-                    throw new FileNotFoundException();
-                }
-
-                // 🛡️ Sentinel: Mitigate command execution risk by specifying notepad.exe directly and disabling UseShellExecute.
+                // 🛡️ Sentinel: Use Try-Catch on Process.Start to handle missing files securely without TOCTOU race conditions.
+                // 🛡️ Sentinel: UseShellExecute = true is safe for internally constructed paths. Hardcoding 'notepad.exe' is security theater.
                 var startInfo = new ProcessStartInfo
                 {
-                    FileName = "notepad.exe",
-                    UseShellExecute = false
+                    FileName = licensePath,
+                    UseShellExecute = true
                 };
-                startInfo.ArgumentList.Add(licensePath);
 
                 Process.Start(startInfo);
             }
-            catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException)
+            catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException || ex is System.ComponentModel.Win32Exception)
             {
                 // 🛡️ Sentinel: Avoid leaking system paths or directory structure in user-facing message boxes.
                 MessageBox.Show(
-                    "Le fichier de licence LICENSE.txt est introuvable dans le dossier de l'application.",
+                    "Le fichier de licence LICENSE.txt est introuvable dans le dossier de l'application, ou l'application par défaut n'est pas configurée.",
                     "Licence introuvable",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);

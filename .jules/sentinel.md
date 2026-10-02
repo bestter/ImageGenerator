@@ -85,6 +85,11 @@
 **Vulnerability:** Calling `MessageBox.Show(ex.Message)` or interpolating `ex.Message` directly in user-facing dialogs can inadvertently expose sensitive internal details (such as database structure, exact file paths, or internal error states) to the user.
 **Learning:** Any unhandled or explicitly caught exceptions that are passed to the UI layer must be sanitized to prevent leaking diagnostic internals.
 **Prevention:** Catch specific exceptions where possible. Show safe, specific messages for known application errors and mapped HTTP statuses, with a generic fallback for untrusted provider or exception text. Use the same safe message in `MessageBox.Show` and copy-to-clipboard actions.
+
+## 2026-09-01 - Avoid Security Theater and TOCTOU in Process.Start
+**Vulnerability:** The application used `File.Exists` to check for a file before opening it via `Process.Start`, creating a TOCTOU race condition. Furthermore, it disabled `UseShellExecute` and hardcoded `notepad.exe` as a supposed security fix for command injection when opening internally constructed safe paths.
+**Learning:** Hardcoding external viewers for internally constructed safe paths provides no real security benefit (security theater). Preventing TOCTOU with `FileStream` locks is ineffective since `Process.Start` relies on the file path.
+**Prevention:** To validate file presence and securely handle missing files without TOCTOU or security theater, avoid pre-checks and directly launch the internally constructed safe path with `UseShellExecute = true`. Catch `Win32Exception` and `FileNotFoundException` to handle cases where the file is absent or the default viewer is unconfigured.
 ## 2026-06-04 - Unsecured Plain Text API Key Storage
 **Vulnerability:** The API key was previously pulled directly from a TextBox without any secure persistence mechanism. Forcing users to repeatedly paste credentials increases the risk of clipboard scraping, key leakage, or user error.
 **Learning:** Forcing users to paste credentials repeatedly without a secure local persistence mechanism is a usability and security issue. Using `ProtectedData` (Windows DPAPI) provides a secure way to store secrets tied to the current Windows user without managing explicit encryption keys.
