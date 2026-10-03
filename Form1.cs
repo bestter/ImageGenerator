@@ -662,7 +662,7 @@ namespace ImageGeneratorApp
             {
                 _hasPromptError = true;
                 this.Invalidate();
-                _lastErrorMessage = ex.Message;
+                _lastErrorMessage = "Le gabarit demandé n'est pas reconnu ou introuvable.";
                 btnCopyError.Visible = true;
                 MessageBox.Show("Le gabarit demandé n'est pas reconnu ou introuvable.", "Modèle non reconnu", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
@@ -670,7 +670,7 @@ namespace ImageGeneratorApp
             {
                 _hasPromptError = true;
                 this.Invalidate();
-                _lastErrorMessage = ex.Message;
+                _lastErrorMessage = "Une erreur de syntaxe a été détectée dans le gabarit.";
                 btnCopyError.Visible = true;
                 MessageBox.Show("Une erreur de syntaxe a été détectée dans le gabarit.", "Erreur de modèles", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
@@ -678,13 +678,13 @@ namespace ImageGeneratorApp
             {
                 _hasPromptError = true;
                 this.Invalidate();
-                _lastErrorMessage = ex.Message;
+                _lastErrorMessage = "Une boucle de récursion infinie a été détectée dans les gabarits.";
                 btnCopyError.Visible = true;
                 MessageBox.Show("Une boucle de récursion infinie a été détectée dans les gabarits.", "Erreur de récursion", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else if (ex is ArgumentException)
             {
-                _lastErrorMessage = ex.Message;
+                _lastErrorMessage = "Une erreur de validation est survenue. Veuillez vérifier vos entrées.";
                 btnCopyError.Visible = true;
                 MessageBox.Show("Une erreur de validation est survenue. Veuillez vérifier vos entrées.", "Erreur de validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
@@ -707,7 +707,7 @@ namespace ImageGeneratorApp
             }
             else
             {
-                _lastErrorMessage = ex.Message;
+                _lastErrorMessage = "Une erreur inattendue est survenue lors de la génération.";
                 btnCopyError.Visible = true;
                 lblStatus.Text = "❌ Erreur inattendue";
                 MessageBox.Show("Une erreur inattendue est survenue lors de la génération.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
