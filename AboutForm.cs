@@ -171,27 +171,21 @@ https://www.gnu.org/licenses/";
 
             try
             {
-                // ⚡ Bolt: Replaced FileStream with File.Exists to avoid unnecessary file handle allocation and overhead.
-                if (!File.Exists(licensePath))
-                {
-                    throw new FileNotFoundException();
-                }
-
-                // 🛡️ Sentinel: Mitigate command execution risk by specifying notepad.exe directly and disabling UseShellExecute.
+                // 🛡️ Sentinel: Remove TOCTOU File.Exists check and security theater of hardcoding notepad.exe.
+                // It is safe to use UseShellExecute for internally constructed, safe paths.
                 var startInfo = new ProcessStartInfo
                 {
-                    FileName = "notepad.exe",
-                    UseShellExecute = false
+                    FileName = licensePath,
+                    UseShellExecute = true
                 };
-                startInfo.ArgumentList.Add(licensePath);
 
                 Process.Start(startInfo);
             }
-            catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException)
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception || ex is FileNotFoundException || ex is DirectoryNotFoundException)
             {
                 // 🛡️ Sentinel: Avoid leaking system paths or directory structure in user-facing message boxes.
                 MessageBox.Show(
-                    "Le fichier de licence LICENSE.txt est introuvable dans le dossier de l'application.",
+                    "Le fichier de licence LICENSE.txt est introuvable ou aucune application n'y est associée.",
                     "Licence introuvable",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
