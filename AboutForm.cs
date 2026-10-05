@@ -171,8 +171,8 @@ https://www.gnu.org/licenses/";
 
             try
             {
-                // 🛡️ Sentinel: Use Try-Catch on Process.Start to handle missing files securely without TOCTOU race conditions.
-                // 🛡️ Sentinel: UseShellExecute = true is safe for internally constructed paths. Hardcoding 'notepad.exe' is security theater.
+                // 🛡️ Sentinel: Remove TOCTOU File.Exists check and security theater of hardcoding notepad.exe.
+                // It is safe to use UseShellExecute for internally constructed, safe paths.
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = licensePath,
@@ -181,11 +181,11 @@ https://www.gnu.org/licenses/";
 
                 Process.Start(startInfo);
             }
-            catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException || ex is System.ComponentModel.Win32Exception)
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception || ex is FileNotFoundException || ex is DirectoryNotFoundException)
             {
                 // 🛡️ Sentinel: Avoid leaking system paths or directory structure in user-facing message boxes.
                 MessageBox.Show(
-                    "Le fichier de licence LICENSE.txt est introuvable dans le dossier de l'application, ou l'application par défaut n'est pas configurée.",
+                    "Le fichier de licence LICENSE.txt est introuvable ou aucune application n'y est associée.",
                     "Licence introuvable",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);

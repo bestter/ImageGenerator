@@ -213,3 +213,7 @@
 **Vulnerability:** Calling `MessageBox.Show(ex.Message)` or interpolating `ex.Message` directly in user-facing dialogs can inadvertently expose sensitive internal details (such as database structure, exact file paths, or internal error states) to the user.
 **Learning:** Any unhandled or explicitly caught exceptions that are passed to the UI layer must be sanitized to prevent leaking diagnostic internals.
 **Prevention:** Catch specific exceptions where possible. Show safe, specific messages for known application errors and mapped HTTP statuses, with a generic fallback for untrusted provider or exception text. Use the same safe message in `MessageBox.Show` and copy-to-clipboard actions.
+## 2026-06-25 - Prevent Process.Start Security Theater
+**Vulnerability:** The application was setting `UseShellExecute = false` and hardcoding an executable like `notepad.exe` as a supposed security measure when opening internally constructed, safe file paths. This is security theater that breaks user preferences and provides no actual security benefit since the path is already safe.
+**Learning:** For internally constructed safe paths, `UseShellExecute = true` is acceptable and preferred as it respects user file associations. For untrusted input, neither approach is inherently secure without input validation.
+**Prevention:** Remove the hardcoded executable and `UseShellExecute = false` when opening safe files. Allow the OS to determine the correct application by using `UseShellExecute = true` with the file path directly.
