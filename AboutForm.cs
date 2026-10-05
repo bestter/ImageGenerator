@@ -162,8 +162,8 @@ https://www.gnu.org/licenses/";
 
         /// <summary>
         /// Opens the LICENSE.txt file located in the same directory as the running executable.
-        /// Uses a specific application (notepad.exe) with UseShellExecute = false to securely open the file.
-        /// Gracefully handles the case where the file is missing.
+        /// Uses the default text viewer with UseShellExecute = true.
+        /// Gracefully handles the case where the file is missing or cannot be opened.
         /// </summary>
         private void BtnShowLicense_Click(object? sender, EventArgs e)
         {
