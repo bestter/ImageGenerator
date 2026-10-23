@@ -168,6 +168,15 @@ namespace ImageGeneratorApp
                     }
                 }
 
+                // ⚡ Bolt Optimization: Use a hybrid approach for prompt replacements.
+                // If there's only 1 unique tag, standard string.Replace avoids StringBuilder allocation overhead.
+                // If there are >1 unique tags, wrap in a single StringBuilder to prevent chaining immutable string allocations in a loop.
+                System.Text.StringBuilder? promptSb = null;
+                if (uniqueCount > 1)
+                {
+                    promptSb = new System.Text.StringBuilder(currentPrompt, currentPrompt.Length + 512);
+                }
+
                 for (int k = 0; k < uniqueCount; k++)
                 {
                     var tag = uniqueTags[k];
@@ -222,24 +231,33 @@ namespace ImageGeneratorApp
                     }
 
                     // Update the prompt replacing all occurrences of this specific tag expression
-                    // ⚡ Bolt Optimization: Do not wrap TemplateParser unique-tag Replace in StringBuilder.
-                    // Allocating a new StringBuilder inside the loop and calling ToString() creates extra copies
-                    // since unique tags per pass are typically one. Just assign the string.Replace result back.
-                    currentPrompt = currentPrompt.Replace(tag, templateValue);
-                    replacedAny = true;
-
-                    // 🛡️ Sentinel: Enforce maximum length on resolved prompt to prevent memory exhaustion (DoS)
-                    // from exponential template expansion (similar to a Billion Laughs attack).
-                    if (currentPrompt.Length > 100000)
+                    if (promptSb != null)
                     {
-                        throw new InvalidOperationException("Le prompt résolu dépasse la taille maximale autorisée (100000 caractères).");
+                        promptSb.Replace(tag, templateValue);
                     }
+                    else
+                    {
+                        currentPrompt = currentPrompt.Replace(tag, templateValue);
+                    }
+                    replacedAny = true;
 
                     // If requested, asynchronously increment usage stats for this key in the database
                     if (incrementUsageStats)
                     {
                         usedKeys.Add(key);
                     }
+                }
+
+                if (promptSb != null)
+                {
+                    currentPrompt = promptSb.ToString();
+                }
+
+                // 🛡️ Sentinel: Enforce maximum length on resolved prompt to prevent memory exhaustion (DoS)
+                // from exponential template expansion (similar to a Billion Laughs attack).
+                if (currentPrompt.Length > 100000)
+                {
+                    throw new InvalidOperationException("Le prompt résolu dépasse la taille maximale autorisée (100000 caractères).");
                 }
 
                 iterations++;
