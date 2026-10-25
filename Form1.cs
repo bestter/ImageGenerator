@@ -561,10 +561,8 @@ namespace ImageGeneratorApp
                     imagesList.Add(new ImageUrlObject { Type = "image_url", Url = $"data:image/png;base64,{imageToEditBase64}" });
                 }
 
-                // ⚡ Bolt Optimization: Avoid LINQ Select and ToArray chains when scheduling asynchronous tasks
-                // to prevent allocating intermediate enumerators, arrays, and closures.
-                // ⚡ Bolt Optimization: Use a pre-allocated array instead of List<Task> to prevent Task.WhenAll
-                // from internally calling .ToArray() on the IEnumerable overload, reducing GC pressure.
+                // ⚡ Bolt Optimization: Schedule tasks into a pre-allocated array (no LINQ, no List)
+                // to avoid intermediate enumerators, closures and collection wrappers.
                 var tasks = new Task<ImageUrlObject?>[selectedImages.Count];
                 for (int i = 0; i < selectedImages.Count; i++)
                 {
