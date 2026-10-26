@@ -1,0 +1,2 @@
+# Preserve upstream redistribution notices byte-for-byte, including whitespace.
+ThirdPartyNotices/*.txt -text -whitespace

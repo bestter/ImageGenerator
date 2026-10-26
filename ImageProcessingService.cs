@@ -1,5 +1,4 @@
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Webp;
+using ImageMagick;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -60,48 +59,37 @@ namespace ImageGeneratorApp
                 throw new ArgumentException("Base file name cannot be null or whitespace.", nameof(baseFileName));
             }
 
-            var fullPath = Path.Combine(historyFolder, stem + ".webp");
-            // 🛡️ Sentinel: Prevent path traversal by explicitly validating the normalized path
-            var normalizedHistoryFolder = Path.GetFullPath(historyFolder);
-            if (!normalizedHistoryFolder.EndsWith(Path.DirectorySeparatorChar.ToString()))
-            {
-                normalizedHistoryFolder += Path.DirectorySeparatorChar;
-            }
-
-            var normalizedFullPath = Path.GetFullPath(fullPath);
-            if (!normalizedFullPath.StartsWith(normalizedHistoryFolder, StringComparison.OrdinalIgnoreCase))
+            string normalizedHistoryFolder = Path.GetFullPath(historyFolder);
+            string fullPath = Path.GetFullPath(Path.Combine(normalizedHistoryFolder, stem + ".webp"));
+            if (!string.Equals(Path.GetDirectoryName(fullPath), Path.TrimEndingDirectorySeparator(normalizedHistoryFolder), StringComparison.OrdinalIgnoreCase))
             {
                 throw new ArgumentException("Invalid file name resulting in path traversal.", nameof(baseFileName));
             }
 
-            fullPath = normalizedFullPath;
-
-
             // Offload CPU-heavy image loading, encoding, and IO-heavy saving to a background thread to prevent UI freezing
             await Task.Run(() =>
             {
-                // Fully qualified name to prevent any ambiguity with System.Drawing.Image in WinForms
-                using var image = SixLabors.ImageSharp.Image.Load(sourceImageBytes);
+                using var image = ImageDecoder.Load(sourceImageBytes);
 
                 if (metadata != null)
                 {
                     ImageMetadataEmbedder.ApplyMetadata(image, metadata);
                 }
 
-                var encoder = new WebpEncoder
-                {
-                    Quality = 80
-                };
-
-                Directory.CreateDirectory(historyFolder);
-                image.Save(fullPath, encoder);
+                image.Quality = 80;
+                image.Settings.SetDefine(MagickFormat.WebP, "lossless", false);
+                image.Settings.SetDefine(MagickFormat.WebP, "alpha-quality", 100);
+                Directory.CreateDirectory(normalizedHistoryFolder);
+                // Open the exact sanitized path with .NET, bypassing native filename expansion.
+                using var output = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None);
+                image.Write(output, MagickFormat.WebP);
             });
 
             return fullPath;
         }
 
         /// <summary>
-        /// Loads a WEBP image from disk using ImageSharp, converts it to a standard BMP stream,
+        /// Loads a WEBP image from disk using Magick.NET, converts it to a PNG stream,
         /// and returns a GDI+ compatible System.Drawing.Image suitable for WinForms PictureBox.
         /// Properly clones the bitmap to prevent GDI+ dependency on the underlying memory stream.
         /// </summary>
@@ -117,11 +105,10 @@ namespace ImageGeneratorApp
             }
 
             // Perform image loading and conversion on a background thread
-            return await Task.Run(async () =>
+            return await Task.Run(() =>
             {
                 // 🛡️ Sentinel: Prevent TOCTOU race condition and handle file existence securely
-                // ⚡ Bolt Optimization: Enable asynchronous OS-level I/O to prevent Thread Pool starvation during async reads
-                using var fs = new FileStream(webpFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true);
+                using var fs = new FileStream(webpFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
 
                 if (fs.Length == 0)
                 {
@@ -134,40 +121,62 @@ namespace ImageGeneratorApp
                     throw new ArgumentException("L'image dépasse la limite de taille autorisée de 20 Mo.", nameof(webpFilePath));
                 }
 
-                MemoryStream? memoryStream = null;
-
-                try
-                {
-                    // Load WEBP using ImageSharp asynchronously from the stream
-                    using (var image = await SixLabors.ImageSharp.Image.LoadAsync(fs))
-                    {
-                        // ⚡ Bolt Optimization: Pre-allocate MemoryStream capacity based on image dimensions
-                        // (Width * Height * 4 bytes for RGBA + 1024 bytes for BMP headers).
-                        // This prevents excessive Large Object Heap (LOH) fragmentation caused by default buffer doubling
-                        // when saving uncompressed image data.
-                        int estimatedCapacity = (image.Width * image.Height * 4) + 1024;
-                        memoryStream = new MemoryStream(estimatedCapacity);
-
-                        // Encode to BMP format (native and extremely fast for WinForms/GDI+)
-                        var bmpEncoder = new SixLabors.ImageSharp.Formats.Bmp.BmpEncoder();
-                        await image.SaveAsync(memoryStream, bmpEncoder);
-                    }
-
-                    memoryStream.Position = 0;
-
-                    // CRITICAL WinForms/GDI+ detail: A Bitmap constructed from a stream requires
-                    // the stream to remain open for the bitmap's lifetime.
-                    // Cloning the bitmap decouples it from the stream so we can safely dispose of it.
-                    using (var tempBitmap = new System.Drawing.Bitmap(memoryStream))
-                    {
-                        return new System.Drawing.Bitmap(tempBitmap);
-                    }
-                }
-                finally
-                {
-                    memoryStream?.Dispose();
-                }
+                using var image = ImageDecoder.Load(fs);
+                // PNG is supported by GDI+ and retains partial alpha, unlike BMP3.
+                using var memoryStream = new MemoryStream(image.ToByteArray(MagickFormat.Png));
+                using var temporaryBitmap = new System.Drawing.Bitmap(memoryStream);
+                return (System.Drawing.Image)new System.Drawing.Bitmap(temporaryBitmap);
             });
+        }
+    }
+
+    /// <summary>
+    /// Shared native decoding policy for exports and history. Ping inspects dimensions
+    /// before allocating the pixel cache; resource limits also apply during native decoding.
+    /// </summary>
+    internal static class ImageDecoder
+    {
+        internal const uint MaximumDimension = 16384;
+        internal const ulong MaximumPixels = 64000000;
+
+        static ImageDecoder()
+        {
+            ResourceLimits.Width = MaximumDimension;
+            ResourceLimits.Height = MaximumDimension;
+            ResourceLimits.Memory = 256UL * 1024 * 1024;
+            ResourceLimits.Disk = 1024UL * 1024 * 1024;
+            ResourceLimits.MaxMemoryRequest = 256UL * 1024 * 1024;
+        }
+
+        internal static MagickImage Load(byte[] bytes)
+        {
+            using var stream = new MemoryStream(bytes, writable: false);
+            return Load(stream);
+        }
+
+        internal static MagickImage Load(Stream stream)
+        {
+            ArgumentNullException.ThrowIfNull(stream);
+            if (!stream.CanSeek)
+            {
+                throw new ArgumentException("Le flux d'image doit être repositionnable (CanSeek = true).", nameof(stream));
+            }
+
+            long position = stream.Position;
+            using (var header = new MagickImage())
+            {
+                header.Ping(stream);
+                if (header.Width > MaximumDimension || header.Height > MaximumDimension
+                    || (ulong)header.Width * header.Height > MaximumPixels)
+                {
+                    throw new ArgumentException("L'image dépasse les dimensions autorisées (16 384 pixels par côté, 64 millions de pixels).");
+                }
+            }
+            stream.Position = position;
+            var settings = new MagickReadSettings();
+            // Preserve the actual ICC bytes instead of replacing recognized profiles with sRGB.
+            settings.SetDefine(MagickFormat.Png, "preserve-iCCP", true);
+            return new MagickImage(stream, settings);
         }
     }
 }

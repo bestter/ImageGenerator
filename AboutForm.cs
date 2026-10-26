@@ -71,7 +71,7 @@ https://www.gnu.org/licenses/";
             this.Padding = new Padding(0);
 
             // Retrieve version dynamically from assembly metadata to stay in sync with csproj
-            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "2.0.1";
+            string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "2.1.0";
 
             // Application name (prominent)
             var appNameLabel = new Label
