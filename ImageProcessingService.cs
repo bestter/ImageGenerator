@@ -156,6 +156,12 @@ namespace ImageGeneratorApp
 
         internal static MagickImage Load(Stream stream)
         {
+            ArgumentNullException.ThrowIfNull(stream);
+            if (!stream.CanSeek)
+            {
+                throw new ArgumentException("Le flux d'image doit être repositionnable (CanSeek = true).", nameof(stream));
+            }
+
             long position = stream.Position;
             using (var header = new MagickImage())
             {

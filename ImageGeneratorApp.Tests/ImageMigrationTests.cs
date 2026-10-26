@@ -178,6 +178,48 @@ namespace ImageGeneratorApp.Tests
         }
 
         [Fact]
+        public void Decoder_NullStream_ThrowsArgumentNullException()
+        {
+            Action decode = () => ImageDecoder.Load((Stream)null!);
+
+            decode.Should().Throw<ArgumentNullException>().WithParameterName("stream");
+        }
+
+        [Fact]
+        public void Decoder_NonSeekableStream_RejectsBeforeAccessingPositionOrReading()
+        {
+            using var stream = new Mock<Stream>(MockBehavior.Strict).Object;
+            Mock.Get(stream).SetupGet(s => s.CanSeek).Returns(false);
+            Mock.Get(stream).Setup(s => s.Close());
+            Action decode = () => ImageDecoder.Load(stream);
+
+            decode.Should().Throw<ArgumentException>()
+                .WithParameterName("stream")
+                .WithMessage("Le flux d'image doit être repositionnable (CanSeek = true).*");
+            Mock.Get(stream).VerifyGet(s => s.CanSeek, Times.Once);
+            Mock.Get(stream).VerifyNoOtherCalls();
+        }
+
+        [Fact]
+        public void Decoder_SeekableStream_DecodesFromCurrentPositionWithoutTakingOwnership()
+        {
+            byte[] input = ImageMetadataEmbedderTests.ImageBytes();
+            using var stream = new MemoryStream();
+            stream.Write(new byte[] { 1, 2, 3, 4 });
+            stream.Write(input);
+            stream.Position = 4;
+
+            using (var image = ImageDecoder.Load(stream))
+            {
+                image.Width.Should().Be(10);
+                image.Height.Should().Be(10);
+            }
+            stream.CanRead.Should().BeTrue();
+            stream.Position = 4;
+            stream.ReadByte().Should().Be(input[0]);
+        }
+
+        [Fact]
         public void Decoder_AcceptsMaximumSideAndGeneratedImageDimensions()
         {
             foreach ((uint width, uint height) in new[] { (16384u, 1u), (1u, 16384u), (2048u, 2048u) })

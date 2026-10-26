@@ -146,6 +146,8 @@ git diff --check
 
 Report the observed build warnings and test results rather than assuming a fixed outcome.
 
+Imaging regression tests also check the decoder's seekable-stream contract and independent WinForms bitmap lifetime. The published-imaging validation script removes its temporary build directory and copied harness files after success or failure, including failed builds and partial copies.
+
 ## Documentation maintenance
 
 Documentation is part of the implementation. Any change to providers, model identifiers, endpoints, authentication, request or response payloads, supported sizes, editing behavior, API-key storage, metadata, user-visible workflows, prerequisites, or tests must update this README in the same change. OpenAI behavior must be checked against current official OpenAI documentation before it is documented.

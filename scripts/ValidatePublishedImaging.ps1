@@ -6,10 +6,13 @@ param(
 $ErrorActionPreference = 'Stop'
 $publishPath = (Resolve-Path -LiteralPath $PublishDirectory).Path
 $repositoryPath = Split-Path $PSScriptRoot -Parent
-$scratchPath = Join-Path ([IO.Path]::GetTempPath()) ('ImageGenerator335Smoke_' + [Guid]::NewGuid().ToString('N'))
-New-Item -ItemType Directory -Path $scratchPath | Out-Null
-$assemblyPath = [System.Security.SecurityElement]::Escape((Join-Path $publishPath 'ImageGeneratorApp.dll'))
-@"
+$tempPath = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
+$scratchPath = [IO.Path]::GetFullPath((Join-Path $tempPath ('ImageGenerator335Smoke_' + [Guid]::NewGuid().ToString('N'))))
+$copiedSmokePaths = [System.Collections.Generic.List[string]]::new()
+try {
+    New-Item -ItemType Directory -Path $scratchPath | Out-Null
+    $assemblyPath = [System.Security.SecurityElement]::Escape((Join-Path $publishPath 'ImageGeneratorApp.dll'))
+    @"
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -22,7 +25,7 @@ $assemblyPath = [System.Security.SecurityElement]::Escape((Join-Path $publishPat
   <ItemGroup><Reference Include="ImageGeneratorApp"><HintPath>$assemblyPath</HintPath><Private>false</Private></Reference></ItemGroup>
 </Project>
 "@ | Set-Content -LiteralPath (Join-Path $scratchPath 'Smoke.csproj')
-@'
+    @'
 using ImageGeneratorApp;
 using System.Drawing;
 using System.Runtime.InteropServices;
@@ -65,22 +68,53 @@ finally
 }
 '@ | Set-Content -LiteralPath (Join-Path $scratchPath 'Program.cs')
 
-$dependencies = Get-Content -LiteralPath (Join-Path $publishPath 'ImageGeneratorApp.deps.json') -Raw | ConvertFrom-Json
-$runtimeIdentifier = ($dependencies.runtimeTarget.name -split '/')[-1]
-dotnet build (Join-Path $scratchPath 'Smoke.csproj') -c Release -r $runtimeIdentifier --self-contained false -o (Join-Path $scratchPath 'output')
-if ($LASTEXITCODE -ne 0) { throw 'Smoke harness build failed.' }
-$smokeDllPath = Join-Path $publishPath 'ImagingPublishSmoke.dll'
-$smokeExePath = Join-Path $publishPath 'ImagingPublishSmoke.exe'
-$smokeDepsPath = Join-Path $publishPath 'ImagingPublishSmoke.deps.json'
-$smokeConfigPath = Join-Path $publishPath 'ImagingPublishSmoke.runtimeconfig.json'
-Copy-Item -LiteralPath (Join-Path $scratchPath 'output/ImagingPublishSmoke.dll') -Destination $smokeDllPath
-Copy-Item -LiteralPath (Join-Path $scratchPath 'output/ImagingPublishSmoke.exe') -Destination $smokeExePath
-Copy-Item -LiteralPath (Join-Path $publishPath 'ImageGeneratorApp.deps.json') -Destination $smokeDepsPath
-Copy-Item -LiteralPath (Join-Path $publishPath 'ImageGeneratorApp.runtimeconfig.json') -Destination $smokeConfigPath
-try {
+    $dependencies = Get-Content -LiteralPath (Join-Path $publishPath 'ImageGeneratorApp.deps.json') -Raw | ConvertFrom-Json
+    $runtimeIdentifier = ($dependencies.runtimeTarget.name -split '/')[-1]
+    dotnet build (Join-Path $scratchPath 'Smoke.csproj') -c Release -r $runtimeIdentifier --self-contained false -o (Join-Path $scratchPath 'output')
+    if ($LASTEXITCODE -ne 0) { throw 'La compilation du harnais de validation a échoué.' }
+    $smokeDllPath = Join-Path $publishPath 'ImagingPublishSmoke.dll'
+    $smokeExePath = Join-Path $publishPath 'ImagingPublishSmoke.exe'
+    $smokeDepsPath = Join-Path $publishPath 'ImagingPublishSmoke.deps.json'
+    $smokeConfigPath = Join-Path $publishPath 'ImagingPublishSmoke.runtimeconfig.json'
+    $smokeFiles = @(
+        @{ Source = (Join-Path $scratchPath 'output/ImagingPublishSmoke.dll'); Destination = $smokeDllPath },
+        @{ Source = (Join-Path $scratchPath 'output/ImagingPublishSmoke.exe'); Destination = $smokeExePath },
+        @{ Source = (Join-Path $publishPath 'ImageGeneratorApp.deps.json'); Destination = $smokeDepsPath },
+        @{ Source = (Join-Path $publishPath 'ImageGeneratorApp.runtimeconfig.json'); Destination = $smokeConfigPath }
+    )
+    foreach ($file in $smokeFiles) {
+        # Never overwrite or clean up files that were already present before this run.
+        if (Test-Path -LiteralPath $file.Destination) {
+            throw 'Un fichier du harnais existe déjà dans le dossier de publication.'
+        }
+        $copiedSmokePaths.Add($file.Destination)
+        Copy-Item -LiteralPath $file.Source -Destination $file.Destination
+    }
     & $smokeExePath (Join-Path $repositoryPath 'ImageGeneratorApp.Tests/Fixtures')
-    if ($LASTEXITCODE -ne 0) { throw 'Published imaging smoke failed.' }
+    if ($LASTEXITCODE -ne 0) { throw 'La validation des binaires publiés a échoué.' }
 }
 finally {
-    Remove-Item -LiteralPath $smokeDllPath, $smokeExePath, $smokeDepsPath, $smokeConfigPath
+    foreach ($path in $copiedSmokePaths) {
+        try {
+            if (Test-Path -LiteralPath $path) {
+                Remove-Item -LiteralPath $path -Force -ErrorAction Stop
+            }
+        }
+        catch {
+            Write-Warning 'Impossible de supprimer un fichier temporaire du harnais dans le dossier de publication.'
+        }
+    }
+
+    # Only recursively delete the unique scratch directory directly below the temp root.
+    if (![string]::Equals([IO.Path]::GetDirectoryName($scratchPath), [IO.Path]::TrimEndingDirectorySeparator($tempPath), [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'Le dossier temporaire du harnais ne se trouve pas dans le répertoire temporaire attendu.'
+    }
+    try {
+        if (Test-Path -LiteralPath $scratchPath) {
+            Remove-Item -LiteralPath $scratchPath -Recurse -Force -ErrorAction Stop
+        }
+    }
+    catch {
+        Write-Warning 'Impossible de supprimer le dossier temporaire du harnais de validation.'
+    }
 }

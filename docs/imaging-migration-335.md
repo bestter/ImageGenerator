@@ -81,4 +81,33 @@ The temporary comparison programs are diagnostics for this session, not applicat
 
 No additional intentional color/background policy change or unsupported legitimate size was introduced. The newly approved decoded-dimension limits and inherent encoder-byte differences are documented above. The GitHub issue remains open for the outstanding target-environment checks. Publication is tracked by the associated Git commit and pull request.
 
+## Post-review follow-up — October 26, 2026
+
+The internal stream decoder now rejects null streams and non-seekable streams before accessing `Position` or reading image data. The non-seekable error is an `ArgumentException` naming `stream`, with a French explanation. Existing production callers already use seekable memory/file streams. Added tests cover null input, strict non-seekable input without position/read access, and decoding from a nonzero stream position without taking ownership of the stream.
+
+The proposed replacement of `new MemoryStream(image.ToByteArray(...))` with `image.Write(memoryStream, ...)` was evaluated and rejected. `MemoryStream(byte[])` wraps the existing array without copying it. A local Release-mode probe measured managed allocations via `GC.GetAllocatedBytesForCurrentThread`, after one warm-up and over three encodings per case:
+
+| Input | Existing array-wrapping path | Direct-write path |
+|---|---:|---:|
+| Committed 2048x2048 comparison pattern | 23,088 B/encoding | 61,341 B/encoding |
+| Seeded 1024x1024 RGB noise (`Random(335)`) | 3,157,658 B/encoding | 8,487,533 B/encoding |
+
+Direct writing avoids returning an encoded array, but does not eliminate the MemoryStream buffer or its growth allocations. These observations favor retaining the existing path; they are not a general benchmark of process/native memory. The unchanged legacy opaque/transparent Bitmap lifetime and file-release tests passed again.
+
+The published-imaging script now wraps preparation, compilation, copying and execution in one `try/finally`. It tracks only this invocation's copied files, refuses to overwrite a pre-existing harness file, and removes its scratch directory after validating that the normalized absolute path is a direct child of the expected temp root. Cleanup failures produce French warnings instead of being silently swallowed or replacing the original compilation/copy error. No dependency, application version or repository instruction file was changed for this follow-up.
+
+Validation executed for the retained changes:
+
+```powershell
+dotnet build ImageGeneratorApp.csproj
+dotnet run --project ImageGeneratorApp.Tests/ImageGeneratorApp.Tests.csproj
+dotnet publish ImageGeneratorApp.csproj -c Release -r win-x64 --self-contained true -o artifacts/publish/win-x64
+./artifacts/post-review/ValidateCleanup.ps1
+git diff --check
+```
+
+Build: passed with zero warnings/errors. Tests: **310 passed**, zero failures/skips, with the existing FluentAssertions runtime license notice. x64 publication and published-binary imaging smoke: passed. The local diagnostic `ValidateCleanup.ps1` isolates `%TMP%`, runs a successful smoke, simulates a compiler failure and simulates a failure after the first copied harness DLL; all three paths left no scratch directory or copied harness files, and both simulated failures retained their original error. The diagnostic is retained locally under ignored `artifacts/post-review/`. `git diff --check`: passed. Allocation comparison used `dotnet run --project C:/Users/marti/AppData/Local/Temp/ImageGenerator335Probe/Probe.csproj -c Release` on the same Windows/.NET host documented above.
+
+No new clean-machine, manual GUI or ARM64 validation was performed for this follow-up. Publication of these reviewed changes is tracked by the associated Git commit and pull request.
+
 Prepared by GPT-6 — Codex.
