@@ -88,15 +88,15 @@ namespace ImageGeneratorApp.Tests
             File.Exists(historyRecord.ImagePath).Should().BeTrue();
             Path.GetExtension(historyRecord.ImagePath).Should().BeEquivalentTo(".webp");
 
-            // Verify it is indeed a valid WEBP image by attempting to load it with ImageSharp
-            using (var loadedImage = SixLabors.ImageSharp.Image.Load(historyRecord.ImagePath))
+            // Verify it is indeed a valid WEBP image by attempting to load it with Magick.NET
+            using (var loadedImage = new ImageMagick.MagickImage(historyRecord.ImagePath))
             {
                 loadedImage.Width.Should().Be(1);
                 loadedImage.Height.Should().Be(1);
 
                 // Verify that EXIF and XMP metadata profiles are successfully embedded in the WebP image
-                loadedImage.Metadata.ExifProfile.Should().NotBeNull();
-                loadedImage.Metadata.XmpProfile.Should().NotBeNull();
+                loadedImage.GetExifProfile().Should().NotBeNull();
+                loadedImage.GetXmpProfile().Should().NotBeNull();
             }
 
             // 2. Verify database insertion via SQLite connection

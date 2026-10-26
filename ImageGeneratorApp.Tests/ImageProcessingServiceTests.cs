@@ -215,9 +215,9 @@ namespace ImageGeneratorApp.Tests
 
             // Assert
             File.Exists(savedPath).Should().BeTrue();
-            using var loadedImage = SixLabors.ImageSharp.Image.Load(savedPath);
-            loadedImage.Metadata.ExifProfile.Should().NotBeNull();
-            loadedImage.Metadata.XmpProfile.Should().NotBeNull();
+            using var loadedImage = new ImageMagick.MagickImage(savedPath);
+            loadedImage.GetExifProfile().Should().NotBeNull();
+            loadedImage.GetXmpProfile().Should().NotBeNull();
         }
 
         [Fact]

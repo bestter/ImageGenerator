@@ -2,8 +2,8 @@
 
 Ce fichier est la source de vérité commune pour les agents IA qui travaillent dans ce dépôt.
 
-**Version** : 2.2.0
-**Dernière mise à jour** : 14 septembre 2026
+**Version** : 2.3.0
+**Dernière mise à jour** : 26 octobre 2026
 **Propriétaire** : Martin Labelle (@bestter)
 
 ---
@@ -68,6 +68,15 @@ Respecte ces frontières. Si la tâche exige de les déplacer, obtenir l'accord 
 - Faire découler l'activation des fonctions des capacités de `ImageProviderCatalog`, notamment pour les images de référence et le multi-turn.
 - Conserver une interface utilisateur en français, moderne, claire et accessible. Vérifier les états normal, désactivé, chargement, succès et erreur.
 - Libérer correctement les objets `Image`, `Bitmap`, flux, minuteries et autres ressources `IDisposable` remplacées ou possédées par un formulaire.
+
+## Traitement des images et distribution native
+
+- `ImageProcessingService.cs` et `ImageMetadataEmbedder.cs` utilisent Magick.NET Q16; conserver la précision des PNG à 16 bits, les profils ICC et la transparence. Les aperçus WinForms passent par un flux PNG et retournent un bitmap indépendant.
+- Le décodeur partagé `ImageDecoder`, dans `ImageProcessingService.cs`, applique les limites approuvées par le propriétaire : 16 384 pixels par côté et 64 000 000 de pixels au total. Vérifier les dimensions avant de décoder les pixels et conserver la validation de la limite de 20 Mio sur le flux d'historique ouvert.
+- Conserver les contrats d'export : PNG sans perte par défaut, JPEG qualité 92 pour jpg/jpeg et historique WebP avec perte qualité 80. Ne pas introduire une nouvelle couleur de fond pour les JPEG transparents.
+- Vérifier les métadonnées sérialisées, pas seulement les attributs en mémoire : EXIF, XMP, les sept clés texte PNG lorsqu'elles sont applicables et le prompt Unicode complet. Les attributs Magick.NET sont partagés entre les formats; ajouter les clés PNG seulement à l'export PNG.
+- Conserver les fichiers de référence historiques dans `ImageGeneratorApp.Tests/Fixtures` pour tester les anciens WebP sans les régénérer avec le nouvel encodeur.
+- Toute mise à jour de Magick.NET doit conserver les avis de redistribution du paquet sélectionné dans `ThirdPartyNotices`, copiés avec les fichiers de publication. Vérifier le chargement natif sur les architectures Windows distribuées et documenter les validations réellement exécutées dans `docs/imaging-migration-335.md`.
 
 ## Réseau, fournisseurs et sérialisation
 

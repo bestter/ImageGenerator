@@ -2,9 +2,9 @@
 
 Image Generator App is a Windows Forms desktop application for generating AI images with xAI, Google, and OpenAI APIs. It targets .NET 10 on Windows and keeps API calls, image processing, metadata, templates, and generation history local to the desktop workflow.
 
-Current application version: `2.0.1`
+Current application version: `2.1.0`
 
-Documentation reviewed against the source code: September 23, 2026
+Imaging and version documentation reviewed against the source code: October 26, 2026
 
 ## Supported providers
 
@@ -30,6 +30,22 @@ xAI has [announced the retirement of `grok-imagine-image-quality` on November 2,
 - Provider-specific API keys protected with Windows DPAPI for the current Windows user.
 
 Exports attempt to embed the prompt, model, generation date, resolution, and aspect ratio. If embedding fails, the application saves the original image bytes. History WebP files embed the prompt, model, and generation date; resolution and aspect ratio are stored separately in the SQLite history record. A history storage failure does not prevent a successful generation from being displayed.
+
+## Image encoding and deployment
+
+Version 2.1.0 replaces ImageSharp with **Magick.NET-Q16-AnyCPU 15.0.0** (ImageMagick 7.1.2-33). Q16 retains 16-bit PNG precision. PNG exports are lossless and preserve alpha and ICC profiles; JPEG exports use 8-bit quality 92 with 4:2:0 sampling. Transparent JPEG input keeps its straight RGB channels when alpha is dropped, matching the previous export policy. History remains lossy WebP quality 80 with lossless alpha; WebP itself is limited to 8-bit channels. Encoder output bytes, appearance and sizes can differ from the previous library.
+
+EXIF stores Software, DateTime, DateTimeOriginal, ImageDescription (at most 180 characters), and Artist. EXIF ASCII fields cannot reliably represent emoji or all scripts: the full Unicode prompt is retained in XMP and PNG UTF-8 text. XMP retains the `http://ns.grokimagineapp.com/ai/1.0/` namespace and existing fields. PNG adds `Software`, `Generator`, `AI Model`, `Prompt`, `Created With`, and optional `Resolution` / `Aspect Ratio` text keys. JPEG selection accepts jpg/jpeg case-insensitively, with or without a leading dot; null/unknown extensions, including `.webp`, still select PNG.
+
+Existing WebP history files and database records need no conversion. WinForms previews use an intermediate PNG and return an independent bitmap, preserving partial transparency and releasing the source file. Native decoding runs in the existing background image-processing workflows. The owner-approved decode limits are 16,384 pixels per side and 64,000,000 pixels total, checked before pixel decoding. Native pixel-cache memory is limited to 256 MiB with at most 1 GiB disk cache, and individual native allocation requests are capped at 256 MiB. These are resource controls, not a guarantee about total process memory. History reads still validate the opened stream and accept at most 20 MiB; provider-response limits remain unchanged.
+
+The package contains Windows x64, x86 and ARM64 native libraries. The repository has no existing RID-specific publish profile; publish explicitly for the destination architecture, for example:
+
+```powershell
+dotnet publish ImageGeneratorApp.csproj -c Release -r win-x64 --self-contained true -o artifacts/publish/win-x64
+```
+
+Use `win-x86` or `win-arm64` for the other package-supported Windows architectures. Distribute the entire publish directory, including native DLLs and `ThirdPartyNotices/`; no separate ImageMagick installation is required. The managed wrapper is Apache-2.0. ImageMagick and bundled codecs retain their own licenses, reproduced in the selected package's unmodified [NOTICE](ThirdPartyNotices/Magick.NET-15.0.0.NOTICE.txt) together with the [wrapper license](ThirdPartyNotices/Magick.NET-LICENSE.txt). See the [migration validation record](docs/imaging-migration-335.md) for measured observations and checks still requiring a clean target machine.
 
 ## OpenAI GPT Image 2
 
